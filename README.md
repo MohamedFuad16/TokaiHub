@@ -1,5 +1,5 @@
 <div align="center">
-<img width="192" height="192" alt="TokaiHub Logo" src="https://MohamedFuad16.github.io/TokaiHub/icons/icon-512x512.png" />
+<img width="192" height="192" alt="TokaiHub Logo" src="https://MohamedFuad16.github.io/TokaiHub/icons/icon-512x512.png?v=2" />
 
 # TokaiHub
 **The modern, central student portal for Tokai University.**
