@@ -54,7 +54,7 @@ export default function TokaiCourse({ onNavigate, goBack, lang, settings, params
   return (
     <div className="h-full relative flex flex-col">
       {/* Header */}
-      <header className="flex justify-between items-center p-6 pt-12 shrink-0">
+      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-4xl w-full mx-auto">
         <div className="font-bold text-2xl tracking-tighter">
           {t[lang].code}
         </div>
@@ -68,23 +68,23 @@ export default function TokaiCourse({ onNavigate, goBack, lang, settings, params
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-12">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-12 max-w-4xl w-full mx-auto">
           
           {/* Title */}
-          <motion.div variants={itemVariants} className="px-6 mt-2 shrink-0">
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-2 shrink-0">
             <div className="flex items-center gap-2 mb-4">
               <span className="bg-brand-black text-white text-xs font-bold px-3 py-1.5 rounded-full">{t[lang].code}</span>
               <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5"/> {t[lang].status}
               </span>
             </div>
-            <h1 className="text-[36px] font-bold leading-[1.1] tracking-tight whitespace-pre-line">
+            <h1 className="text-[28px] sm:text-[36px] lg:text-[42px] font-bold leading-[1.1] tracking-tight whitespace-pre-line">
               {t[lang].title}
             </h1>
           </motion.div>
 
           {/* Details Grid */}
-          <motion.div variants={itemVariants} className="px-6 mt-8 grid grid-cols-2 gap-4 shrink-0">
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
             <div className={`${bgClass} p-5 rounded-3xl`}>
               <Clock className="w-6 h-6 text-brand-black mb-3" />
               <div className={`text-xs ${textMuted} font-bold mb-1`}>Time</div>
@@ -95,7 +95,7 @@ export default function TokaiCourse({ onNavigate, goBack, lang, settings, params
               <div className={`text-xs ${textMuted} font-bold mb-1`}>Credits</div>
               <div className="font-bold text-sm">{t[lang].credits}</div>
             </div>
-            <div className={`${bgClass} p-5 rounded-3xl col-span-2 flex items-center gap-4`}>
+            <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
               <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
                 <BookOpen className="w-6 h-6 text-brand-black" />
               </div>
@@ -106,8 +106,8 @@ export default function TokaiCourse({ onNavigate, goBack, lang, settings, params
             </div>
           </motion.div>
 
-          {/* Overview & Evaluation */}
-          <motion.div variants={itemVariants} className="px-6 mt-8 space-y-8">
+          {/* Overview & Evaluation — side by side on desktop */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 lg:grid lg:grid-cols-2 lg:gap-8 space-y-8 lg:space-y-0">
             <div>
               <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-brand-pink"></span>

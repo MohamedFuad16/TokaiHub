@@ -39,7 +39,7 @@ export default function SharedMenu({ isOpen, onClose, onNavigate, lang, setLang,
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="absolute inset-0 z-50 flex">
+        <div className="absolute inset-0 z-50 flex lg:hidden">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -52,7 +52,7 @@ export default function SharedMenu({ isOpen, onClose, onNavigate, lang, setLang,
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className={`relative w-3/4 h-full p-6 flex flex-col shadow-2xl ${bgClass}`}
+            className={`relative w-3/4 max-w-xs h-full p-6 flex flex-col shadow-2xl ${bgClass}`}
           >
             <div className="flex justify-between items-center mb-12 mt-6">
               <div className="font-bold text-2xl leading-none">TOKAI<br/>HUB</div>

@@ -1,0 +1,27 @@
+{
+  "name": "TokaiHub — Student Hub",
+  "short_name": "TokaiHub",
+  "description": "Your Tokai University student hub — classes, schedules, assignments, and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#FFD747",
+  "background_color": "#EBF2D9",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education"],
+  "lang": "en"
+}
