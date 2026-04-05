@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, Clock, BookOpen, Award, CheckCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { allItems } from '../data';
 
@@ -14,7 +15,11 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiCourse({ onNavigate, goBack, lang, settings, params }: ScreenProps) {
+export default function TokaiCourse({ lang, settings }: ScreenProps) {
+  const navigate = useNavigate();
+  const goBack = () => navigate(-1);
+  const { id } = useParams();
+  const params = { id };
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';

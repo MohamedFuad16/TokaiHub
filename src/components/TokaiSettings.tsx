@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil } from 'lucide-react';
 import { ScreenProps } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 const t = {
@@ -64,7 +65,9 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
-export default function TokaiSettings({ goBack, onNavigate, lang, settings, setSettings, userProfile, onSignOut, onDevSkipChange }: SettingsProps) {
+export default function TokaiSettings({ lang, settings, setSettings, userProfile, onSignOut, onDevSkipChange }: SettingsProps) {
+  const navigate = useNavigate();
+  const goBack = () => navigate(-1);
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const itemBg = isDark ? 'bg-gray-800' : 'bg-white';
@@ -114,7 +117,7 @@ export default function TokaiSettings({ goBack, onNavigate, lang, settings, setS
           {/* Edit Profile Button */}
           <motion.div variants={itemVariants}>
             <button
-              onClick={() => onNavigate('editProfile' as any)}
+              onClick={() => navigate('/editProfile')}
               className={`w-full flex items-center justify-between p-4 rounded-2xl transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} shadow-sm border ${borderClass}`}
             >
               <div className="flex items-center gap-4">

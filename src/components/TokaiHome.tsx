@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Menu, BookOpen, ArrowRight, Calendar, Users, Clock, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
+import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
@@ -59,7 +60,8 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiHome({ onNavigate, lang, setLang, settings, userProfile }: ScreenProps) {
+export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
+  const navigate = useNavigate();
   // Derive live values from userProfile
   const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';
   const studentIdDisplay = userProfile?.studentId ?? '—';
@@ -222,7 +224,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
               return (
                 <div 
                   key={item.id}
-                  onClick={() => setTimeout(() => onNavigate(item.action as any, { id: item.id }), 150)}
+                  onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                   className="w-[280px] lg:w-full h-[320px] shrink-0 lg:shrink snap-center bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
                 >
                   {/* Screen Layer (Top ~60%) */}
@@ -271,7 +273,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                     <div 
                       onClick={(e) => { 
                         e.stopPropagation(); 
-                        setTimeout(() => onNavigate(item.action as any, { id: item.id }), 150); 
+                        setTimeout(() => navigate(`/${item.action}/${item.id}`), 150); 
                       }}
                       className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group"
                     >
@@ -298,7 +300,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
               </h2>
               <div className="space-y-3">
                 {deadlines.map(deadline => (
-                  <div key={deadline.id} onClick={() => setTimeout(() => onNavigate('assignments'), 150)} className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`}>
+                  <div key={deadline.id} onClick={() => setTimeout(() => navigate('/assignments'), 150)} className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`}>
                     <div>
                       <h3 className="font-bold text-sm">{deadline.title[lang]}</h3>
                       <p className={`text-xs ${textMuted} mt-1`}>{deadline.course[lang]}</p>
@@ -395,7 +397,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-8">
                 {todayClasses.map(cls => (
-                  <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => onNavigate('course'), 150)}>
+                  <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}>
                      <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                        {cls.time.split(' ')[0]}
                      </div>
@@ -488,7 +490,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                       className="space-y-4"
                     >
                       {calendarClasses.map(cls => (
-                        <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => onNavigate('course', { id: cls.id }), 150)}>
+                        <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}>
                            <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                              {cls.time.split(' ')[0]}
                            </div>
@@ -513,7 +515,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
       <SharedMenu 
         isOpen={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 
-        onNavigate={onNavigate} 
+         
         lang={lang} 
         setLang={setLang} 
         settings={settings}

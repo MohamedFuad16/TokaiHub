@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Menu, Clock, MapPin } from 'lucide-react';
 import { ScreenProps } from '../App';
+import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { getClassesForDate, allItems } from '../data';
@@ -51,7 +52,8 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiSchedule({ onNavigate, lang, setLang, settings, userProfile }: ScreenProps) {
+export default function TokaiSchedule({ lang, setLang, settings, userProfile }: ScreenProps) {
+  const navigate = useNavigate();
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -189,7 +191,7 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings, use
 
               <div className="space-y-0 relative">
                 {dailyClasses.length > 0 ? dailyClasses.map((item, i) => (
-                  <motion.div variants={itemVariants} key={i} className="flex gap-4 group cursor-pointer" onClick={() => setTimeout(() => onNavigate('course', { id: item.id }), 150)}>
+                  <motion.div variants={itemVariants} key={i} className="flex gap-4 group cursor-pointer" onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}>
                     <div className="flex flex-col items-center w-16 shrink-0">
                       <span className="text-white font-bold text-sm mt-4">{item.time.split(' ')[0]}</span>
                       {i !== dailyClasses.length - 1 && (
@@ -280,7 +282,7 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings, use
                             gridRow: `${rowStart} / span ${rowSpan}`,
                             gridColumn: colIdx + 2,
                           }}
-                          onClick={() => setTimeout(() => onNavigate('course', { id: item.id }), 150)}
+                          onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
                           className={`${item.color} rounded-xl p-1.5 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between overflow-hidden`}
                         >
                           <div className="font-bold text-brand-black text-[10px] sm:text-[11px] leading-tight line-clamp-3 overflow-hidden text-ellipsis">
@@ -393,7 +395,7 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings, use
                       monthlySelectedClasses.map((cls) => (
                         <div
                           key={cls.id}
-                          onClick={() => setTimeout(() => onNavigate('course', { id: cls.id }), 150)}
+                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
                           className={`${cls.color} rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.15)]`}
                         >
                           <div className="bg-white/40 rounded-xl px-2.5 py-1.5 font-bold text-xs text-brand-black shrink-0 flex items-center gap-1">
@@ -424,7 +426,7 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings, use
       <SharedMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        onNavigate={onNavigate}
+        
         lang={lang}
         setLang={setLang}
         settings={settings}

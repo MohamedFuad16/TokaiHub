@@ -1,154 +1,55 @@
-import React, { useState } from 'react';
-import { Menu, Plus, Calendar as CalendarIcon, BookOpen, ChevronLeft } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, FileText, CheckCircle2, Clock } from 'lucide-react';
 import { ScreenProps } from '../App';
-import SharedMenu from './SharedMenu';
-import { motion } from 'motion/react';
 
-const t = {
-  en: {
-    assignments: "Assignments",
-    addAssignment: "Add Assignment",
-    title: "Title",
-    course: "Course",
-    dueDate: "Due Date",
-    description: "Description",
-    submit: "Add to Schedule",
-    placeholderTitle: "e.g., Lab Report 3",
-    placeholderDesc: "Add any notes or requirements...",
-    back: "Back"
-  },
-  jp: {
-    assignments: "課題",
-    addAssignment: "課題を追加",
-    title: "タイトル",
-    course: "授業",
-    dueDate: "期限",
-    description: "説明",
-    submit: "スケジュールに追加",
-    placeholderTitle: "例：ラボレポート 3",
-    placeholderDesc: "メモや要件を追加...",
-    back: "戻る"
-  }
-};
+const deadlines = [
+  { id: '1', title: { en: 'VR Project Draft', jp: 'VRプロジェクト草案' }, course: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' }, daysLeft: 2, color: 'bg-brand-yellow', status: 'pending' },
+  { id: '2', title: { en: 'Cloud Architecture Essay', jp: 'クラウドアーキテクチャレポート' }, course: { en: 'Cloud Computing', jp: 'クラウドコンピューティング' }, daysLeft: 5, color: 'bg-brand-pink', status: 'pending' },
+  { id: '3', title: { en: 'Mobile App Outline', jp: 'モバイルアプリの概要' }, course: { en: 'Mobile App Dev', jp: 'モバイルアプリケーション開発' }, daysLeft: 0, color: 'bg-brand-green', status: 'submitted' },
+];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
-};
-
-export default function TokaiAssignments({ onNavigate, goBack, lang, setLang, settings }: ScreenProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+export default function TokaiAssignments({ lang, settings }: ScreenProps) {
+  const navigate = useNavigate();
   const isDark = settings.isDarkMode;
-  const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
-  const inputBg = isDark ? 'bg-gray-700' : 'bg-white';
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
+  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-brand-black';
 
   return (
-    <div className="h-full relative flex flex-col">
-      {/* Header */}
-      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-3xl w-full mx-auto">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsMenuOpen(true)}
-            className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} lg:hidden`}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight">{t[lang].assignments}</h1>
-        </div>
-        <button 
-          onClick={() => setTimeout(goBack, 150)}
-          className="w-10 h-10 rounded-full bg-brand-yellow flex items-center justify-center hover:bg-yellow-400 transition-colors active:scale-95 lg:hidden"
-        >
-          <ChevronLeft className="w-5 h-5 text-brand-black" />
+    <div className={`h-full flex flex-col ${bgClass}`}>
+      <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 shrink-0 border-b border-gray-100 dark:border-gray-800">
+        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors`}>
+          <ChevronLeft className="w-5 h-5"/>
         </button>
+        <h1 className="text-2xl font-bold tracking-tight">{lang === 'en' ? 'Assignments' : '課題'}</h1>
       </header>
 
-      {/* Form Container */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 pt-2">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className={`${bgClass} rounded-[40px] p-4 sm:p-6 max-w-3xl w-full mx-auto`}>
-          <motion.div variants={itemVariants} className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-brand-black text-white rounded-full flex items-center justify-center">
-              <Plus className="w-6 h-6" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold leading-tight">{t[lang].addAssignment}</h2>
-          </motion.div>
-
-          <motion.form variants={itemVariants} className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0" onSubmit={(e) => { e.preventDefault(); onNavigate('schedule'); }}>
-            
-            {/* Title — spans full width on desktop */}
-            <div className="space-y-2 lg:col-span-2">
-              <label className="font-bold text-sm ml-2">{t[lang].title}</label>
-              <input 
-                type="text" 
-                required
-                placeholder={t[lang].placeholderTitle}
-                className={`w-full ${inputBg} rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all`}
-              />
-            </div>
-
-            {/* Course Selection */}
-            <div className="space-y-2">
-              <label className="font-bold text-sm ml-2">{t[lang].course}</label>
-              <div className="relative">
-                <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <select className={`w-full ${inputBg} rounded-2xl pl-12 pr-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all appearance-none`}>
-                  <option>CGとバーチャルリアリティ</option>
-                  <option>技術英語</option>
-                  <option>クラウドコンピューティング</option>
-                  <option>モバイルアプリケーション開発</option>
-                </select>
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        {deadlines.map(item => (
+          <div 
+            key={item.id} 
+            onClick={() => navigate(`/assignments/${item.id}`)}
+            className={`p-5 rounded-[24px] cursor-pointer hover:scale-[1.02] transition-transform ${item.status === 'submitted' ? (isDark ? 'bg-gray-800 opacity-60' : 'bg-gray-50 opacity-70') : item.color} text-brand-black`}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex gap-3 items-center">
+                <div className={`w-10 h-10 ${item.status === 'submitted' ? 'bg-green-500' : 'bg-white/40'} rounded-full flex items-center justify-center`}>
+                  {item.status === 'submitted' ? <CheckCircle2 className="w-5 h-5 text-white" /> : <FileText className="w-5 h-5" />}
+                </div>
+                <div>
+                  <div className={`text-xs font-bold ${item.status === 'submitted' ? 'text-gray-500' : 'opacity-80'}`}>{item.course[lang]}</div>
+                  <h3 className="font-bold text-lg leading-tight">{item.title[lang]}</h3>
+                </div>
               </div>
             </div>
-
-            {/* Due Date */}
-            <div className="space-y-2">
-              <label className="font-bold text-sm ml-2">{t[lang].dueDate}</label>
-              <div className="relative">
-                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input 
-                  type="date" 
-                  required
-                  className={`w-full ${inputBg} rounded-2xl pl-12 pr-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all`}
-                />
+            {item.status !== 'submitted' && (
+              <div className="flex items-center gap-2 mt-4 bg-white/30 self-start px-3 py-1.5 rounded-lg inline-flex">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-bold">{item.daysLeft} {lang === 'en' ? 'days left' : '日後'}</span>
               </div>
-            </div>
-
-            {/* Description — spans full width */}
-            <div className="space-y-2 lg:col-span-2">
-              <label className="font-bold text-sm ml-2">{t[lang].description}</label>
-              <textarea 
-                rows={4}
-                placeholder={t[lang].placeholderDesc}
-                className={`w-full ${inputBg} rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all resize-none`}
-              ></textarea>
-            </div>
-
-            {/* Submit Button — spans full width */}
-            <button 
-              type="submit"
-              className="w-full lg:col-span-2 bg-brand-black text-white rounded-full py-4 font-bold text-lg hover:bg-gray-800 transition-colors mt-4 lg:mt-0 shadow-xl"
-            >
-              {t[lang].submit}
-            </button>
-          </motion.form>
-        </motion.div>
+            )}
+          </div>
+        ))}
       </div>
-
-      <SharedMenu 
-        isOpen={isMenuOpen} 
-        onClose={() => setIsMenuOpen(false)} 
-        onNavigate={onNavigate} 
-        lang={lang} 
-        setLang={setLang} 
-        settings={settings}
-      />
     </div>
   );
 }
