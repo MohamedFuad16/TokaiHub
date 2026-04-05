@@ -189,8 +189,17 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 })}
               </motion.div>
 
-              <div className="space-y-0 relative">
-                {dailyClasses.length > 0 ? dailyClasses.map((item, i) => (
+              <div className="space-y-0 relative min-h-[300px]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={baseDate.toISOString()}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-0"
+                  >
+                    {dailyClasses.length > 0 && dailyClasses.map((item, i) => (
                   <motion.div variants={itemVariants} key={i} className="flex gap-4 group cursor-pointer" onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}>
                     <div className="flex flex-col items-center w-16 shrink-0">
                       <span className="text-white font-bold text-sm mt-4">{item.time.split(' ')[0]}</span>
@@ -206,8 +215,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       </div>
                     </div>
                   </motion.div>
-                )) : (
-                  <div className="text-center text-white/50 py-8">{t[lang].noClasses}</div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+                {dailyClasses.length === 0 && (
+                  <div className="text-center text-white/50 py-8 absolute inset-0 flex items-center justify-center">{t[lang].noClasses}</div>
                 )}
               </div>
             </>

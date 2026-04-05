@@ -490,15 +490,20 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                       className="space-y-4"
                     >
                       {calendarClasses.map(cls => (
-                        <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}>
-                           <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                        <motion.div 
+                          key={cls.id} 
+                          whileTap={{ scale: 0.96 }}
+                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.01] transition-all shadow-[0_8px_20px_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5`} 
+                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
+                        >
+                           <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
                              {cls.time.split(' ')[0]}
                            </div>
-                           <div>
-                             <div className="font-bold text-lg leading-tight">{cls.title[lang]}</div>
-                             <div className="text-sm font-medium opacity-80">{cls.location[lang]}</div>
+                           <div className="flex-1 min-w-0">
+                             <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
+                             <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
                            </div>
-                        </div>
+                        </motion.div>
                       ))}
                       {calendarClasses.length === 0 && (
                         <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>

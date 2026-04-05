@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, MapPin, GraduationCap, Star, Save } from 'lucide-react';
 import { Language, AppSettings, UserProfile, Screen } from '../App';
 import { allItems } from '../data';
@@ -20,6 +21,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
   const [cumulativeGpa, setCumulativeGpa] = useState(userProfile?.cumulativeGpa?.toString() ?? '');
   const [lastSemGpa, setLastSemGpa] = useState(userProfile?.lastSemGpa?.toString() ?? '');
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
 
   const isDark = settings.isDarkMode;
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
@@ -57,7 +59,10 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       lastSemGpa: parseFloat(lastSemGpa),
     });
     setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    setTimeout(() => {
+      setSaved(false);
+      navigate('/');
+    }, 1200);
   };
 
   const t = {
