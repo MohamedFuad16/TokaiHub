@@ -457,45 +457,48 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                    </div>
                    <div className="grid grid-cols-7 gap-2 text-center">
                      {Array.from({length: firstDayOfMonth}).map((_, i) => <div key={`empty-${i}`} />)}
-                     {Array.from({length: daysInMonth}).map((_, i) => {
-                       const dateNum = i + 1;
-                       const isSelected = selectedDate.getDate() === dateNum && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
-                       return (
-                         <button 
-                           key={i} 
-                           onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
-                           className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-bold text-sm transition-colors ${isSelected ? 'bg-brand-black text-white dark:bg-white dark:text-brand-black' : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-brand-black')}`}
-                         >
-                           {dateNum}
-                         </button>
-                       );
-                     })}
-                   </div>
-                </div>
+                      {Array.from({length: daysInMonth}).map((_, i) => {
+                        const dateNum = i + 1;
+                        const isSelected = selectedDate.getDate() === dateNum && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
+                        return (
+                          <button 
+                            key={i} 
+                            onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
+                            className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-bold text-sm transition-all active:scale-95 ${
+                              isSelected 
+                                ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-brand-black text-white shadow-lg shadow-black/20') 
+                                : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-brand-black')}`}
+                          >
+                            {dateNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                 </div>
 
-                {/* Classes for selected date */}
-                <h3 className="font-bold text-lg mb-4">
-                  {lang === 'en' 
-                    ? `Classes on ${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getDate()}` 
-                    : `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の授業`}
-                </h3>
-                <motion.div layout className="relative min-h-[200px]">
-                  <AnimatePresence mode="wait">
-                    <motion.div 
-                      key={selectedDate.toISOString()}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                      className="space-y-4"
-                    >
-                      {calendarClasses.map(cls => (
-                        <motion.div 
-                          key={cls.id} 
-                          whileTap={{ scale: 0.96 }}
-                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.01] transition-all shadow-[0_8px_20px_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5`} 
-                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                        >
+                 {/* Classes for selected date */}
+                 <h3 className="font-bold text-lg mb-4">
+                   {lang === 'en' 
+                     ? `Classes on ${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getDate()}` 
+                     : `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の授業`}
+                 </h3>
+                 <motion.div layout className="relative min-h-[200px]">
+                   <AnimatePresence mode="wait">
+                     <motion.div 
+                       key={selectedDate.toISOString()}
+                       initial={{ opacity: 0, y: 10 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       exit={{ opacity: 0, y: -10 }}
+                       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                       className="space-y-4"
+                     >
+                       {calendarClasses.map(cls => (
+                         <motion.div 
+                           key={cls.id} 
+                           whileTap={{ scale: 0.98 }}
+                           className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`} 
+                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
+                         >
                            <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
                              {cls.time.split(' ')[0]}
                            </div>
@@ -503,8 +506,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                              <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
                              <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
                            </div>
-                        </motion.div>
-                      ))}
+                         </motion.div>
+                       ))}
                       {calendarClasses.length === 0 && (
                         <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>
                       )}
