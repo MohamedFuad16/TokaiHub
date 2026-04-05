@@ -199,22 +199,23 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                     exit="hidden"
                     className="space-y-0"
                   >
-                    {dailyClasses.length > 0 && dailyClasses.map((item, i) => (
-                  <motion.div variants={itemVariants} key={i} className="flex gap-4 group cursor-pointer" onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}>
-                    <div className="flex flex-col items-center w-16 shrink-0">
-                      <span className="text-white font-bold text-sm mt-4">{item.time.split(' ')[0]}</span>
-                      {i !== dailyClasses.length - 1 && (
-                        <div className="w-0.5 h-full bg-white/20 my-2 rounded-full" />
-                      )}
-                    </div>
-                    <div className={`flex-1 ${item.color} rounded-3xl p-5 mb-4 group-hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.1)]`}>
-                      <h3 className="font-bold text-lg sm:text-xl text-brand-black leading-tight mb-2">{item.title[lang]}</h3>
-                      <div className="flex items-center gap-2 text-brand-black/80 font-medium text-sm">
-                        <MapPin className="w-4 h-4" />
-                        {item.location[lang]}
-                      </div>
-                    </div>
-                  </motion.div>
+                    {dailyClasses.length > 0 && dailyClasses.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        variants={itemVariants}
+                        onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
+                        className={`p-5 rounded-[32px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4`}
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/course/${item.id}`), 150)}
+                      >
+                        <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                          {item.time.split(' ')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-lg leading-tight truncate">{item.title[lang]}</div>
+                          <div className="text-sm font-medium opacity-80 truncate">{item.location[lang]}</div>
+                        </div>
+                      </motion.div>
                     ))}
                   </motion.div>
                 </AnimatePresence>
@@ -405,21 +406,21 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   >
                     {monthlySelectedClasses.length > 0 ? (
                       monthlySelectedClasses.map((cls) => (
-                        <div
+                        <motion.div
                           key={cls.id}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                          className={`${cls.color} rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.15)]`}
+                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
+                          tabIndex={0}
                         >
-                          <div className="bg-white/40 rounded-xl px-2.5 py-1.5 font-bold text-xs text-brand-black shrink-0 flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {cls.time.split(' ')[0]}
+                          <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                            {cls.time.split(' ')[0]}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-brand-black text-sm leading-tight truncate">{cls.title[lang]}</div>
-                            <div className="text-brand-black/70 text-xs mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> {cls.location[lang]}
-                            </div>
+                            <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
+                            <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
                           </div>
-                        </div>
+                        </motion.div>
                       ))
                     ) : (
                       <div className="text-white/40 text-sm font-medium text-center py-4">
