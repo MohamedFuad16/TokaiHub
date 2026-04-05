@@ -105,7 +105,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       {/* Header */}
       <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-3xl w-full mx-auto">
         <button
-          onClick={() => setTimeout(goBack, 150)}
+          onClick={() => navigate(-1)}
           className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors active:scale-95`}
         >
           <ChevronLeft className="w-5 h-5" />

@@ -193,10 +193,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={baseDate.toISOString()}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    exit="hidden"
                     className="space-y-0"
                   >
                     {dailyClasses.length > 0 && dailyClasses.map((item, i) => (

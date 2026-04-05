@@ -34,6 +34,7 @@ export interface UserProfile {
   selectedCourseIds: string[];
   cumulativeGpa: number;
   lastSemGpa: number;
+  isVerified?: boolean;
 }
 
 export interface ScreenProps {
@@ -64,6 +65,7 @@ const DEV_PROFILE: UserProfile = {
   selectedCourseIds: ['mon-1-2', 'tue-1', 'tue-2', 'tue-3', 'thu-1-2', 'thu-3-4', 'fri-1'],
   cumulativeGpa: 3.66,
   lastSemGpa: 3.73,
+  isVerified: true,
 };
 
 Amplify.configure({
@@ -212,6 +214,7 @@ export default function App() {
           selectedCourseIds: ['mon-1-2', 'tue-1', 'tue-3'],
           cumulativeGpa: 3.66,
           lastSemGpa: 3.73,
+          isVerified: true,
         });
         setIsAuthenticated(true);
       } catch (e) {

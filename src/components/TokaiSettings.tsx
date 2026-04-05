@@ -1,5 +1,4 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, BadgeCheck } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -16,6 +15,9 @@ const t = {
     devSkipAuthSub: "Bypass auth for testing",
     logout: "Log Out",
     account: "Account",
+    verified: "Verified",
+    notVerified: "Not Verified",
+    devVerify: "Toggle Verification Badge",
     editProfile: "Edit Profile",
     editProfileSub: "Credits, courses & GPA",
   },
@@ -30,6 +32,9 @@ const t = {
     devSkipAuthSub: "テスト用に認証をバイパス",
     logout: "ログアウト",
     account: "アカウント",
+    verified: "検証済み",
+    notVerified: "未検証",
+    devVerify: "検証バッジを切り替え",
     editProfile: "プロフィール編集",
     editProfileSub: "単位、授業 & GPA",
   }
@@ -65,7 +70,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
-export default function TokaiSettings({ lang, settings, setSettings, userProfile, onSignOut, onDevSkipChange }: SettingsProps) {
+export default function TokaiSettings({ lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange }: SettingsProps) {
   const navigate = useNavigate();
   const goBack = () => navigate(-1);
   const isDark = settings.isDarkMode;
@@ -110,7 +115,11 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
               </p>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg">GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}</div>
+              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg mb-1.5">GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}</div>
+              <div className={`flex items-center gap-1 justify-end px-2 py-1 rounded-lg text-[10px] font-bold ${userProfile?.isVerified ? 'bg-blue-500/10 text-blue-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                {userProfile?.isVerified && <BadgeCheck className="w-3 h-3" />}
+                {userProfile?.isVerified ? tx.verified : tx.notVerified}
+              </div>
             </div>
           </motion.div>
 
@@ -146,7 +155,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <div>
                     <div className="font-bold text-sm">{tx.notifications}</div>
-                    <div className="text-[10px] font-bold text-brand-pink uppercase tracking-wider">Coming Soon</div>
+                    <div className="text-[10px] font-bold text-brand-pink bg-brand-pink/20 px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider">Coming Soon</div>
                   </div>
                 </div>
                 <Toggle on={false} onToggle={() => {}} />
@@ -200,6 +209,20 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                 </div>
                 <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} />
+              </div>
+              
+              {/* Separate toggle for verification */}
+              <div
+                onClick={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })}
+                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <BadgeCheck className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="font-bold text-sm">{tx.devVerify}</div>
+                </div>
+                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} />
               </div>
             </div>
           </motion.div>
