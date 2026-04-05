@@ -162,8 +162,9 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: 'linear' }}
             className="absolute inset-0"
+            style={{ willChange: 'opacity, transform' }}
           >
-            <Routes location={location} key={location.pathname}>
+            <Routes location={location}>
                <Route path="/" element={<TokaiHome {...screenProps} />} />
                <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
                <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
