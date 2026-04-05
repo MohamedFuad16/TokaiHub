@@ -3,7 +3,7 @@ import { Amplify } from 'aws-amplify';
 import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
-import { HashRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
@@ -338,7 +338,7 @@ export default function App() {
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter basename="/TokaiHub/">
       <MainAppContent 
          screenProps={screenProps} 
          lang={lang} 
@@ -348,6 +348,6 @@ export default function App() {
          handleUpdateProfile={handleUpdateProfile}
          handleDevSkipChange={handleDevSkipChange}
       />
-    </HashRouter>
+    </BrowserRouter>
   );
 }
