@@ -347,9 +347,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       {/* Floating Schedule Bar — mobile only */}
       <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
         <motion.div 
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.5, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           onClick={() => setIsScheduleSheetOpen(true)}
           className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
         >
