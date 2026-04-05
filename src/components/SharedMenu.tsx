@@ -59,6 +59,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
               <div className="font-bold text-2xl leading-none">TOKAI<br/>HUB</div>
               <button 
                 onClick={onClose} 
+                aria-label="Close menu"
                 className={`p-2 rounded-full transition-colors ${hoverClass}`}
               >
                 <X className="w-6 h-6"/>
@@ -77,13 +78,15 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
               <div className="flex gap-2">
                 <button 
                   onClick={() => setLang('en')} 
+                  aria-label="Switch to English"
                   className={`flex-1 py-3 rounded-2xl font-bold transition-colors ${lang === 'en' ? btnActiveBgClass : btnBgClass}`}
                 >
                   English
                 </button>
                 <button 
                   onClick={() => setLang('jp')} 
-                  className={`flex-1 py-3 rounded-2xl font-bold transition-colors ${lang === 'jp' ? btnActiveBgClass : btnBgClass}`}
+                  aria-label="日本語に切り替え"
+                  className={`flex-1 py-3 rounded-2xl font-bold transition-all duration-200 ${lang === 'jp' ? btnActiveBgClass : btnBgClass}`}
                 >
                   日本語
                 </button>

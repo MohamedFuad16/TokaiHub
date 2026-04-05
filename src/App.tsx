@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Amplify } from 'aws-amplify';
 import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
 import { HashRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
-import TokaiHome from './components/TokaiHome';
-import TokaiCourse from './components/TokaiCourse';
-import TokaiSchedule from './components/TokaiSchedule';
-import TokaiSettings from './components/TokaiSettings';
-import TokaiAssignments from './components/TokaiAssignments';
-import TokaiAssignmentDetail from './components/TokaiAssignmentDetail';
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
-import TokaiEditProfile from './components/TokaiEditProfile';
+
+// Lazy load route components for performance
+const TokaiHome = React.lazy(() => import('./components/TokaiHome'));
+const TokaiCourse = React.lazy(() => import('./components/TokaiCourse'));
+const TokaiSchedule = React.lazy(() => import('./components/TokaiSchedule'));
+const TokaiSettings = React.lazy(() => import('./components/TokaiSettings'));
+const TokaiAssignments = React.lazy(() => import('./components/TokaiAssignments'));
+const TokaiAssignmentDetail = React.lazy(() => import('./components/TokaiAssignmentDetail'));
+const TokaiEditProfile = React.lazy(() => import('./components/TokaiEditProfile'));
 
 export type Screen = string; // Legacy fallback
 export type Language = 'en' | 'jp';
@@ -166,16 +168,18 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
             className="absolute inset-0"
             style={{ willChange: 'opacity, transform' }}
           >
-            <Routes location={location}>
-               <Route path="/" element={<TokaiHome {...screenProps} />} />
-               <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
-               <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
-               <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
-               <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
-               <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
-               <Route path="/editProfile" element={<TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} />} />
-               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<LoadingScreen lang={lang} isDark={isDark} />}>
+              <Routes location={location}>
+                 <Route path="/" element={<TokaiHome {...screenProps} />} />
+                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
+                 <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
+                 <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
+                 <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
+                 <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
+                 <Route path="/editProfile" element={<TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} />} />
+                 <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

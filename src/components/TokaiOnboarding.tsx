@@ -245,8 +245,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     setErrors({});
   };
 
-  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-sm ${
-    isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-gray-100 text-brand-black placeholder-gray-400'
+  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${
+    isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-white text-brand-black placeholder-gray-400 shadow-sm'
   }`;
 
   const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
@@ -279,7 +279,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
             setBackendError('');
             step === 0 ? onBack() : setStep(s => s - 1);
           }}
-          className={`flex items-center gap-2 text-sm font-bold mb-8 transition-opacity hover:opacity-70 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          aria-label="Go back to previous step"
+          className={`flex items-center gap-2 text-sm font-bold mb-8 transition-opacity hover:opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
         >
           <ChevronLeft className="w-4 h-4" /> {tx.back}
         </button>
@@ -325,7 +326,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
                     {tx.profileTitle}
                   </h2>
-                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.profileSub}</p>
+                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.profileSub}</p>
                 </div>
 
                 <div className={`${cardBg} rounded-[28px] p-5 space-y-4 shadow-sm`}>

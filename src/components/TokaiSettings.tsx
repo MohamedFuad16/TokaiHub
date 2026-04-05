@@ -54,10 +54,15 @@ interface SettingsProps extends ScreenProps {
   onDevSkipChange?: (val: boolean) => void;
 }
 
-function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+function Toggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void; ariaLabel: string }) {
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      role="switch"
+      aria-checked={on}
+      aria-label={ariaLabel}
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onToggle()}
       className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-brand-yellow' : 'bg-gray-300'}`}
     >
       <motion.div
@@ -78,7 +83,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
   const itemBg = isDark ? 'bg-gray-800' : 'bg-white';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-100';
   const hoverClass = isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50';
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-600';
 
   const tx = t[lang];
 
@@ -92,6 +97,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
         <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight">{tx.settings}</h1>
         <button
           onClick={() => setTimeout(goBack, 150)}
+          aria-label="Go back"
           className={`w-12 h-12 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} active:scale-95 lg:hidden`}
         >
           <ChevronLeft className="w-6 h-6" />
@@ -178,7 +184,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                     <div className="text-[10px] font-bold text-brand-pink bg-brand-pink/10 px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider">Coming Soon</div>
                   </div>
                 </div>
-                <Toggle on={false} onToggle={() => {}} />
+                <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} />
               </div>
 
               {/* Dark Mode — fixed: single handler, stopPropagation in Toggle */}
@@ -192,7 +198,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <span className="font-bold text-sm">{tx.darkMode}</span>
                 </div>
-                <Toggle on={settings.isDarkMode} onToggle={toggleDarkMode} />
+                <Toggle on={settings.isDarkMode} onToggle={toggleDarkMode} ariaLabel={tx.darkMode} />
               </div>
 
               {/* Privacy */}
@@ -206,7 +212,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <span className="font-bold text-sm">{tx.privacy}</span>
                 </div>
-                <Toggle on={settings.privacy} onToggle={togglePrivacy} />
+                <Toggle on={settings.privacy} onToggle={togglePrivacy} ariaLabel={tx.privacy} />
               </div>
             </div>
           </motion.div>
@@ -228,7 +234,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                     <div className={`text-xs font-medium ${textMuted}`}>{tx.devSkipAuthSub}</div>
                   </div>
                 </div>
-                <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} />
+                <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} ariaLabel={tx.devSkipAuth} />
               </div>
               
               {/* Separate toggle for verification */}
@@ -242,7 +248,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <div className="font-bold text-sm">{tx.devVerify}</div>
                 </div>
-                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} />
+                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} ariaLabel={tx.devVerify} />
               </div>
             </div>
           </motion.div>

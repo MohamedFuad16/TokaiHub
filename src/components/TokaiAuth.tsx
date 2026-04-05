@@ -203,7 +203,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
     }
   };
 
-  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-sm ${
+  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${
     isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-gray-100 text-brand-black placeholder-gray-400'
   }`;
 
@@ -220,6 +220,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
           <button
             key={l}
             onClick={() => setLang(l)}
+            aria-label={l === 'en' ? "Switch to English" : "日本語に切り替え"}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
               lang === l
                 ? (isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white')
@@ -248,7 +249,11 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         </div>
 
         {/* Mascot — directly stacked above the card */}
-        <div className="relative z-30 -mb-8 w-[160px] h-[160px] pointer-events-none self-center">
+        <div 
+          role="img" 
+          aria-label="Student mascot illustration"
+          className="relative z-30 -mb-8 w-[160px] h-[160px] pointer-events-none self-center"
+        >
           <div className="absolute inset-0">
             <motion.div
               animate={{ 

@@ -113,6 +113,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         </div>
         <button 
           onClick={() => setIsMenuOpen(true)}
+          aria-label="Open navigation menu"
           className={`w-12 h-12 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} lg:hidden`}
         >
           <Menu className="w-5 h-5" />
@@ -225,6 +226,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 <div 
                   key={item.id}
                   onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View details for ${item.title[lang]} by ${item.teacher[lang]}. Time: ${item.time}. Location: ${item.location[lang]}.`}
+                  onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                   className="w-[280px] lg:w-full h-[320px] shrink-0 lg:shrink snap-center bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
                 >
                   {/* Screen Layer (Top ~60%) */}
@@ -436,7 +441,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-2xl font-bold">{lang === 'en' ? 'Calendar' : 'カレンダー'}</h2>
-                <button onClick={() => setIsCalendarSheetOpen(false)} className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                <button 
+                  onClick={() => setIsCalendarSheetOpen(false)} 
+                  aria-label="Close calendar"
+                  className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center transition-transform active:scale-95`}
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -444,13 +453,25 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 {/* Calendar UI */}
                 <div className="mb-6">
                    <div className="flex justify-between items-center mb-4">
-                     <button onClick={handlePrevMonth} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"><ChevronLeft className="w-5 h-5"/></button>
-                     <div className="font-bold text-lg">
+                     <button 
+                       onClick={handlePrevMonth} 
+                       aria-label="Previous month"
+                       className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
+                     >
+                       <ChevronLeft className="w-5 h-5"/>
+                     </button>
+                     <div className="font-bold text-lg" aria-live="polite">
                        {lang === 'en' 
                          ? currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' }) 
                          : `${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}
                      </div>
-                     <button onClick={handleNextMonth} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"><ChevronRight className="w-5 h-5"/></button>
+                     <button 
+                       onClick={handleNextMonth} 
+                       aria-label="Next month"
+                       className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
+                     >
+                       <ChevronRight className="w-5 h-5"/>
+                     </button>
                    </div>
                    <div className="grid grid-cols-7 gap-2 text-center mb-2">
                      {['S','M','T','W','T','F','S'].map((d, i) => <div key={i} className={`text-xs font-bold ${textMuted}`}>{d}</div>)}
@@ -464,6 +485,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                           <button 
                             key={i} 
                             onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
+                            aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
+                            aria-pressed={isSelected}
                             className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-bold text-sm transition-all active:scale-95 ${
                               isSelected 
                                 ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-brand-black text-white shadow-lg shadow-black/20') 

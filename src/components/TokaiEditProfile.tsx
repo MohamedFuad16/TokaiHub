@@ -24,7 +24,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
   const navigate = useNavigate();
 
   const isDark = settings.isDarkMode;
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-600';
 
   const selectedCredits = useMemo(() =>
     selectedCourseIds.reduce((acc, id) => {
@@ -95,9 +95,9 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
   };
   const tx = t[lang];
 
-  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-sm ${
-    isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-gray-100 text-brand-black placeholder-gray-400'
-  }`;
+  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${
+    isDark ? 'bg-gray-800 text-white placeholder-gray-600 border-gray-700' : 'bg-gray-100 text-brand-black placeholder-gray-400'
+  } ${isDark ? 'border' : ''}`;
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
 
   return (
@@ -106,6 +106,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-3xl w-full mx-auto">
         <button
           onClick={() => navigate(-1)}
+          aria-label="Go back to settings"
           className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors active:scale-95`}
         >
           <ChevronLeft className="w-5 h-5" />
@@ -117,12 +118,12 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
         <div className="space-y-6 max-w-3xl w-full mx-auto pb-32">
 
           {/* ── GPA SECTION ── */}
-          <div className="space-y-3">
-            <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{tx.gpa}</h3>
+          <section className="space-y-3">
+            <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.gpa}</h3>
             <div className={`${cardBg} rounded-[28px] p-5 space-y-4 shadow-sm ${isDark ? 'border border-gray-700' : ''}`}>
               {/* Cumulative GPA */}
               <div className="space-y-2">
-                <label className={`text-xs font-bold ml-1 ${textMuted}`}>{tx.cumGpa}</label>
+                <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.cumGpa}</label>
                 <div className="relative">
                   <GraduationCap className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
                   <input
@@ -164,11 +165,11 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
           {/* ── COURSES SECTION ── */}
-          <div className="space-y-3">
-            <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{tx.courses}</h3>
+          <section className="space-y-3">
+            <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.courses}</h3>
 
             {/* Credits bar */}
             <div className={`${cardBg} rounded-2xl p-4 flex items-center justify-between shadow-sm ${isDark ? 'border border-gray-700' : ''}`}>
@@ -209,6 +210,8 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
                     type="button"
                     onClick={() => toggleCourse(course.id)}
                     disabled={wouldExceed}
+                    aria-label={`Select course: ${course.title[lang]} by ${course.teacher[lang]}. ${course.credits} credits.`}
+                    aria-pressed={isSelected}
                     className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${
                       isSelected
                         ? `border-brand-black ${course.color} shadow-md`
@@ -247,7 +250,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
                 );
               })}
             </div>
-          </div>
+          </section>
 
         </div>
       </div>
