@@ -338,7 +338,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter basename="/TokaiHub/">
+    <BrowserRouter>
       <MainAppContent 
          screenProps={screenProps} 
          lang={lang} 
