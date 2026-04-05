@@ -203,6 +203,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       <motion.div
                         key={item.id}
                         variants={itemVariants}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
                         className={`p-5 rounded-[32px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4`}
                         tabIndex={0}
