@@ -20,11 +20,20 @@ interface AuthProps {
    ═══════════════════════════════════════════════════════════════ */
 function AppMascot({ covering }: { covering: boolean }) {
   return (
-    <img 
-      src={covering ? mascotCover : mascotIdle} 
-      alt="Tokai Mascot" 
-      className="w-full h-full object-contain filter drop-shadow-md" 
-    />
+    <div className="relative w-full h-full filter drop-shadow-lg drop-shadow-yellow-500">
+      <AnimatePresence>
+        <motion.img 
+          key={covering ? 'cover' : 'idle'}
+          src={covering ? mascotCover : mascotIdle} 
+          alt="Tokai Mascot" 
+          initial={{ opacity: 0, filter: 'blur(2px)' }}
+          animate={{ opacity: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, filter: 'blur(2px)', position: 'absolute' }}
+          transition={{ duration: 0.25 }}
+          className="absolute inset-0 w-full h-full object-contain" 
+        />
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -239,13 +248,15 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         </div>
 
         {/* Mascot — directly stacked above the card */}
-        <div className="relative z-30 -mb-6 w-[150px] h-[150px] pointer-events-none self-center">
+        <div className="relative z-30 -mb-8 w-[160px] h-[160px] pointer-events-none self-center">
           <div className="absolute inset-0">
             <motion.div
-              animate={{ y: isPasswordFocused ? 10 : [0, -4, 0] }}
+              animate={{ 
+                y: isPasswordFocused ? 12 : [0, -6, 0]
+              }}
               transition={isPasswordFocused
-                ? { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
-                : { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+                ? { duration: 0.3, ease: 'easeInOut' }
+                : { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }
               }
               className="w-full h-full"
             >
