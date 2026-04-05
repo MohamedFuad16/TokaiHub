@@ -107,7 +107,20 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
               {userProfile?.name?.charAt(0) ?? 'T'}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-lg truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-lg truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
+                {userProfile?.isVerified && (
+                  <motion.div
+                    animate={{ 
+                      boxShadow: ["0 0 0px rgba(59, 130, 246, 0)", "0 0 10px rgba(59, 130, 246, 0.4)", "0 0 0px rgba(59, 130, 246, 0)"]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="bg-blue-500 rounded-full p-0.5 flex items-center justify-center shrink-0"
+                  >
+                    <BadgeCheck className="w-4 h-4 text-white" />
+                  </motion.div>
+                )}
+              </div>
               <p className={`text-sm font-medium ${textMuted}`}>{userProfile?.studentId ?? '—'}</p>
               <p className={`text-xs font-medium mt-0.5 capitalize ${textMuted}`}>
                 {userProfile?.campus === 'shinagawa' ? (lang === 'en' ? 'Shinagawa Campus' : '品川キャンパス') :
@@ -115,11 +128,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
               </p>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg mb-1.5">GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}</div>
-              <div className={`flex items-center gap-1 justify-end px-2 py-1 rounded-lg text-[10px] font-bold ${userProfile?.isVerified ? 'bg-blue-500/10 text-blue-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                {userProfile?.isVerified && <BadgeCheck className="w-3 h-3" />}
-                {userProfile?.isVerified ? tx.verified : tx.notVerified}
-              </div>
+              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg">GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}</div>
             </div>
           </motion.div>
 
@@ -148,17 +157,25 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
 
             <div className={`${itemBg} border ${borderClass} rounded-3xl p-2 shadow-sm`}>
               {/* Notifications (disabled) */}
-              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl opacity-50 cursor-not-allowed">
+              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl relative overflow-hidden group">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-brand-pink rounded-full flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-brand-black" />
+                  <div className="w-10 h-10 bg-brand-pink/20 rounded-full flex items-center justify-center shrink-0">
+                    <Bell className="w-5 h-5 text-brand-pink/50" />
                   </div>
                   <div>
-                    <div className="font-bold text-sm">{tx.notifications}</div>
-                    <div className="text-[10px] font-bold text-brand-pink bg-brand-pink/20 px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider">Coming Soon</div>
+                    <div className={`font-bold text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{tx.notifications}</div>
+                    <div className="text-[10px] font-black text-brand-pink bg-brand-pink shadow-[0_0_12px_rgba(255,107,157,0.5)] px-2.5 py-1 rounded-full inline-block mt-0.5 uppercase tracking-[0.1em] border border-white/20">
+                      Coming Soon
+                    </div>
                   </div>
                 </div>
                 <Toggle on={false} onToggle={() => {}} />
+                {/* Visual overlay for the 'disabled' row but NOT the badge */}
+                <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 pointer-events-none z-[1]" />
+                {/* Lift the badge above the overlay */}
+                <div className="absolute left-[70px] top-[42px] z-[2]">
+                   {/* This matches the layout but ensures the badge is sharp */}
+                </div>
               </div>
 
               {/* Dark Mode — fixed: single handler, stopPropagation in Toggle */}
