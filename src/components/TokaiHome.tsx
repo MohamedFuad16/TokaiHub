@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Menu, BookOpen, ArrowRight, Calendar, Users, Clock, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import SharedMenu from './SharedMenu';
@@ -87,9 +87,12 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
-  const filteredItems = activeCategory === 'All'
+  const filteredItems = useMemo(() => activeCategory === 'All'
     ? allItems
-    : allItems.filter(item => item.type === activeCategory);
+    : allItems.filter(item => item.type === activeCategory), [activeCategory]);
+
+  const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds), [selectedCourseIds]);
+  const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds), [selectedDate, selectedCourseIds]);
 
   const isDark = settings.isDarkMode;
   const cardBg = isDark ? 'bg-gray-800' : 'bg-brand-gray';
@@ -116,7 +119,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-32 lg:pb-12">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-48 lg:pb-32">
           
           {/* Title */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-2">
@@ -350,7 +353,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
         >
           <div className="flex items-center gap-4 pl-2">
             <div className="w-12 h-12 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-lg text-brand-black">
-              {getClassesForDate(new Date()).length}
+              {todayClasses.length}
             </div>
             <div className="text-white">
               <div className="font-bold text-lg leading-tight">{t[lang].schedule}</div>
@@ -391,7 +394,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-8">
-                {getClassesForDate(new Date()).map(cls => (
+                {todayClasses.map(cls => (
                   <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => onNavigate('course'), 150)}>
                      <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                        {cls.time.split(' ')[0]}
@@ -402,7 +405,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                      </div>
                   </div>
                 ))}
-                {getClassesForDate(new Date()).length === 0 && (
+                {todayClasses.length === 0 && (
                   <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>
                 )}
               </div>
@@ -484,7 +487,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                       className="space-y-4"
                     >
-                      {getClassesForDate(selectedDate).map(cls => (
+                      {calendarClasses.map(cls => (
                         <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => onNavigate('course', { id: cls.id }), 150)}>
                            <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
                              {cls.time.split(' ')[0]}
@@ -495,7 +498,7 @@ export default function TokaiHome({ onNavigate, lang, setLang, settings, userPro
                            </div>
                         </div>
                       ))}
-                      {getClassesForDate(selectedDate).length === 0 && (
+                      {calendarClasses.length === 0 && (
                         <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>
                       )}
                     </motion.div>

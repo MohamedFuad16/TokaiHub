@@ -51,7 +51,9 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiSchedule({ onNavigate, lang, setLang, settings }: ScreenProps) {
+export default function TokaiSchedule({ onNavigate, lang, setLang, settings, userProfile }: ScreenProps) {
+  const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
@@ -91,13 +93,13 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings }: S
     return dates;
   }, [baseDate]);
 
-  const dailyClasses = useMemo(() => getClassesForDate(baseDate), [baseDate]);
+  const dailyClasses = useMemo(() => getClassesForDate(baseDate, selectedCourseIds), [baseDate, selectedCourseIds]);
 
   // Weekly timetable: build a Map<dayOfWeek, Map<period, item>>
   const weeklyTimetable = useMemo(() => {
     // map: dayOfWeek -> period -> item
     const map = new Map<number, Map<number, typeof allItems[0]>>();
-    allItems.filter(i => i.type === 'Classes').forEach(item => {
+    allItems.filter(i => i.type === 'Classes' && selectedCourseIds.includes(i.id)).forEach(item => {
       if (!map.has(item.dayOfWeek)) map.set(item.dayOfWeek, new Map());
       // For classes spanning multiple periods, register each period separately
       (item.periods || [1]).forEach(p => {
@@ -105,7 +107,7 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings }: S
       });
     });
     return map;
-  }, []);
+  }, [selectedCourseIds]);
 
   const shortDaysOfWeekEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const shortDaysOfWeekJp = ['日', '月', '火', '水', '木', '金', '土'];
@@ -113,8 +115,8 @@ export default function TokaiSchedule({ onNavigate, lang, setLang, settings }: S
   // Selected day classes for monthly view
   const monthlySelectedClasses = useMemo(() => {
     if (!monthlySelected) return [];
-    return getClassesForDate(monthlySelected);
-  }, [monthlySelected]);
+    return getClassesForDate(monthlySelected, selectedCourseIds);
+  }, [monthlySelected, selectedCourseIds]);
 
   // Actual selected date (highlighted in calendar)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date(2026, 3, 8));

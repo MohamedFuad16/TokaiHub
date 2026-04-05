@@ -66,7 +66,10 @@ export default function SharedMenu({ isOpen, onClose, onNavigate, lang, setLang,
             <nav className="flex flex-col gap-6 text-xl font-bold">
               <button onClick={() => { onClose(); setTimeout(() => onNavigate('home'), 150); }} className={`text-left py-2 border-b ${borderClass} hover:text-brand-yellow transition-colors`}>{t[lang].home}</button>
               <button onClick={() => { onClose(); setTimeout(() => onNavigate('schedule'), 150); }} className={`text-left py-2 border-b ${borderClass} hover:text-brand-yellow transition-colors`}>{t[lang].schedule}</button>
-              <button onClick={() => { onClose(); setTimeout(() => onNavigate('assignments'), 150); }} className={`text-left py-2 border-b ${borderClass} hover:text-brand-yellow transition-colors`}>{t[lang].assignments}</button>
+              <button className={`text-left py-2 border-b ${borderClass} text-gray-400 cursor-not-allowed flex items-center justify-between`}>
+                <span>{t[lang].assignments}</span>
+                <span className="text-[10px] bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded-md text-gray-500 uppercase tracking-wider">Soon</span>
+              </button>
               <button onClick={() => { onClose(); setTimeout(() => onNavigate('settings'), 150); }} className={`text-left py-2 border-b ${borderClass} hover:text-brand-yellow transition-colors`}>{t[lang].settings}</button>
             </nav>
 
