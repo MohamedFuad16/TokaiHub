@@ -133,15 +133,14 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${
-                  isActive
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${isActive
                     ? isDark
                       ? 'bg-brand-yellow text-brand-black shadow-lg shadow-yellow-500/20'
                       : 'bg-brand-black text-white shadow-lg shadow-black/20'
                     : isDark
                       ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
                       : 'text-gray-500 hover:bg-gray-100 hover:text-brand-black'
-                }`}
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 {lang === 'en' ? item.labelEn : item.labelJp}
@@ -158,11 +157,10 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <button
                   key={l}
                   onClick={() => setLang(l)}
-                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${
-                    lang === l
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${lang === l
                       ? isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'
                       : isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   {l.toUpperCase()}
                 </button>
@@ -189,14 +187,14 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
           >
             <Suspense fallback={<div className="h-full w-full" />}>
               <Routes location={location}>
-                 <Route path="/" element={<TokaiHome {...screenProps} />} />
-                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
-                 <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
-                 <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
-                 <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
-                 <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
-                 <Route path="/editProfile" element={<TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} />} />
-                 <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="/" element={<TokaiHome {...screenProps} />} />
+                <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
+                <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
+                <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
+                <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
+                <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
+                <Route path="/editProfile" element={<TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </motion.div>
@@ -255,31 +253,41 @@ export default function App() {
     }
   }, [settings.devSkipAuth]);
 
-  const handleSignIn = (email: string) => {
+  const handleSignIn = async (email: string, password: string) => {
     setIsLoading(true);
-    preloadRoutes();
-    setTimeout(() => {
-      setUserProfile({ ...DEV_PROFILE, email });
-      setIsAuthenticated(true);
-      setIsLoading(false);
-    }, 3500);
-  };
 
-  const handleOnboardingComplete = (profile: UserProfile) => {
-    setIsLoading(true);
-    preloadRoutes();
-    setTimeout(() => {
-      setUserProfile(profile);
+    try {
+      await signIn({ username: email, password });
+
+      const user = await getCurrentUser();
+      const attrs = await fetchUserAttributes();
+
+      setUserProfile({
+        name: attrs.name || 'Student',
+        email: attrs.email || user.username,
+        studentId: attrs['custom:studentId'] as string,
+        campus: 'shinagawa',
+        selectedCourseIds: [],
+        cumulativeGpa: 0,
+        lastSemGpa: 0,
+        isVerified: true,
+      });
+
       setIsAuthenticated(true);
-      setIsLoading(false);
-    }, 3500);
+      preloadRoutes();
+
+    } catch (err) {
+      console.error(err);
+    }
+
+    setIsLoading(false);
   };
 
   const handleSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
-       console.error('Error signing out:', error);
+      console.error('Error signing out:', error);
     }
     // Reset URL to root so next login lands on home
     window.history.replaceState(null, '', '/');
@@ -364,14 +372,14 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <MainAppContent 
-         screenProps={screenProps} 
-         lang={lang} 
-         userProfile={userProfile} 
-         isDark={isDark} 
-         setLang={setLang}
-         handleUpdateProfile={handleUpdateProfile}
-         handleDevSkipChange={handleDevSkipChange}
+      <MainAppContent
+        screenProps={screenProps}
+        lang={lang}
+        userProfile={userProfile}
+        isDark={isDark}
+        setLang={setLang}
+        handleUpdateProfile={handleUpdateProfile}
+        handleDevSkipChange={handleDevSkipChange}
       />
     </BrowserRouter>
   );
