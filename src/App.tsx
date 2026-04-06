@@ -232,7 +232,7 @@ export default function App() {
         setUserProfile({
           name: attrs.name || 'Student',
           email: attrs.email || user.username,
-          studentId: '4CJE1108',
+          studentId: (attrs['custom:studentId'] as string) || '4CJE1108',
           campus: 'shinagawa',
           selectedCourseIds: ['mon-1-2', 'tue-1', 'tue-3'],
           cumulativeGpa: 3.66,

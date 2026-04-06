@@ -197,6 +197,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
             userAttributes: {
               email: email.trim(),
               name: name.trim(),
+              'custom:studentId': studentId.toUpperCase(),
             }
           }
         });
