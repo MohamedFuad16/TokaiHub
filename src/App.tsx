@@ -8,14 +8,33 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
 
-// Lazy load route components for performance
-const TokaiHome = React.lazy(() => import('./components/TokaiHome'));
-const TokaiCourse = React.lazy(() => import('./components/TokaiCourse'));
-const TokaiSchedule = React.lazy(() => import('./components/TokaiSchedule'));
-const TokaiSettings = React.lazy(() => import('./components/TokaiSettings'));
-const TokaiAssignments = React.lazy(() => import('./components/TokaiAssignments'));
-const TokaiAssignmentDetail = React.lazy(() => import('./components/TokaiAssignmentDetail'));
-const TokaiEditProfile = React.lazy(() => import('./components/TokaiEditProfile'));
+// Lazy load route components — imports cached after first load
+const lazyHome = () => import('./components/TokaiHome');
+const lazyCourse = () => import('./components/TokaiCourse');
+const lazySchedule = () => import('./components/TokaiSchedule');
+const lazySettings = () => import('./components/TokaiSettings');
+const lazyAssignments = () => import('./components/TokaiAssignments');
+const lazyAssignmentDetail = () => import('./components/TokaiAssignmentDetail');
+const lazyEditProfile = () => import('./components/TokaiEditProfile');
+
+const TokaiHome = React.lazy(lazyHome);
+const TokaiCourse = React.lazy(lazyCourse);
+const TokaiSchedule = React.lazy(lazySchedule);
+const TokaiSettings = React.lazy(lazySettings);
+const TokaiAssignments = React.lazy(lazyAssignments);
+const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
+const TokaiEditProfile = React.lazy(lazyEditProfile);
+
+// Preload all route components after initial paint
+function preloadRoutes() {
+  lazyHome();
+  lazyCourse();
+  lazySchedule();
+  lazySettings();
+  lazyAssignments();
+  lazyAssignmentDetail();
+  lazyEditProfile();
+}
 
 export type Screen = string; // Legacy fallback
 export type Language = 'en' | 'jp';
@@ -161,14 +180,14 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, scale: 0.98, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -10 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0"
-            style={{ willChange: 'opacity, transform' }}
+            style={{ willChange: 'opacity' }}
           >
-            <Suspense fallback={<LoadingScreen lang={lang} isDark={isDark} />}>
+            <Suspense fallback={<div className="h-full w-full" />}>
               <Routes location={location}>
                  <Route path="/" element={<TokaiHome {...screenProps} />} />
                  <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
@@ -221,6 +240,7 @@ export default function App() {
           isVerified: true,
         });
         setIsAuthenticated(true);
+        preloadRoutes();
       } catch (e) {
         setIsAuthenticated(false);
       } finally {
@@ -230,12 +250,14 @@ export default function App() {
     if (!settings.devSkipAuth) {
       checkAuthStatus();
     } else {
+      preloadRoutes();
       setIsLoading(false);
     }
   }, [settings.devSkipAuth]);
 
   const handleSignIn = (id: string) => {
     setIsLoading(true);
+    preloadRoutes();
     setTimeout(() => {
       setUserProfile({ ...DEV_PROFILE, studentId: id });
       setIsAuthenticated(true);
@@ -245,6 +267,7 @@ export default function App() {
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setIsLoading(true);
+    preloadRoutes();
     setTimeout(() => {
       setUserProfile(profile);
       setIsAuthenticated(true);

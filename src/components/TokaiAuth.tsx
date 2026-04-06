@@ -70,26 +70,22 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 0, scale: 1.02 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}
+      style={{ willChange: 'opacity, transform' }}
     >
       <motion.div
-        initial={{ scale: 0.7, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col items-center"
       >
         {/* Mascot in loading screen */}
         <div className="w-40 h-40 mb-2 mt-4 relative">
-          <motion.div
-             animate={{ y: [0, -8, 0] }}
-             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-             className="w-full h-full"
-          >
-             <img src={mascotLoading} alt="Loading Mascot" className="w-full h-full object-contain drop-shadow-xl" />
-          </motion.div>
+          <img src={mascotLoading} alt="Loading Mascot" className="w-full h-full object-contain drop-shadow-xl" />
         </div>
         <h1 className={`text-2xl font-bold tracking-tight mb-2 ${isDark ? 'text-white' : 'text-brand-black'}`}>
           TOKAI HUB
@@ -100,17 +96,17 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
         <motion.div
           className="w-8 h-8 rounded-full border-[3px] border-brand-yellow border-t-transparent"
           animate={{ rotate: 360 }}
-          transition={{ duration: 1.0, repeat: Infinity, ease: 'linear' }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
         />
       </div>
 
       <AnimatePresence mode="wait">
         <motion.p
           key={quoteIdx}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className={`text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
         >
           {quotes[quoteIdx]}
@@ -248,33 +244,30 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
           </h1>
         </div>
 
-        {/* Mascot — directly stacked above the card */}
-        <div 
-          role="img" 
-          aria-label="Student mascot illustration"
-          className="relative z-30 -mb-8 w-[160px] h-[160px] pointer-events-none self-center"
-        >
-          <div className="absolute inset-0">
+        {/* Card with mascot layered on top */}
+        <div className="relative w-full">
+          {/* Mascot — overlapping the card top */}
+          <div
+            role="img"
+            aria-label="Student mascot illustration"
+            className="absolute -top-20 left-1/2 -translate-x-1/2 z-30 w-[130px] h-[130px] pointer-events-none"
+          >
             <motion.div
-              animate={{ 
-                y: isPasswordFocused ? 12 : [0, -6, 0]
+              animate={{
+                y: isPasswordFocused ? 8 : 0
               }}
-              transition={isPasswordFocused
-                ? { duration: 0.3, ease: 'easeInOut' }
-                : { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }
-              }
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full h-full"
             >
               <AppMascot covering={isPasswordFocused} />
             </motion.div>
           </div>
-        </div>
 
-        {/* Card */}
-        <div
-          ref={cardRef}
-          className={`w-full rounded-[32px] p-6 shadow-xl relative z-20 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
-        >
+          {/* Card */}
+          <div
+            ref={cardRef}
+            className={`w-full rounded-[32px] p-6 pt-16 shadow-xl relative z-20 mt-14 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
+          >
           <h2 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-brand-black'}`}>
             {tx.welcome}
           </h2>
@@ -346,6 +339,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
               <ArrowRight className="w-4 h-4" />
             </motion.button>
           </form>
+        </div>
         </div>
 
         {/* Sign up link */}

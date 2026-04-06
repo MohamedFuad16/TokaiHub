@@ -44,12 +44,12 @@ const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } }
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
 };
 
 export default function TokaiSchedule({ lang, setLang, settings, userProfile }: ScreenProps) {

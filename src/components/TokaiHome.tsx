@@ -52,12 +52,12 @@ const deadlines = [
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }
 };
 
 export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
@@ -351,10 +351,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
 
       {/* Floating Schedule Bar — mobile only */}
       <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
-        <motion.div 
+        <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.6, ease: "linear" }}
+          transition={{ delay: 0.3, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           onClick={() => setIsScheduleSheetOpen(true)}
           className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
         >
@@ -402,15 +402,20 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-8">
                 {todayClasses.map(cls => (
-                  <div key={cls.id} className={`p-4 rounded-3xl ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`} onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}>
-                     <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                  <motion.div
+                    key={cls.id}
+                    whileTap={{ scale: 0.98 }}
+                    className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
+                    onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
+                  >
+                     <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
                        {cls.time.split(' ')[0]}
                      </div>
-                     <div>
-                       <div className="font-bold text-lg leading-tight">{cls.title[lang]}</div>
-                       <div className="text-sm font-medium opacity-80">{cls.location[lang]}</div>
+                     <div className="flex-1 min-w-0">
+                       <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
+                       <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
                      </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {todayClasses.length === 0 && (
                   <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>

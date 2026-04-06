@@ -42,12 +42,12 @@ const t = {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
 };
 
 interface SettingsProps extends ScreenProps {
@@ -115,22 +115,14 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <h2 className="font-bold text-lg truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence>
                   {userProfile?.isVerified && (
                     <motion.div
                       key="verified-badge"
-                      initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
-                      animate={{ 
-                        opacity: 1, 
-                        scale: 1, 
-                        rotate: 0,
-                        boxShadow: ["0 0 0px rgba(59, 130, 246, 0)", "0 0 10px rgba(59, 130, 246, 0.4)", "0 0 0px rgba(59, 130, 246, 0)"]
-                      }}
-                      exit={{ opacity: 0, scale: 0.5, rotate: 45 }}
-                      transition={{ 
-                        boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                        layout: { duration: 0.3 }
-                      }}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                       className="bg-blue-500 rounded-full p-0.5 flex items-center justify-center shrink-0"
                     >
                       <BadgeCheck className="w-3.5 h-3.5 text-white" />

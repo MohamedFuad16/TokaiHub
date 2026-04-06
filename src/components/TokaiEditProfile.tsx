@@ -256,7 +256,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       </div>
 
       {/* Floating Save Button */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none">
         <div className="max-w-3xl mx-auto pointer-events-auto">
           <motion.button
             onClick={handleSave}
