@@ -255,11 +255,11 @@ export default function App() {
     }
   }, [settings.devSkipAuth]);
 
-  const handleSignIn = (id: string) => {
+  const handleSignIn = (email: string) => {
     setIsLoading(true);
     preloadRoutes();
     setTimeout(() => {
-      setUserProfile({ ...DEV_PROFILE, studentId: id });
+      setUserProfile({ ...DEV_PROFILE, email });
       setIsAuthenticated(true);
       setIsLoading(false);
     }, 3500);
