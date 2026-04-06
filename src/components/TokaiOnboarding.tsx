@@ -153,7 +153,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       // Email validation
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRe.test(email)) e.email = tx.errEmail;
-      
+
       // Password validation (min 8 chars, 1 uppercase, 1 number, 1 special char)
       const pwRe = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()[\]{},.<>/?_=+\-|;:'"`~]).{8,}$/;
       if (!pwRe.test(password)) e.password = tx.errPassword;
@@ -182,8 +182,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     setErrors({});
     setBackendError('');
 
-    if (step < 2) { 
-      setStep(s => s + 1); 
+    if (step < 2) {
+      setStep(s => s + 1);
     }
     else if (step === 2) {
       setIsSubmitting(true);
@@ -215,9 +215,12 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           username: studentId.toUpperCase(),
           confirmationCode: otpCode.trim()
         });
-        
+
         // Log them in immediately to fetch tokens. Email is an alias, so we can sign in with it.
-        await signIn({ username: email.trim(), password });
+        await signIn({
+          username: studentId.toUpperCase(),
+          password
+        });
 
         onComplete({
           name: name.trim(),
@@ -246,27 +249,24 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     setErrors({});
   };
 
-  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${
-    isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-white text-brand-black placeholder-gray-400 shadow-sm'
-  }`;
+  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-white text-brand-black placeholder-gray-400 shadow-sm'
+    }`;
 
   const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
 
   return (
-    <div className={`h-full w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-y-auto relative ${
-      isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
-    }`}>
+    <div className={`h-full w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-y-auto relative ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
+      }`}>
       {/* Language toggle — top right */}
       <div className="absolute top-6 right-6 flex gap-1.5 z-10">
         {(['en', 'jp'] as Language[]).map((l) => (
           <button
             key={l}
             onClick={() => setLang(l)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-              lang === l
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${lang === l
                 ? (isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white')
                 : (isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white/70 text-gray-500 hover:bg-white shadow-sm')
-            }`}
+              }`}
           >
             {l.toUpperCase()}
           </button>
@@ -291,18 +291,16 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           {tx.stepLabels.map((label, i) => (
             i < 3 && (<React.Fragment key={i}>
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  i < step || step === 3
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${i < step || step === 3
                     ? 'bg-brand-black text-white'
                     : i === step
                       ? `${STEP_COLORS[i]} text-brand-black shadow-lg`
                       : (isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400')
-                }`}>
+                  }`}>
                   {i < step || step === 3 ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                <span className={`text-xs font-bold hidden md:block ${
-                  i === step || step === 3 ? (isDark ? 'text-white' : 'text-brand-black') : (isDark ? 'text-gray-600' : 'text-gray-400')
-                }`}>
+                <span className={`text-xs font-bold hidden md:block ${i === step || step === 3 ? (isDark ? 'text-white' : 'text-brand-black') : (isDark ? 'text-gray-600' : 'text-gray-400')
+                  }`}>
                   {label}
                 </span>
               </div>
@@ -335,7 +333,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className="space-y-1.5">
                     <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.nameLbl}</label>
                     <input type="text" placeholder={tx.namePh} value={name}
-                      onChange={e => { setName(e.target.value); setErrors(p => ({...p, name: ''})); }}
+                      onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: '' })); }}
                       className={inputCls} />
                     {errors.name && <p className="text-red-500 text-xs font-bold px-1">{errors.name}</p>}
                   </div>
@@ -346,7 +344,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     <div className="relative">
                       <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                       <input type="email" placeholder={tx.emailPh} value={email}
-                        onChange={e => { setEmail(e.target.value); setErrors(p => ({...p, email: ''})); }}
+                        onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }}
                         className={`${inputCls} pl-11`} />
                     </div>
                     {errors.email && <p className="text-red-500 text-xs font-bold px-1">{errors.email}</p>}
@@ -358,7 +356,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     <div className="relative">
                       <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                       <input type={showPw ? 'text' : 'password'} placeholder={tx.passwordPh} value={password}
-                        onChange={e => { setPassword(e.target.value); setErrors(p => ({...p, password: ''})); }}
+                        onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }}
                         className={`${inputCls} pl-11 pr-12`} />
                       <button
                         type="button"
@@ -375,7 +373,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className="space-y-1.5">
                     <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.idLbl}</label>
                     <input type="text" placeholder={tx.idPh} value={studentId}
-                      onChange={e => { setStudentId(e.target.value); setErrors(p => ({...p, id: ''})); }}
+                      onChange={e => { setStudentId(e.target.value); setErrors(p => ({ ...p, id: '' })); }}
                       className={inputCls} autoCapitalize="characters" />
                     {errors.id && <p className="text-red-500 text-xs font-bold px-1">{errors.id}</p>}
                   </div>
@@ -390,12 +388,11 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => { setCampus(c.id); setErrors(p => ({...p, campus: ''})); }}
-                            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2.5 transition-all duration-200 active:scale-95 ${
-                              campus === c.id
+                            onClick={() => { setCampus(c.id); setErrors(p => ({ ...p, campus: '' })); }}
+                            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2.5 transition-all duration-200 active:scale-95 ${campus === c.id
                                 ? 'border-brand-black bg-brand-yellow text-brand-black shadow-lg shadow-yellow-400/20'
                                 : (isDark ? 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-700')
-                            }`}
+                              }`}
                           >
                             <Icon className={`w-6 h-6 ${campus === c.id ? 'text-brand-black' : ''}`} />
                             <span className={`text-xs font-bold text-center leading-tight ${campus === c.id ? 'text-brand-black' : ''}`}>
@@ -438,13 +435,12 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       />
                     </div>
                   </div>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${
-                    selectedCredits > MAX_CREDITS
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${selectedCredits > MAX_CREDITS
                       ? 'bg-red-100 text-red-600'
                       : creditsLeft === 0
                         ? 'bg-green-100 text-green-700'
                         : 'bg-brand-yellow text-brand-black'
-                  }`}>
+                    }`}>
                     {creditsLeft}
                   </div>
                 </div>
@@ -461,31 +457,27 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                         type="button"
                         onClick={() => toggleCourse(course.id)}
                         disabled={wouldExceed}
-                        className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${
-                          isSelected
+                        className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${isSelected
                             ? `border-brand-black ${course.color} shadow-md`
                             : wouldExceed
                               ? (isDark ? 'border-transparent bg-gray-800/50 opacity-40 cursor-not-allowed' : 'border-transparent bg-gray-100 opacity-40 cursor-not-allowed')
                               : (isDark ? 'border-transparent bg-gray-800 hover:border-gray-700' : 'border-transparent bg-white hover:border-gray-200 shadow-sm')
-                        }`}
+                          }`}
                       >
                         {/* Checkbox */}
-                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
-                          isSelected ? 'bg-brand-black border-brand-black' : (isDark ? 'border-gray-600' : 'border-gray-300')
-                        }`}>
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-brand-black border-brand-black' : (isDark ? 'border-gray-600' : 'border-gray-300')
+                          }`}>
                           {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className={`font-bold text-sm leading-tight truncate ${
-                            isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
-                          }`}>
+                          <div className={`font-bold text-sm leading-tight truncate ${isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
+                            }`}>
                             {course.title[lang]}
                           </div>
-                          <div className={`text-xs mt-0.5 flex items-center gap-2 ${
-                            isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
-                          }`}>
+                          <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
+                            }`}>
                             <span>{course.code}</span>
                             <span>·</span>
                             <MapPin className="w-3 h-3" />
@@ -494,11 +486,10 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                         </div>
 
                         {/* Credits badge */}
-                        <div className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          isSelected
+                        <div className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold ${isSelected
                             ? 'bg-brand-black text-white'
                             : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
-                        }`}>
+                          }`}>
                           {course.credits}cr
                         </div>
                       </button>
@@ -527,7 +518,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       <input
                         type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
                         value={cumulativeGpa}
-                        onChange={e => { setCumulativeGpa(e.target.value); setErrors(p => ({...p, cumGpa: ''})); }}
+                        onChange={e => { setCumulativeGpa(e.target.value); setErrors(p => ({ ...p, cumGpa: '' })); }}
                         className={`${inputCls} pl-12`}
                       />
                     </div>
@@ -554,7 +545,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       <input
                         type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
                         value={lastSemGpa}
-                        onChange={e => { setLastSemGpa(e.target.value); setErrors(p => ({...p, semGpa: ''})); }}
+                        onChange={e => { setLastSemGpa(e.target.value); setErrors(p => ({ ...p, semGpa: '' })); }}
                         className={`${inputCls} pl-12`}
                       />
                     </div>
@@ -599,7 +590,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className="space-y-1.5">
                     <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.otpLbl}</label>
                     <input type="text" placeholder={tx.otpPh} value={otpCode}
-                      onChange={e => { setOtpCode(e.target.value); setErrors(p => ({...p, otp: ''})); }}
+                      onChange={e => { setOtpCode(e.target.value); setErrors(p => ({ ...p, otp: '' })); }}
                       className={inputCls} />
                     {errors.otp && <p className="text-red-500 text-xs font-bold px-1">{errors.otp}</p>}
                   </div>
