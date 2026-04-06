@@ -262,7 +262,7 @@ export default function App() {
       setUserProfile({ ...DEV_PROFILE, studentId: id });
       setIsAuthenticated(true);
       setIsLoading(false);
-    }, 2500);
+    }, 3500);
   };
 
   const handleOnboardingComplete = (profile: UserProfile) => {
@@ -272,7 +272,7 @@ export default function App() {
       setUserProfile(profile);
       setIsAuthenticated(true);
       setIsLoading(false);
-    }, 2500);
+    }, 3500);
   };
 
   const handleSignOut = async () => {
@@ -281,6 +281,8 @@ export default function App() {
     } catch (error) {
        console.error('Error signing out:', error);
     }
+    // Reset URL to root so next login lands on home
+    window.history.replaceState(null, '', '/');
     setIsAuthenticated(false);
     setUserProfile(undefined);
     setAuthScreen('signIn');

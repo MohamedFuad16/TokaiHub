@@ -354,7 +354,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
           onClick={() => setIsScheduleSheetOpen(true)}
           className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
         >
@@ -510,14 +510,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                      ? `Classes on ${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getDate()}` 
                      : `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の授業`}
                  </h3>
-                 <motion.div layout className="relative min-h-[200px]">
+                 <div className="relative min-h-[200px]">
                    <AnimatePresence mode="wait">
-                     <motion.div 
+                     <motion.div
                        key={selectedDate.toISOString()}
-                       initial={{ opacity: 0, y: 10 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       exit={{ opacity: 0, y: -10 }}
-                       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                       initial={{ opacity: 0 }}
+                       animate={{ opacity: 1 }}
+                       exit={{ opacity: 0 }}
+                       transition={{ duration: 0.15 }}
                        className="space-y-4"
                      >
                        {calendarClasses.map(cls => (
@@ -541,7 +541,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                       )}
                     </motion.div>
                   </AnimatePresence>
-                </motion.div>
+                </div>
               </div>
             </motion.div>
           </>

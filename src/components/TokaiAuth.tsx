@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff, ArrowRight, GraduationCap, Mail } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Mail } from 'lucide-react';
 import { signIn } from 'aws-amplify/auth';
 import { Language, AppSettings } from '../App';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
@@ -72,8 +72,8 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
     <motion.div
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.02 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, scale: 1.03 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}
       style={{ willChange: 'opacity, transform' }}
     >
@@ -234,27 +234,17 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-sm flex flex-col items-center"
       >
-        {/* TokaiHub Logo — strictly centered at the very top */}
-        <div className="flex flex-col items-center mb-6 w-full">
-          <div className="w-16 h-16 bg-brand-yellow rounded-[22px] flex items-center justify-center shadow-lg shadow-yellow-400/30 mb-3">
-            <GraduationCap className="w-8 h-8 text-brand-black" />
-          </div>
-          <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
-            TOKAI HUB
-          </h1>
-        </div>
-
-        {/* Card with mascot layered on top */}
-        <div className="relative w-full">
-          {/* Mascot — overlapping the card top */}
+        {/* Card with mascot resting on top edge */}
+        <div className="relative w-full mt-20">
+          {/* Mascot — sitting on the card top edge */}
           <div
             role="img"
             aria-label="Student mascot illustration"
-            className="absolute -top-20 left-1/2 -translate-x-1/2 z-30 w-[130px] h-[130px] pointer-events-none"
+            className="absolute -top-24 left-1/2 -translate-x-1/2 z-30 w-[140px] h-[140px] pointer-events-none"
           >
             <motion.div
               animate={{
-                y: isPasswordFocused ? 8 : 0
+                y: isPasswordFocused ? 10 : 0
               }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full h-full"
@@ -266,8 +256,9 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
           {/* Card */}
           <div
             ref={cardRef}
-            className={`w-full rounded-[32px] p-6 pt-16 shadow-xl relative z-20 mt-14 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
+            className={`w-full rounded-[32px] p-6 pt-14 shadow-xl relative z-20 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
           >
+          <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>TOKAI HUB</p>
           <h2 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-brand-black'}`}>
             {tx.welcome}
           </h2>

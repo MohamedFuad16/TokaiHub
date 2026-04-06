@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Menu, Clock, MapPin } from 'lucide-react';
 import { ScreenProps } from '../App';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { getClassesForDate, allItems } from '../data';
@@ -54,10 +54,17 @@ const itemVariants = {
 
 export default function TokaiSchedule({ lang, setLang, settings, userProfile }: ScreenProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+
+  // Persist view in URL so back navigation restores it
+  const viewParam = searchParams.get('view') as 'daily' | 'weekly' | 'monthly' | null;
+  const view = viewParam && ['daily', 'weekly', 'monthly'].includes(viewParam) ? viewParam : 'daily';
+  const setView = (v: 'daily' | 'weekly' | 'monthly') => {
+    setSearchParams({ view: v }, { replace: true });
+  };
 
   const [baseDate, setBaseDate] = useState(new Date(2026, 3, 8));
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
@@ -193,10 +200,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={baseDate.toISOString()}
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="show"
-                    exit="hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="space-y-0"
                   >
                     {dailyClasses.length > 0 && dailyClasses.map((item) => (
@@ -362,7 +369,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const dateNum = i + 1;
                     const thisDate = new Date(monthYear.getFullYear(), monthYear.getMonth(), dateNum);
-                    const hasClass = getClassesForDate(thisDate).length > 0;
+                    const hasClass = getClassesForDate(thisDate, selectedCourseIds).length > 0;
                     const isSelected =
                       calendarSelectedDate.getDate() === dateNum &&
                       calendarSelectedDate.getMonth() === monthYear.getMonth() &&
@@ -399,10 +406,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={calendarSelectedDate.toISOString()}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="space-y-3"
                   >
                     {monthlySelectedClasses.length > 0 ? (

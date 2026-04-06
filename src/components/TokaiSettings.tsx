@@ -166,14 +166,14 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
 
             <div className={`${itemBg} border ${borderClass} rounded-3xl p-2 shadow-sm`}>
               {/* Notifications (disabled) */}
-              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl opacity-50 cursor-not-allowed">
+              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-not-allowed">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-brand-pink rounded-full flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-brand-black" />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                    <Bell className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                   </div>
                   <div>
-                    <div className="font-bold text-sm">{tx.notifications}</div>
-                    <div className="text-[10px] font-bold text-brand-pink bg-brand-pink/10 px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider">Coming Soon</div>
+                    <div className={`font-bold text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{tx.notifications}</div>
+                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider ${isDark ? 'text-pink-400 bg-pink-500/20' : 'text-pink-600 bg-pink-100'}`}>Coming Soon</div>
                   </div>
                 </div>
                 <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} />
@@ -213,6 +213,21 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
           <motion.div variants={itemVariants} className="space-y-3">
             <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{tx.developer}</h3>
             <div className={`${isDark ? 'bg-gray-800 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'} border-2 rounded-3xl p-2`}>
+              {/* Toggle verification badge */}
+              <div
+                onClick={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })}
+                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <BadgeCheck className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="font-bold text-sm">{tx.devVerify}</div>
+                </div>
+                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} ariaLabel={tx.devVerify} />
+              </div>
+
+              {/* Skip login (dev mode) */}
               <div
                 onClick={() => onDevSkipChange?.(!settings.devSkipAuth)}
                 className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
@@ -227,20 +242,6 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                 </div>
                 <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} ariaLabel={tx.devSkipAuth} />
-              </div>
-              
-              {/* Separate toggle for verification */}
-              <div
-                onClick={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })}
-                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
-              >
-                <div className="flex items-center gap-4 text-left">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                    <BadgeCheck className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div className="font-bold text-sm">{tx.devVerify}</div>
-                </div>
-                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} ariaLabel={tx.devVerify} />
               </div>
             </div>
           </motion.div>
