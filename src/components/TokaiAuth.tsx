@@ -8,7 +8,7 @@ import mascotCover from '../assets/mascots/mascot_2_2.png';
 import mascotLoading from '../assets/mascots/mascot_0_2.png';
 
 interface AuthProps {
-  onSignIn: (id: string) => void;
+  onSignIn: (email: string) => void; // Fixed signature to match usage or App.tsx
   onGoToSignUp: () => void;
   lang: Language;
   setLang: (l: Language) => void;
@@ -22,15 +22,15 @@ function AppMascot({ covering }: { covering: boolean }) {
   return (
     <div className="relative w-full h-full filter drop-shadow-lg drop-shadow-yellow-500">
       <AnimatePresence>
-        <motion.img 
+        <motion.img
           key={covering ? 'cover' : 'idle'}
-          src={covering ? mascotCover : mascotIdle} 
-          alt="Tokai Mascot" 
+          src={covering ? mascotCover : mascotIdle}
+          alt="Tokai Mascot"
           initial={{ opacity: 0, filter: 'blur(4px)', scale: 0.95 }}
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
           exit={{ opacity: 0, filter: 'blur(4px)', position: 'absolute' }}
           transition={{ duration: 0.3 }}
-          className="absolute inset-0 w-full h-full object-contain" 
+          className="absolute inset-0 w-full h-full object-contain"
         />
       </AnimatePresence>
     </div>
@@ -190,7 +190,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
       setError(tx.errorPw); return;
     }
     setError('');
-    
+
     try {
       await signIn({ username: email, password });
       onSignIn(email);
@@ -199,15 +199,13 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
     }
   };
 
-  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${
-    isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-gray-100 text-brand-black placeholder-gray-400'
-  }`;
+  const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-gray-100 text-brand-black placeholder-gray-400'
+    }`;
 
   return (
     <div
-      className={`h-full w-full flex flex-col items-center justify-center transition-colors duration-500 p-6 relative ${
-        isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
-      }`}
+      className={`h-full w-full flex flex-col items-center justify-center transition-colors duration-500 p-6 relative ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
+        }`}
       onMouseMove={handleMouseMove}
     >
       {/* Language toggle */}
@@ -217,11 +215,10 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
             key={l}
             onClick={() => setLang(l)}
             aria-label={l === 'en' ? "Switch to English" : "日本語に切り替え"}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-              lang === l
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${lang === l
                 ? (isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white')
                 : (isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white/70 text-gray-500 hover:bg-white shadow-sm')
-            }`}
+              }`}
           >
             {l.toUpperCase()}
           </button>
@@ -258,79 +255,79 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
             ref={cardRef}
             className={`w-full rounded-[32px] p-6 pt-14 shadow-xl relative z-20 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
           >
-          <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>TOKAI HUB</p>
-          <h2 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-brand-black'}`}>
-            {tx.welcome}
-          </h2>
-          <p className={`text-xs font-medium mb-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {tx.sub}
-          </p>
+            <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>TOKAI HUB</p>
+            <h2 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-brand-black'}`}>
+              {tx.welcome}
+            </h2>
+            <p className={`text-xs font-medium mb-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              {tx.sub}
+            </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {tx.emailLbl}
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder={tx.emailPlaceholder}
-                  value={email}
-                  onChange={handleEmailChange}
-                  onFocus={() => setIsPasswordFocused(false)}
-                  className={`${inputCls} pl-11`}
-                />
-                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {tx.emailLbl}
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    placeholder={tx.emailPlaceholder}
+                    value={email}
+                    onChange={handleEmailChange}
+                    onFocus={() => setIsPasswordFocused(false)}
+                    className={`${inputCls} pl-11`}
+                  />
+                  <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {tx.password}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder={tx.pwPlaceholder}
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setError(''); }}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
-                  className={`${inputCls} pr-12`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(p => !p)}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <div className="space-y-1.5">
+                <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {tx.password}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    placeholder={tx.pwPlaceholder}
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setError(''); }}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    className={`${inputCls} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(p => !p)}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="text-red-500 text-xs font-bold px-1"
-                >
-                  {error}
-                </motion.p>
-              )}
-            </AnimatePresence>
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-red-500 text-xs font-bold px-1"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
 
-            <motion.button
-              type="submit"
-              whileTap={{ scale: 0.97 }}
-              className="w-full bg-brand-black text-white rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors mt-2 shadow-lg shadow-black/20"
-            >
-              {tx.signIn}
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          </form>
-        </div>
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.97 }}
+                className="w-full bg-brand-black text-white rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors mt-2 shadow-lg shadow-black/20"
+              >
+                {tx.signIn}
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </form>
+          </div>
         </div>
 
         {/* Sign up link */}

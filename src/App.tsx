@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Amplify } from 'aws-amplify';
-import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, fetchUserAttributes, signOut, signIn } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
@@ -134,12 +134,12 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${isActive
-                    ? isDark
-                      ? 'bg-brand-yellow text-brand-black shadow-lg shadow-yellow-500/20'
-                      : 'bg-brand-black text-white shadow-lg shadow-black/20'
-                    : isDark
-                      ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-brand-black'
+                  ? isDark
+                    ? 'bg-brand-yellow text-brand-black shadow-lg shadow-yellow-500/20'
+                    : 'bg-brand-black text-white shadow-lg shadow-black/20'
+                  : isDark
+                    ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-brand-black'
                   }`}
               >
                 <Icon className="w-5 h-5" />
@@ -158,8 +158,8 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                   key={l}
                   onClick={() => setLang(l)}
                   className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${lang === l
-                      ? isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'
-                      : isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'
+                    : isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                     }`}
                 >
                   {l.toUpperCase()}
@@ -253,12 +253,10 @@ export default function App() {
     }
   }, [settings.devSkipAuth]);
 
-  const handleSignIn = async (email: string, password: string) => {
+  const handleSignIn = async (email: string) => {
     setIsLoading(true);
 
     try {
-      await signIn({ username: email, password });
-
       const user = await getCurrentUser();
       const attrs = await fetchUserAttributes();
 
@@ -308,6 +306,12 @@ export default function App() {
 
   const handleUpdateProfile = (updated: UserProfile) => {
     setUserProfile(updated);
+  };
+
+  const handleOnboardingComplete = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setIsAuthenticated(true);
+    preloadRoutes();
   };
 
   const isDark = settings.isDarkMode;
