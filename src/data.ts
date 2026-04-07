@@ -180,7 +180,11 @@ export const allItems = [
   },
 ];
 
-export const getClassesForDate = (date: Date, selectedCourseIds: string[]) => {
+export const getClassesForDate = (
+  date: Date,
+  selectedCourseIds: string[],
+  items: typeof allItems = allItems,
+) => {
   // Guard: nothing to show when no courses are selected
   if (!selectedCourseIds?.length) return [];
 
@@ -197,7 +201,7 @@ export const getClassesForDate = (date: Date, selectedCourseIds: string[]) => {
 
   const dayOfWeek = date.getDay();
   // Always filter by selectedCourseIds — single source of truth
-  return allItems.filter(
+  return items.filter(
     item => item.dayOfWeek === dayOfWeek && selectedCourseIds.includes(item.id)
   );
 };

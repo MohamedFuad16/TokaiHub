@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
+import { getDashboard } from '../lib/api';
+import type { CourseItem, Assignment } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const t = {
@@ -65,13 +67,27 @@ const itemVariants = {
 
 export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
   const navigate = useNavigate();
+
+  // API-fetched data — falls back to local data on error
+  const [courseItems, setCourseItems] = useState<CourseItem[]>(allItems as CourseItem[]);
+  const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
+
+  useEffect(() => {
+    getDashboard()
+      .then(data => {
+        if (data.courses?.length) setCourseItems(data.courses);
+        if (data.assignments?.length) setAssignments(data.assignments);
+      })
+      .catch(() => { /* keep local fallback */ });
+  }, []);
+
   // Derive live values from userProfile
   const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';
   const studentIdDisplay = userProfile?.studentId ?? '—';
   const cumGpa = userProfile?.cumulativeGpa ?? 0;
   const lastSemGpa = userProfile?.lastSemGpa ?? 0;
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-  const selectedCredits = allItems
+  const selectedCredits = courseItems
     .filter(item => selectedCourseIds.includes(item.id))
     .reduce((acc, item) => acc + (item.credits || 0), 0);
   const [activeCategory, setActiveCategory] = useState('Classes');
@@ -94,16 +110,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'All') {
-      return allItems.filter(item => item.type !== 'Classes' || selectedCourseIds.includes(item.id));
+      return courseItems.filter(item => item.type !== 'Classes' || selectedCourseIds.includes(item.id));
     }
     if (activeCategory === 'Classes') {
-      return allItems.filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id));
+      return courseItems.filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id));
     }
-    return allItems.filter(item => item.type === activeCategory);
-  }, [activeCategory, selectedCourseIds]);
+    return courseItems.filter(item => item.type === activeCategory);
+  }, [activeCategory, selectedCourseIds, courseItems]);
 
-  const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds), [selectedCourseIds]);
-  const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds), [selectedDate, selectedCourseIds]);
+  const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds, courseItems), [selectedCourseIds, courseItems]);
+  const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
 
   const isDark = settings.isDarkMode;
   const cardBg = isDark ? 'bg-gray-800' : 'bg-brand-gray';
@@ -192,7 +208,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
               </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{getClassesForDate(new Date(), selectedCourseIds).length}</div>
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{todayClasses.length}</div>
               <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
                 {lang === 'en' ? 'Scheduled' : '予定'}
               </div>
@@ -207,7 +223,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 <AlertCircle className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
               </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{deadlines.length}</div>
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignments.length}</div>
               <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold">
                 {lang === 'en' ? 'This Week' : '今週'}
               </div>
@@ -368,9 +384,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 {t[lang].deadlines}
               </h2>
               <div className="space-y-3">
-                {deadlines.map(deadline => (
+                {assignments.map(assignment => (
                   <motion.div
-                    key={deadline.id}
+                    key={assignment.id}
                     onClick={() => setTimeout(() => navigate('/assignments'), 150)}
                     whileHover={{ y: -2, scale: 1.005 }}
                     whileTap={{ scale: 0.99 }}
@@ -378,11 +394,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between gap-3 cursor-pointer shadow-sm`}
                   >
                     <div className="min-w-0">
-                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{deadline.title[lang]}</h3>
-                      <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{deadline.course[lang]}</p>
+                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignment.title[lang]}</h3>
+                      <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{assignment.course[lang]}</p>
                     </div>
-                    <div className={`px-3 py-1.5 rounded-lg ${deadline.color} text-brand-black font-semibold text-xs shadow-sm shrink-0`}>
-                      {t[lang].dueIn} {deadline.daysLeft} {t[lang].days}
+                    <div className={`px-3 py-1.5 rounded-lg ${assignment.color} text-brand-black font-semibold text-xs shadow-sm shrink-0`}>
+                      {t[lang].dueIn} {assignment.daysLeft} {t[lang].days}
                     </div>
                   </motion.div>
                 ))}

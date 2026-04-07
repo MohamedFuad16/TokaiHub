@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronLeft, Clock, BookOpen, Award, CheckCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { allItems } from '../data';
+import { getCourseDetails } from '../lib/api';
+import type { CourseItem } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const containerVariants = {
@@ -20,15 +22,21 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
   const navigate = useNavigate();
   const goBack = () => navigate(-1);
   const { id } = useParams();
-  const params = { id };
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
   const textNormal = isDark ? 'text-gray-300' : 'text-gray-600';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
 
-  const courseId = params?.id || 'mon-1-2';
-  const course = allItems.find(item => item.id === courseId) || allItems[0];
+  const courseId = id || 'mon-1-2';
+  const localCourse = allItems.find(item => item.id === courseId) || allItems[0];
+  const [course, setCourse] = useState<CourseItem>(localCourse);
+
+  useEffect(() => {
+    getCourseDetails(courseId)
+      .then(data => setCourse(data))
+      .catch(() => { /* keep local fallback */ });
+  }, [courseId]);
 
   const t = {
     en: {

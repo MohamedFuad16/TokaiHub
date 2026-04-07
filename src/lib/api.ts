@@ -1,48 +1,78 @@
 /**
  * Centralized API layer for TokaiHub.
  *
- * Currently uses mock data. Each function is structured so you can replace
- * the mock return with a real fetch() call once the API Gateway endpoint is available.
+ * Connects to AWS Lambda functions via API Gateway.
+ * All requests include the Cognito JWT ID token in the Authorization header.
  *
- * ─── Future Backend Endpoints ────────────────────────────────────────────────
+ * ─── Endpoints ────────────────────────────────────────────────────────────────
  *
- * GET  /courses                      → getCourses()          → CourseItem[]
- * GET  /courses/:id                  → (future) getCourse()  → CourseItem
- *
- * GET  /assignments                  → getAssignments()      → Assignment[]
- * GET  /assignments/:id              → (future) getAssignment()
- * POST /assignments                  → (future) createAssignment()
- * PUT  /assignments/:id              → (future) updateAssignment()
- * DEL  /assignments/:id              → (future) deleteAssignment()
- *
- * GET  /users/:userId                → getUserProfile()      → UserProfileAPI | null
- * PUT  /users/:userId                → updateUserProfile()   → void
- *
- * GET  /schedule?date=YYYY-MM-DD     → (future) getScheduleForDate()
- * GET  /schedule?userId=:id&date=... → (future) getUserSchedule() (with selectedCourseIds filter)
- *
- * ─── Migration Pattern ───────────────────────────────────────────────────────
- *
- *   // Before (mock):
- *   return allItems as CourseItem[];
- *
- *   // After (real API):
- *   const res = await fetch(`${API_BASE_URL}/courses`, {
- *     headers: { Authorization: `Bearer ${token}` },
- *   });
- *   if (!res.ok) throw new Error(`getCourses failed: ${res.status}`);
- *   return res.json();
+ * GET  /dashboard                    → getDashboard()         → DashboardResponse
+ * GET  /schedule                     → getSchedule()          → CourseItem[]
+ * GET  /course-details/{courseId}    → getCourseDetails()     → CourseItem
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { allItems } from '../data';
 import type { Assignment, CourseItem, UserProfileAPI } from './types';
 
-/** Base URL — set VITE_API_BASE_URL in .env when the backend is ready */
-const _API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = 'https://4tsr153t0m.execute-api.ap-northeast-1.amazonaws.com';
 
-// Mock assignment data (mirrors TokaiAssignments.tsx deadlines)
+// ─── Auth Token ────────────────────────────────────────────────────────────────
+
+/** Retrieves the Cognito ID token from the current session. Returns null in dev/offline mode. */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Fetch Helper ──────────────────────────────────────────────────────────────
+
+/** Authenticated fetch — attaches Authorization: Bearer <token> header when a session exists. */
+async function apiFetch<T>(path: string): Promise<T> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+// ─── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface DashboardResponse {
+  courses?: CourseItem[];
+  assignments?: Assignment[];
+  userProfile?: UserProfileAPI;
+}
+
+/** Fetches dashboard summary data: courses, assignments, and user profile. */
+export async function getDashboard(): Promise<DashboardResponse> {
+  return apiFetch<DashboardResponse>('/dashboard');
+}
+
+// ─── Schedule ──────────────────────────────────────────────────────────────────
+
+/** Fetches the authenticated user's full schedule. */
+export async function getSchedule(): Promise<CourseItem[]> {
+  return apiFetch<CourseItem[]>('/schedule');
+}
+
+// ─── Course Details ────────────────────────────────────────────────────────────
+
+/** Fetches detailed info for a single course. */
+export async function getCourseDetails(courseId: string): Promise<CourseItem> {
+  return apiFetch<CourseItem>(`/course-details/${courseId}`);
+}
+
+// ─── Legacy helpers (kept for compatibility) ───────────────────────────────────
+
 const _mockAssignments: Assignment[] = [
   {
     id: '1',
@@ -70,36 +100,18 @@ const _mockAssignments: Assignment[] = [
   },
 ];
 
-/**
- * Fetch all courses/items.
- * Replace mock with: fetch(`${API_BASE_URL}/courses`) when API Gateway endpoint is available.
- */
 export async function getCourses(): Promise<CourseItem[]> {
   return allItems as CourseItem[];
 }
 
-/**
- * Fetch all assignments.
- * Replace mock with: fetch(`${API_BASE_URL}/assignments`) when API Gateway endpoint is available.
- */
 export async function getAssignments(): Promise<Assignment[]> {
   return _mockAssignments;
 }
 
-/**
- * Fetch a user profile by userId.
- * Replace mock with: fetch(`${API_BASE_URL}/users/${userId}`) when API Gateway endpoint is available.
- */
 export async function getUserProfile(_userId: string): Promise<UserProfileAPI | null> {
-  // No backend connected yet — Cognito attributes are loaded via fetchUserAttributes() in App.tsx
   return null;
 }
 
-/**
- * Persist a user profile update.
- * Replace mock with: fetch(`${API_BASE_URL}/users/${profile.studentId}`, { method: 'PUT', body: JSON.stringify(profile) })
- * when API Gateway endpoint is available.
- */
 export async function updateUserProfile(_profile: UserProfileAPI): Promise<void> {
   console.warn('updateUserProfile: no backend connected — changes are local session only');
 }

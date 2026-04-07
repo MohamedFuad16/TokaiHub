@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronLeft, Menu } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { getClassesForDate, allItems } from '../data';
+import { getSchedule } from '../lib/api';
+import type { CourseItem } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const t = {
@@ -62,6 +64,14 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
 
+  // Fetch schedule from API; fall back to local data on error
+  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>(allItems as CourseItem[]);
+  useEffect(() => {
+    getSchedule()
+      .then(data => { if (data?.length) setScheduleItems(data); })
+      .catch(() => { /* keep local fallback */ });
+  }, []);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Persist view in URL so back navigation restores it
@@ -103,13 +113,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     return dates;
   }, [baseDate]);
 
-  const dailyClasses = useMemo(() => getClassesForDate(baseDate, selectedCourseIds), [baseDate, selectedCourseIds]);
+  const dailyClasses = useMemo(() => getClassesForDate(baseDate, selectedCourseIds, scheduleItems), [baseDate, selectedCourseIds, scheduleItems]);
 
   // Weekly timetable: build a Map<dayOfWeek, Map<period, item>>
   const weeklyTimetable = useMemo(() => {
     // map: dayOfWeek -> period -> item
-    const map = new Map<number, Map<number, typeof allItems[0]>>();
-    allItems.filter(i => i.type === 'Classes' && selectedCourseIds.includes(i.id)).forEach(item => {
+    const map = new Map<number, Map<number, CourseItem>>();
+    scheduleItems.filter(i => i.type === 'Classes' && selectedCourseIds.includes(i.id)).forEach(item => {
       if (!map.has(item.dayOfWeek)) map.set(item.dayOfWeek, new Map());
       // For classes spanning multiple periods, register each period separately
       (item.periods || [1]).forEach(p => {
@@ -117,7 +127,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       });
     });
     return map;
-  }, [selectedCourseIds]);
+  }, [selectedCourseIds, scheduleItems]);
 
   const shortDaysOfWeekEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const shortDaysOfWeekJp = ['日', '月', '火', '水', '木', '金', '土'];
@@ -125,8 +135,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   // Selected day classes for monthly view
   const monthlySelectedClasses = useMemo(() => {
     if (!monthlySelected) return [];
-    return getClassesForDate(monthlySelected, selectedCourseIds);
-  }, [monthlySelected, selectedCourseIds]);
+    return getClassesForDate(monthlySelected, selectedCourseIds, scheduleItems);
+  }, [monthlySelected, selectedCourseIds, scheduleItems]);
 
   // Actual selected date (highlighted in calendar)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date());
@@ -359,7 +369,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   ))}
 
                   {/* ── Class cards — placed with gridColumn + gridRow span ── */}
-                  {allItems
+                  {scheduleItems
                     .filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id))
                     .map(item => {
                       const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
