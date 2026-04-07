@@ -71,13 +71,26 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // Fetch courses when the user enters step 2, using the class derived from their student ID
   useEffect(() => {
     if (step !== 2) return;
+
+    console.log("🚀 FETCHING COURSES WITH:", {
+      studentId: studentId.toUpperCase(),
+      studentClass
+    });
+
     setLoadingCourses(true);
     setCoursesError('');
+
     fetchAvailableCourses(studentId.toUpperCase(), studentClass)
-      .then(data => setAvailableCourses(data))
-      .catch((err: Error) => setCoursesError(err.message))
+      .then(data => {
+        console.log("🔥 COURSES FROM API:", data);
+        setAvailableCourses(data);
+      })
+      .catch((err: Error) => {
+        console.error("❌ COURSE FETCH ERROR:", err);
+        setCoursesError(err.message);
+      })
       .finally(() => setLoadingCourses(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [step]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
