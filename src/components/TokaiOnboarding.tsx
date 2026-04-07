@@ -77,7 +77,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       .then(data => setAvailableCourses(data))
       .catch((err: Error) => setCoursesError(err.message))
       .finally(() => setLoadingCourses(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
@@ -622,8 +622,14 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                         setLoadingCourses(true);
                         setCoursesError('');
                         fetchAvailableCourses(studentId.toUpperCase(), studentClass)
-                          .then(data => setAvailableCourses(data))
-                          .catch((err: Error) => setCoursesError(err.message))
+                          .then(data => {
+                            console.log("🔥 COURSES FROM API:", data);
+                            setAvailableCourses(data);
+                          })
+                          .catch((err: Error) => {
+                            console.error("❌ COURSE FETCH ERROR:", err);
+                            setCoursesError(err.message);
+                          })
                           .finally(() => setLoadingCourses(false));
                       }}
                       className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
