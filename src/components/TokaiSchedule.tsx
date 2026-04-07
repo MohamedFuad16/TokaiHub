@@ -119,7 +119,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const weeklyTimetable = useMemo(() => {
     // map: dayOfWeek -> period -> item
     const map = new Map<number, Map<number, CourseItem>>();
-    scheduleItems.filter(i => i.type === 'Classes' && selectedCourseIds.includes(i.id)).forEach(item => {
+    scheduleItems.filter(i => i.type === 'Classes' && (selectedCourseIds.includes(i.id) || selectedCourseIds.includes(i.code ?? ''))).forEach(item => {
       if (!map.has(item.dayOfWeek)) map.set(item.dayOfWeek, new Map());
       // For classes spanning multiple periods, register each period separately
       (item.periods || [1]).forEach(p => {

@@ -65,7 +65,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
+export default function TokaiHome({ lang, setLang, settings, userProfile, setUserProfile }: ScreenProps) {
   const navigate = useNavigate();
 
   // API-fetched data — falls back to local data on error
@@ -77,8 +77,23 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       .then(data => {
         if (data.courses?.length) setCourseItems(data.courses);
         if (data.assignments?.length) setAssignments(data.assignments);
+
+        // If selectedCourseIds is empty (e.g. fresh login, localStorage cleared),
+        // restore from enrolledCourseIds returned by the dashboard Lambda.
+        // Translate API course codes → local data IDs so filtering works correctly.
+        if (data.enrolledCourseIds?.length && userProfile && setUserProfile) {
+          const current = userProfile.selectedCourseIds ?? [];
+          if (current.length === 0) {
+            const localIds = data.enrolledCourseIds.map(apiId => {
+              const localItem = allItems.find(item => (item as any).code === apiId);
+              return localItem ? localItem.id : apiId;
+            });
+            setUserProfile({ ...userProfile, selectedCourseIds: localIds });
+          }
+        }
       })
       .catch(() => { /* keep local fallback */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Derive live values from userProfile
@@ -88,7 +103,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const lastSemGpa = userProfile?.lastSemGpa ?? 0;
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
   const selectedCredits = courseItems
-    .filter(item => selectedCourseIds.includes(item.id))
+    .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
     .reduce((acc, item) => acc + (item.credits || 0), 0);
   const [activeCategory, setActiveCategory] = useState('Classes');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -109,11 +124,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
   const filteredItems = useMemo(() => {
+    const isSelected = (item: CourseItem) =>
+      selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? '');
     if (activeCategory === 'All') {
-      return courseItems.filter(item => item.type !== 'Classes' || selectedCourseIds.includes(item.id));
+      return courseItems.filter(item => item.type !== 'Classes' || isSelected(item));
     }
     if (activeCategory === 'Classes') {
-      return courseItems.filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id));
+      return courseItems.filter(item => item.type === 'Classes' && isSelected(item));
     }
     return courseItems.filter(item => item.type === activeCategory);
   }, [activeCategory, selectedCourseIds, courseItems]);

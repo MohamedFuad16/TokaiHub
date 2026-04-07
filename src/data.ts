@@ -202,6 +202,7 @@ export const getClassesForDate = (
   const dayOfWeek = date.getDay();
   // Always filter by selectedCourseIds — single source of truth
   return items.filter(
-    item => item.dayOfWeek === dayOfWeek && selectedCourseIds.includes(item.id)
+    item => item.dayOfWeek === dayOfWeek &&
+      (selectedCourseIds.includes(item.id) || selectedCourseIds.includes((item as any).code ?? ''))
   );
 };

@@ -5,6 +5,7 @@ import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
 import { fetchAvailableCourses, enrollCourses } from '../lib/api';
 import type { CourseItem } from '../lib/types';
+import { allItems } from '../data';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
 interface OnboardingProps {
@@ -301,13 +302,20 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           // Non-fatal — user still proceeds; they can re-select later
         }
 
+        // Translate API course codes (e.g. "TTK085") → local data IDs (e.g. "mon-1-2")
+        // so TokaiHome / TokaiSchedule can match courses against allItems.
+        const localCourseIds = selectedCourseIds.map(apiId => {
+          const localItem = allItems.find(item => item.code === apiId);
+          return localItem ? localItem.id : apiId;
+        });
+
         // ✅ Continue to app
         onComplete({
           name: name.trim(),
           email: email.trim(),
           studentId: studentId.toUpperCase(),
           campus,
-          selectedCourseIds,
+          selectedCourseIds: localCourseIds,
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         });

@@ -294,16 +294,16 @@ export default function App() {
       const user = await getCurrentUser();
       const attrs = await fetchUserAttributes();
 
-      setUserProfile({
+      setUserProfile(prev => ({
         name: attrs.name || 'Student',
         email: attrs.email || user.username,
         studentId: attrs['custom:studentId'] as string,
-        campus: 'shinagawa',
-        selectedCourseIds: [],
-        cumulativeGpa: 0,
-        lastSemGpa: 0,
+        campus: prev?.campus ?? 'shinagawa',
+        selectedCourseIds: prev?.selectedCourseIds ?? [],
+        cumulativeGpa: prev?.cumulativeGpa ?? 0,
+        lastSemGpa: prev?.lastSemGpa ?? 0,
         isVerified: true,
-      });
+      }));
 
       setIsAuthenticated(true);
       preloadRoutes();

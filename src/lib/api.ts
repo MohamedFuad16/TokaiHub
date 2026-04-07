@@ -50,6 +50,22 @@ export interface DashboardResponse {
   courses?: CourseItem[];
   assignments?: Assignment[];
   userProfile?: UserProfileAPI;
+  // Fields returned by the updated get-dashboard Lambda
+  enrolledCourseIds?: string[];
+  todayClasses?: Array<{
+    courseId: string;
+    courseName: string;
+    startTime: string | null;
+    endTime: string | null;
+    roomNumber: string | null;
+    professorName: string | null;
+  }>;
+  profile?: {
+    fullName: string;
+    studentId: string;
+    institutionId: string;
+    class: string;
+  };
 }
 
 /** Fetches dashboard summary data: courses, assignments, and user profile. */
