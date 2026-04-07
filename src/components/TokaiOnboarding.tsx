@@ -23,8 +23,15 @@ const CAMPUSES = [
 // Color accent per step
 const STEP_COLORS = ['bg-brand-yellow', 'bg-brand-pink', 'bg-brand-green'];
 
+/** Derives class A or B from the numeric suffix of the student ID (last 4 chars). */
+function deriveStudentClass(id: string): 'A' | 'B' {
+  const num = parseInt(id.slice(4), 10);
+  return !isNaN(num) && num >= 1200 && num <= 1299 ? 'B' : 'A';
+}
+
 export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, settings }: OnboardingProps) {
-  const [step, setStep] = useState(0); // 0=Profile, 1=Courses, 2=GPA, 3=OTP Verification
+  // 0=Profile  1=GPA  2=Courses  3=OTP
+  const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [backendError, setBackendError] = useState('');
 
@@ -35,42 +42,43 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   const [showPw, setShowPw] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [campus, setCampus] = useState('');
+  const [studentClass, setStudentClass] = useState<'A' | 'B'>('A');
 
-  // Step 1
+  // Step 1 — GPA
+  const [cumulativeGpa, setCumulativeGpa] = useState('');
+  const [lastSemGpa, setLastSemGpa] = useState('');
+
+  // Step 2 — Courses
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [coursesError, setCoursesError] = useState('');
 
-  // Step 2
-  const [cumulativeGpa, setCumulativeGpa] = useState('');
-  const [lastSemGpa, setLastSemGpa] = useState('');
-
-  // Step 3
+  // Step 3 — OTP
   const [otpCode, setOtpCode] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isDark = settings.isDarkMode;
 
-  // Dynamic credit limit: >3.8 GPA → 24 credits, otherwise 20
+  // Dynamic credit limit — computed from GPA entered in step 1
   const cumGpaNum = parseFloat(cumulativeGpa);
   const maxCredits = !isNaN(cumGpaNum) && cumGpaNum > 3.8 ? 24 : 20;
 
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Pre-fetch courses as soon as a valid student ID is entered — so by the time
-  // the user reaches step 1 the list is already ready.
+  // Fetch courses when the user enters step 2, using the class derived from their student ID
   useEffect(() => {
-    if (!studentIdValid) return;
+    if (step !== 2) return;
     setLoadingCourses(true);
     setCoursesError('');
-    fetchAvailableCourses(studentId.toUpperCase())
+    fetchAvailableCourses(studentId.toUpperCase(), studentClass)
       .then(data => setAvailableCourses(data))
       .catch(() => setCoursesError('Could not load courses. Please try again.'))
       .finally(() => setLoadingCourses(false));
-  }, [studentId, studentIdValid]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
@@ -80,7 +88,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
   const t = {
     en: {
-      stepLabels: ['Profile', 'Courses', 'GPA'],
+      stepLabels: ['Profile', 'GPA', 'Courses'],
       // Step 0
       profileTitle: 'Create your profile',
       profileSub: 'Tell us about yourself',
@@ -125,7 +133,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       errGpa: 'Enter a value between 0.00 and 4.30',
     },
     jp: {
-      stepLabels: ['プロフィール', '授業', 'GPA', '確認'],
+      stepLabels: ['プロフィール', 'GPA', '授業'],
       profileTitle: 'プロフィール作成',
       profileSub: '自己紹介をしてください',
       nameLbl: '氏名',
@@ -179,16 +187,16 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       if (!campus) e.campus = tx.errCampus;
     }
     if (step === 1) {
-      if (selectedCourseIds.length === 0) e.courses = tx.errCourses;
-      if (selectedCredits > maxCredits) e.courses = tx.tooMany(maxCredits);
-    }
-    if (step === 2) {
-      // GPA range: 0.00 – 4.30
-      const gpaRe = /^([0-3](\.\d{0,2})?|4(\.[0-2]\d?|\.3[0]?|\.30?)?)$/;
+      // GPA step — validate range 0.00–4.30
       const cumVal = parseFloat(cumulativeGpa);
       const semVal = parseFloat(lastSemGpa);
       if (isNaN(cumVal) || cumVal < 0 || cumVal > 4.3) e.cumGpa = tx.errGpa;
       if (isNaN(semVal) || semVal < 0 || semVal > 4.3) e.semGpa = tx.errGpa;
+    }
+    if (step === 2) {
+      // Courses step
+      if (selectedCourseIds.length === 0) e.courses = tx.errCourses;
+      if (selectedCredits > maxCredits) e.courses = tx.tooMany(maxCredits);
     }
     if (step === 3) {
       if (otpCode.length < 3) e.otp = tx.errOtp;
@@ -203,6 +211,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     setBackendError('');
 
     if (step < 2) {
+      // Derive student class (A/B) from student ID when leaving step 0
+      if (step === 0) setStudentClass(deriveStudentClass(studentId.toUpperCase()));
       setStep(s => s + 1);
     }
     else if (step === 2) {
@@ -438,10 +448,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       />
                       {studentIdValid && (
                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          {loadingCourses
-                            ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                            : <Check className="w-4 h-4 text-green-500" />
-                          }
+                          <Check className="w-4 h-4 text-green-500" />
                         </div>
                       )}
                     </div>
@@ -478,8 +485,85 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
               </div>
             )}
 
-            {/* ── STEP 1: COURSES ── */}
+            {/* ── STEP 1: GPA ── */}
             {step === 1 && (
+              <div>
+                <div className="mb-6">
+                  <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
+                    {tx.gpaTitle}
+                  </h2>
+                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.gpaSub}</p>
+                </div>
+
+                <div className={`${cardBg} rounded-[28px] p-5 space-y-5 shadow-sm`}>
+                  {/* Cumulative GPA */}
+                  <div className="space-y-2">
+                    <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.cumGpaLbl}</label>
+                    <div className="relative">
+                      <GraduationCap className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                      <input
+                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
+                        value={cumulativeGpa}
+                        onChange={e => { setCumulativeGpa(e.target.value); setErrors(p => ({ ...p, cumGpa: '' })); }}
+                        className={`${inputCls} pl-12`}
+                      />
+                    </div>
+                    {errors.cumGpa && <p className="text-red-500 text-xs font-bold px-1">{errors.cumGpa}</p>}
+                    {cumulativeGpa && !isNaN(parseFloat(cumulativeGpa)) && (
+                      <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden mt-2`}>
+                        <motion.div
+                          animate={{ width: `${Math.min((parseFloat(cumulativeGpa) / 4.3) * 100, 100)}%` }}
+                          className="h-full rounded-full bg-brand-yellow"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Last Semester GPA */}
+                  <div className="space-y-2">
+                    <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.semGpaLbl}</label>
+                    <div className="relative">
+                      <Star className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                      <input
+                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
+                        value={lastSemGpa}
+                        onChange={e => { setLastSemGpa(e.target.value); setErrors(p => ({ ...p, semGpa: '' })); }}
+                        className={`${inputCls} pl-12`}
+                      />
+                    </div>
+                    {errors.semGpa && <p className="text-red-500 text-xs font-bold px-1">{errors.semGpa}</p>}
+                    {lastSemGpa && !isNaN(parseFloat(lastSemGpa)) && (
+                      <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden mt-2`}>
+                        <motion.div
+                          animate={{ width: `${Math.min((parseFloat(lastSemGpa) / 4.3) * 100, 100)}%` }}
+                          className="h-full rounded-full bg-brand-pink"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Scale hint */}
+                  <div className={`text-xs font-medium ${isDark ? 'text-gray-600' : 'text-gray-400'} flex justify-between`}>
+                    <span>0.00 — Failing</span>
+                    <span>2.00 — Passing</span>
+                    <span>4.30 — Perfect</span>
+                  </div>
+
+                  {/* Credit allowance hint */}
+                  {cumulativeGpa && !isNaN(parseFloat(cumulativeGpa)) && (
+                    <div className={`text-xs font-bold px-3 py-2 rounded-xl text-center ${parseFloat(cumulativeGpa) > 3.8 ? 'bg-green-100 text-green-700' : (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500')}`}>
+                      {parseFloat(cumulativeGpa) > 3.8
+                        ? (lang === 'en' ? '★ GPA above 3.8 — you can enroll up to 24 credits' : '★ GPA 3.8超 — 最大24単位まで履修可能')
+                        : (lang === 'en' ? 'GPA 3.8 or below — up to 20 credits allowed' : 'GPA 3.8以下 — 最大20単位まで')
+                      }
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 2: COURSES ── */}
+            {step === 2 && (
               <div>
                 <div className="mb-4">
                   <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
@@ -536,7 +620,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       onClick={() => {
                         setLoadingCourses(true);
                         setCoursesError('');
-                        fetchAvailableCourses(studentId.toUpperCase())
+                        fetchAvailableCourses(studentId.toUpperCase(), studentClass)
                           .then(data => setAvailableCourses(data))
                           .catch(() => setCoursesError('Could not load courses. Please try again.'))
                           .finally(() => setLoadingCourses(false));
@@ -607,89 +691,6 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
               </div>
             )}
 
-            {/* ── STEP 2: GPA ── */}
-            {step === 2 && (
-              <div>
-                <div className="mb-6">
-                  <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                    {tx.gpaTitle}
-                  </h2>
-                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.gpaSub}</p>
-                </div>
-
-                <div className={`${cardBg} rounded-[28px] p-5 space-y-5 shadow-sm`}>
-                  {/* Cumulative GPA */}
-                  <div className="space-y-2">
-                    <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.cumGpaLbl}</label>
-                    <div className="relative">
-                      <GraduationCap className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-                      <input
-                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
-                        value={cumulativeGpa}
-                        onChange={e => { setCumulativeGpa(e.target.value); setErrors(p => ({ ...p, cumGpa: '' })); }}
-                        className={`${inputCls} pl-12`}
-                      />
-                    </div>
-                    {errors.cumGpa && <p className="text-red-500 text-xs font-bold px-1">{errors.cumGpa}</p>}
-
-                    {/* GPA visual */}
-                    {cumulativeGpa && !isNaN(parseFloat(cumulativeGpa)) && (
-                      <div className="mt-2">
-                        <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
-                          <motion.div
-                            animate={{ width: `${Math.min((parseFloat(cumulativeGpa) / 4.3) * 100, 100)}%` }}
-                            className="h-full rounded-full bg-brand-yellow"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Last Semester GPA */}
-                  <div className="space-y-2">
-                    <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.semGpaLbl}</label>
-                    <div className="relative">
-                      <Star className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-                      <input
-                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
-                        value={lastSemGpa}
-                        onChange={e => { setLastSemGpa(e.target.value); setErrors(p => ({ ...p, semGpa: '' })); }}
-                        className={`${inputCls} pl-12`}
-                      />
-                    </div>
-                    {errors.semGpa && <p className="text-red-500 text-xs font-bold px-1">{errors.semGpa}</p>}
-
-                    {lastSemGpa && !isNaN(parseFloat(lastSemGpa)) && (
-                      <div className="mt-2">
-                        <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
-                          <motion.div
-                            animate={{ width: `${Math.min((parseFloat(lastSemGpa) / 4.3) * 100, 100)}%` }}
-                            className="h-full rounded-full bg-brand-pink"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* GPA scale hint */}
-                  <div className={`text-xs font-medium ${isDark ? 'text-gray-600' : 'text-gray-400'} flex justify-between`}>
-                    <span>0.00 — Failing</span>
-                    <span>2.00 — Passing</span>
-                    <span>4.30 — Perfect</span>
-                  </div>
-                  {/* Credit limit hint based on GPA */}
-                  {cumulativeGpa && !isNaN(parseFloat(cumulativeGpa)) && (
-                    <div className={`text-xs font-bold px-3 py-2 rounded-xl text-center ${parseFloat(cumulativeGpa) > 3.8 ? 'bg-green-100 text-green-700' : (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500')}`}>
-                      {parseFloat(cumulativeGpa) > 3.8
-                        ? (lang === 'en' ? '★ GPA above 3.8 — you can enroll up to 24 credits' : '★ GPA 3.8超 — 最大24単位まで履修可能')
-                        : (lang === 'en' ? 'GPA 3.8 or below — up to 20 credits allowed' : 'GPA 3.8以下 — 最大20単位まで')
-                      }
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* ── STEP 3: OTP VERIFICATION ── */}
             {step === 3 && (
               <div>
@@ -738,7 +739,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           className={`w-full mt-6 bg-brand-black text-white rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 transition-colors shadow-lg shadow-black/20 ${isSubmitting ? 'opacity-80 cursor-wait' : 'hover:bg-gray-800'}`}
         >
           {isSubmitting ? 'Processing...' : step < 2 ? tx.next : step === 2 ? tx.finish : tx.verify}
-          {!isSubmitting && (step < 2 ? <ChevronRight className="w-4 h-4" /> : <Check className="w-4 h-4" />)}
+          {!isSubmitting && (step < 3 ? <ChevronRight className="w-4 h-4" /> : <Check className="w-4 h-4" />)}
         </motion.button>
 
         <p className={`text-center mt-4 text-xs ${isDark ? 'text-gray-700' : 'text-gray-400'}`}>

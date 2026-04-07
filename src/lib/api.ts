@@ -81,16 +81,20 @@ export async function getCourseDetails(courseId: string): Promise<CourseItem> {
  * Lambda reads x-student-id header → looks up class in tokai-classes table →
  * joins with tokai-courses → returns only the correct class sections for the student.
  */
-export async function fetchAvailableCourses(studentId: string): Promise<CourseItem[]> {
+export async function fetchAvailableCourses(
+  studentId: string,
+  studentClass: 'A' | 'B',
+): Promise<CourseItem[]> {
   const token = await getAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-student-id': studentId,
+    'x-student-class': studentClass,
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE_URL}/courses`, { headers });
-  if (!res.ok) throw new Error(`fetchAvailableCourses → ${res.status}`);
+  if (!res.ok) throw new Error(`fetchAvailableCourses → ${res.status} (class ${studentClass})`);
   return res.json() as Promise<CourseItem[]>;
 }
 
