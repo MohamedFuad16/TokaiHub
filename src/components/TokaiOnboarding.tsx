@@ -72,37 +72,20 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   useEffect(() => {
     if (step !== 2) return;
 
+    const derivedClass = deriveStudentClass(studentId.toUpperCase());
+
     console.log("🚀 FETCHING COURSES WITH:", {
       studentId: studentId.toUpperCase(),
-      studentClass
+      studentClass: derivedClass
     });
 
     setLoadingCourses(true);
     setCoursesError('');
 
-    fetchAvailableCourses(studentId.toUpperCase(), studentClass)
+    fetchAvailableCourses(studentId.toUpperCase(), derivedClass)
       .then(data => {
-        console.log("🔥 RAW API RESPONSE:", data);
-
-        // ✅ FIX: map backend → frontend shape
-        const mapped = (data || []).map((c: any) => ({
-          id: c.courseId, // 🔥 IMPORTANT
-          title: {
-            en: c.courseName,
-            jp: c.courseName
-          },
-          credits: c.credits ?? 0,
-          code: c.courseId,
-          location: {
-            en: "Shinagawa Campus",
-            jp: "品川キャンパス"
-          },
-          color: "bg-brand-yellow"
-        }));
-
-        console.log("✅ MAPPED COURSES:", mapped);
-
-        setAvailableCourses(mapped);
+        console.log("🔥 COURSES FROM API:", data);
+        setAvailableCourses(data);
       })
       .catch((err: Error) => {
         console.error("❌ COURSE FETCH ERROR:", err);
@@ -110,7 +93,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       })
       .finally(() => setLoadingCourses(false));
 
-  }, [step]);
+  }, [step, studentId]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
