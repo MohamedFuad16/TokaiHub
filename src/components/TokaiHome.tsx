@@ -85,7 +85,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
           const current = userProfile.selectedCourseIds ?? [];
           if (current.length === 0) {
             const localIds = data.enrolledCourseIds.map(apiId => {
-              const localItem = allItems.find(item => (item as any).code === apiId);
+              const localItem = (allItems as CourseItem[]).find(item => item.code === apiId);
               return localItem ? localItem.id : apiId;
             });
             setUserProfile({ ...userProfile, selectedCourseIds: localIds });
@@ -102,9 +102,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const cumGpa = userProfile?.cumulativeGpa ?? 0;
   const lastSemGpa = userProfile?.lastSemGpa ?? 0;
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-  const selectedCredits = courseItems
-    .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
-    .reduce((acc, item) => acc + (item.credits || 0), 0);
+  const selectedCredits = useMemo(() =>
+    courseItems
+      .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
+      .reduce((acc, item) => acc + (item.credits || 0), 0),
+  [courseItems, selectedCourseIds]);
+
   const [activeCategory, setActiveCategory] = useState('Classes');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
@@ -112,13 +115,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
-  const handlePrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  };
+  const handlePrevMonth = useCallback(() => {
+    setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }, []);
 
-  const handleNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  };
+  const handleNextMonth = useCallback(() => {
+    setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }, []);
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();

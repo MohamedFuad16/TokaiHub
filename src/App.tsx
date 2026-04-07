@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { Amplify } from 'aws-amplify';
 import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
@@ -7,6 +6,9 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
+import { configureAmplify } from './lib/awsConfig';
+
+configureAmplify();
 
 // Lazy load route components — imports cached after first load
 const lazyHome = () => import('./components/TokaiHome');
@@ -94,15 +96,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableEnhancedUI: false,
 };
 
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: 'ap-northeast-1_G22UBNCKK',
-      userPoolClientId: '4ej101oqii0dopq22duiodvah7',
-      loginWith: { email: true }
-    }
-  }
-});
 
 interface MainAppContentProps {
   screenProps: ScreenProps;
@@ -247,6 +240,10 @@ export default function App() {
       try {
         const user = await getCurrentUser();
         const attrs = await fetchUserAttributes();
+        // Apply locale from Cognito attribute so language matches what the user chose at sign-up
+        if (attrs.locale) {
+          setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
+        }
         // Preserve any persisted profile data (e.g. selectedCourseIds edited by the user)
         // and only fall back to defaults for fields not stored yet.
         setUserProfile(prev => ({
@@ -293,6 +290,11 @@ export default function App() {
     try {
       const user = await getCurrentUser();
       const attrs = await fetchUserAttributes();
+
+      // Restore language from Cognito locale attribute
+      if (attrs.locale) {
+        setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
+      }
 
       setUserProfile(prev => ({
         name: attrs.name || 'Student',

@@ -138,6 +138,20 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     return getClassesForDate(monthlySelected, selectedCourseIds, scheduleItems);
   }, [monthlySelected, selectedCourseIds, scheduleItems]);
 
+  // Precompute which day-numbers in the visible month have classes.
+  // Avoids 31 separate getClassesForDate calls during calendar grid render.
+  const daysWithClasses = useMemo(() => {
+    const year = monthlySelected.getFullYear();
+    const month = monthlySelected.getMonth();
+    const count = new Date(year, month + 1, 0).getDate();
+    const s = new Set<number>();
+    for (let d = 1; d <= count; d++) {
+      const date = new Date(year, month, d);
+      if (getClassesForDate(date, selectedCourseIds, scheduleItems).length > 0) s.add(d);
+    }
+    return s;
+  }, [monthlySelected, selectedCourseIds, scheduleItems]);
+
   // Actual selected date (highlighted in calendar)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date());
 
@@ -247,27 +261,6 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   >
                     {dailyClasses.length > 0 && (
                       <>
-                        {settings.enableEnhancedUI && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-[20px] bg-white/8 border border-white/10 mb-5"
-                          >
-                            <div className="w-9 h-9 rounded-full bg-brand-yellow/15 flex items-center justify-center shrink-0">
-                              <div className="w-2.5 h-2.5 rounded-full bg-brand-yellow shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.12em] leading-none mb-1">
-                                {lang === 'en' ? 'Up Next' : '次の授業'}
-                              </p>
-                              <p className="text-white text-sm font-bold truncate leading-tight">{dailyClasses[0].title[lang]}</p>
-                              <p className="text-white/40 text-xs truncate mt-0.5">{dailyClasses[0].location[lang]}</p>
-                            </div>
-                            <span className="text-brand-yellow text-xs font-bold bg-brand-yellow/10 px-2.5 py-1 rounded-full shrink-0">
-                              {dailyClasses[0].time.split(' ')[0]}
-                            </span>
-                          </motion.div>
-                        )}
                         {dailyClasses.map((item) => (
                           <motion.div
                             key={item.id}
@@ -438,7 +431,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
                 {/* Day labels */}
                 <div className="grid grid-cols-7 gap-1 text-center mb-3">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                  {(lang === 'en' ? shortDaysOfWeekEn : shortDaysOfWeekJp).map((d, i) => (
                     <div key={i} className="text-xs font-bold text-white/40">{d}</div>
                   ))}
                 </div>
@@ -449,7 +442,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const dateNum = i + 1;
                     const thisDate = new Date(monthYear.getFullYear(), monthYear.getMonth(), dateNum);
-                    const hasClass = getClassesForDate(thisDate, selectedCourseIds).length > 0;
+                    const hasClass = daysWithClasses.has(dateNum);
                     const isSelected =
                       calendarSelectedDate.getDate() === dateNum &&
                       calendarSelectedDate.getMonth() === monthYear.getMonth() &&

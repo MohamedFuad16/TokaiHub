@@ -1,6 +1,7 @@
 import { BookOpen } from 'lucide-react';
+import type { CourseItem } from './lib/types';
 
-export const allItems = [
+export const allItems: CourseItem[] = [
   { 
     id: 'mon-1-2', 
     type: 'Classes', 
@@ -203,6 +204,6 @@ export const getClassesForDate = (
   // Always filter by selectedCourseIds — single source of truth
   return items.filter(
     item => item.dayOfWeek === dayOfWeek &&
-      (selectedCourseIds.includes(item.id) || selectedCourseIds.includes((item as any).code ?? ''))
+      (selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
   );
 };

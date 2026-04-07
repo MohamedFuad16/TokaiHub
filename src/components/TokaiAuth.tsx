@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff, ArrowRight, Mail } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import { signIn } from 'aws-amplify/auth';
 import { Language, AppSettings } from '../App';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
@@ -130,6 +130,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -190,12 +191,13 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
       setError(tx.errorPw); return;
     }
     setError('');
-
+    setIsSigningIn(true);
     try {
       await signIn({ username: email, password });
       onSignIn(email);
     } catch (err: any) {
       setError(err.message || 'Error signing in');
+      setIsSigningIn(false);
     }
   };
 
@@ -231,6 +233,16 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-sm flex flex-col items-center"
       >
+        {/* Logo — above mascot */}
+        <div className="flex flex-col items-center mb-4">
+          <div className={`font-black text-3xl tracking-tighter leading-none ${isDark ? 'text-white' : 'text-brand-black'}`}>
+            TOKAI<span className={`${isDark ? 'text-brand-yellow' : 'text-[#3B82F6]'}`}>HUB</span>
+          </div>
+          <p className={`text-[10px] font-semibold tracking-widest uppercase mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+            {lang === 'en' ? 'Student Portal' : '学生ポータル'}
+          </p>
+        </div>
+
         {/* Card with mascot resting on top edge */}
         <div className="relative w-full mt-20">
           {/* Mascot — sitting on the card top edge */}
@@ -320,11 +332,21 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
 
               <motion.button
                 type="submit"
-                whileTap={{ scale: 0.97 }}
-                className="w-full bg-brand-black text-white rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors mt-2 shadow-lg shadow-black/20"
+                disabled={isSigningIn}
+                whileTap={!isSigningIn ? { scale: 0.97 } : {}}
+                className={`w-full bg-brand-black text-white rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 transition-colors mt-2 shadow-lg shadow-black/20 ${isSigningIn ? 'opacity-80 cursor-wait' : 'hover:bg-gray-800'}`}
               >
-                {tx.signIn}
-                <ArrowRight className="w-4 h-4" />
+                {isSigningIn ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {lang === 'en' ? 'Signing in…' : 'サインイン中…'}
+                  </>
+                ) : (
+                  <>
+                    {tx.signIn}
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </motion.button>
             </form>
           </div>
