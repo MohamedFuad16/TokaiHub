@@ -93,8 +93,19 @@ export async function fetchAvailableCourses(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}/courses`, { headers });
-  if (!res.ok) throw new Error(`fetchAvailableCourses → ${res.status} (class ${studentClass})`);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/courses`, { headers });
+  } catch (networkErr: any) {
+    throw new Error(`Network error: ${networkErr?.message ?? 'failed to reach server'}`);
+  }
+
+  if (!res.ok) {
+    let body = '';
+    try { body = await res.text(); } catch { /* ignore */ }
+    throw new Error(`HTTP ${res.status} — ${body || res.statusText}`);
+  }
+
   return res.json() as Promise<CourseItem[]>;
 }
 

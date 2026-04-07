@@ -75,7 +75,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     setCoursesError('');
     fetchAvailableCourses(studentId.toUpperCase(), studentClass)
       .then(data => setAvailableCourses(data))
-      .catch(() => setCoursesError('Could not load courses. Please try again.'))
+      .catch((err: Error) => setCoursesError(err.message))
       .finally(() => setLoadingCourses(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -611,10 +611,11 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   </div>
                 )}
 
-                {/* Error state */}
+                {/* Error state — shows the raw error for debugging */}
                 {!loadingCourses && coursesError && (
-                  <div className={`rounded-2xl p-4 text-center space-y-3 ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
-                    <p className="text-sm font-bold">{coursesError}</p>
+                  <div className={`rounded-2xl p-4 space-y-3 ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                    <p className="text-xs font-bold uppercase tracking-wide opacity-70">Course load error</p>
+                    <pre className="text-xs font-mono whitespace-pre-wrap break-all leading-relaxed">{coursesError}</pre>
                     <button
                       type="button"
                       onClick={() => {
@@ -622,7 +623,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                         setCoursesError('');
                         fetchAvailableCourses(studentId.toUpperCase(), studentClass)
                           .then(data => setAvailableCourses(data))
-                          .catch(() => setCoursesError('Could not load courses. Please try again.'))
+                          .catch((err: Error) => setCoursesError(err.message))
                           .finally(() => setLoadingCourses(false));
                       }}
                       className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
