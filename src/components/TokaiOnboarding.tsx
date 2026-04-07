@@ -226,8 +226,6 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
               email: email.trim(),
               name: name.trim(),
               'custom:studentId': studentId.toUpperCase(),
-              // locale is read by the Cognito custom message Lambda to send
-              // the verification email in the user's language (ja or en).
               locale: lang === 'jp' ? 'ja' : 'en',
             }
           }
