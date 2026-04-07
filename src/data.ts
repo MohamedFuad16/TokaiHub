@@ -180,24 +180,21 @@ export const allItems = [
   },
 ];
 
-export const getClassesForDate = (date: Date, courseIds?: string[]) => {
+export const getClassesForDate = (date: Date, selectedCourseIds: string[]) => {
   // Classes start from April 8th, 2026
   const startDate = new Date(2026, 3, 8); // Month is 0-indexed, so 3 is April
   const endDate = new Date(2026, 9, 31); // October 31st
 
   // Zero out time for accurate comparison
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  
+
   if (d < startDate || d > endDate) {
     return [];
   }
 
   const dayOfWeek = date.getDay();
-  let classes = allItems.filter(item => item.dayOfWeek === dayOfWeek);
-  
-  if (courseIds && courseIds.length > 0) {
-    classes = classes.filter(item => courseIds.includes(item.id));
-  }
-  
-  return classes;
+  // Always filter by selectedCourseIds — single source of truth
+  return allItems.filter(
+    item => item.dayOfWeek === dayOfWeek && selectedCourseIds.includes(item.id)
+  );
 };

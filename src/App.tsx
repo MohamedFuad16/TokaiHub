@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Amplify } from 'aws-amplify';
-import { getCurrentUser, fetchUserAttributes, signOut, signIn } from 'aws-amplify/auth';
+import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
@@ -36,7 +36,6 @@ function preloadRoutes() {
   lazyEditProfile();
 }
 
-export type Screen = string; // Legacy fallback
 export type Language = 'en' | 'jp';
 export type AuthScreen = 'signIn' | 'signUp';
 
@@ -45,6 +44,7 @@ export interface AppSettings {
   notifications: boolean;
   privacy: boolean;
   devSkipAuth: boolean;
+  enableEnhancedUI: boolean;
 }
 
 export interface UserProfile {
@@ -59,8 +59,6 @@ export interface UserProfile {
 }
 
 export interface ScreenProps {
-  onNavigate?: (s: Screen, params?: any) => void; // Deprecated
-  goBack?: () => void; // Deprecated
   lang: Language;
   setLang: (l: Language) => void;
   settings: AppSettings;
@@ -68,7 +66,6 @@ export interface ScreenProps {
   userProfile?: UserProfile;
   setUserProfile?: (p: UserProfile) => void;
   onSignOut?: () => void;
-  params?: any; // Deprecated
 }
 
 const sidebarNav = [
@@ -99,7 +96,17 @@ Amplify.configure({
   }
 });
 
-function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handleUpdateProfile, handleDevSkipChange }: any) {
+interface MainAppContentProps {
+  screenProps: ScreenProps;
+  lang: Language;
+  userProfile: UserProfile | undefined;
+  isDark: boolean;
+  setLang: (l: Language) => void;
+  handleUpdateProfile: (updated: UserProfile) => void;
+  handleDevSkipChange: (val: boolean) => void;
+}
+
+function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handleUpdateProfile, handleDevSkipChange }: MainAppContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -215,6 +222,7 @@ export default function App() {
     notifications: true,
     privacy: true,
     devSkipAuth: false,
+    enableEnhancedUI: false,
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -253,7 +261,7 @@ export default function App() {
     }
   }, [settings.devSkipAuth]);
 
-  const handleSignIn = async (email: string) => {
+  const handleSignIn = async (_email: string) => {
     setIsLoading(true);
 
     try {
@@ -316,7 +324,7 @@ export default function App() {
 
   const isDark = settings.isDarkMode;
 
-  const screenProps: ScreenProps = {
+  const screenProps: ScreenProps = React.useMemo(() => ({
     lang,
     setLang,
     settings,
@@ -324,7 +332,7 @@ export default function App() {
     userProfile,
     setUserProfile: handleUpdateProfile,
     onSignOut: handleSignOut,
-  };
+  }), [lang, setLang, settings, userProfile, handleUpdateProfile, handleSignOut]);
 
   if (isLoading) {
     return <LoadingScreen lang={lang} isDark={isDark} />;

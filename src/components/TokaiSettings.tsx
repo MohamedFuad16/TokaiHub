@@ -14,6 +14,8 @@ const t = {
     developer: "Developer",
     devSkipAuth: "Skip Login (Dev Mode)",
     devSkipAuthSub: "Bypass auth for testing",
+    enhancedUI: "Enhanced UI",
+    enhancedUISub: "Enable enhanced animations and visual upgrades",
     logout: "Log Out",
     account: "Account",
     verified: "Verified",
@@ -31,6 +33,8 @@ const t = {
     developer: "開発者",
     devSkipAuth: "ログインをスキップ（開発モード）",
     devSkipAuthSub: "テスト用に認証をバイパス",
+    enhancedUI: "強化UI",
+    enhancedUISub: "拡張アニメーションとビジュアルアップグレードを有効化",
     logout: "ログアウト",
     account: "アカウント",
     verified: "検証済み",
@@ -243,6 +247,23 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                 </div>
                 <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} ariaLabel={tx.devSkipAuth} />
+              </div>
+
+              {/* Enhanced UI toggle */}
+              <div
+                onClick={() => setSettings(s => ({ ...s, enableEnhancedUI: !s.enableEnhancedUI }))}
+                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
+                    <Code2 className="w-5 h-5 text-brand-black" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm">{tx.enhancedUI}</div>
+                    <div className={`text-xs font-medium ${textMuted}`}>{tx.enhancedUISub}</div>
+                  </div>
+                </div>
+                <Toggle on={settings.enableEnhancedUI} onToggle={() => setSettings(s => ({ ...s, enableEnhancedUI: !s.enableEnhancedUI }))} ariaLabel={tx.enhancedUI} />
               </div>
             </div>
           </motion.div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Menu, BookOpen, ArrowRight, Calendar, Users, Clock, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
+import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -18,6 +18,7 @@ const t = {
     schedule: "Schedule",
     classesToday: "Classes Today",
     noItems: "No items found for this category.",
+    noCourses: "Select your courses in Edit Profile to see your schedule.",
     otherInfo: "Campus News",
     gpa: "Cumulative GPA",
     credits: "Credits (5th Sem)",
@@ -36,6 +37,7 @@ const t = {
     schedule: "スケジュール",
     classesToday: "今日の授業",
     noItems: "このカテゴリのアイテムはありません。",
+    noCourses: "プロフィール編集で履修科目を選択してください。",
     otherInfo: "キャンパスニュース",
     gpa: "累積 GPA",
     credits: "履修単位数 (5セメ)",
@@ -145,7 +147,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           {/* Academic Overview (GPA & Credits) — label → value → sublabel hierarchy */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Cumulative GPA */}
-            <div className={`p-5 rounded-2xl ${cardBg} shadow-sm`}>
+            <motion.div
+              whileHover={{ y: -2, scale: 1.005 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={`p-5 rounded-2xl ${cardBg} shadow-sm`}
+            >
               <div className={`flex items-center gap-1.5 mb-3`}>
                 <Target className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{t[lang].gpa}</span>
@@ -154,9 +160,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-green-500/10 text-green-500 text-xs font-semibold">
                 {lang === 'en' ? `Last Sem: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
               </div>
-            </div>
+            </motion.div>
             {/* Selected Credits */}
-            <div className={`p-5 rounded-2xl ${cardBg} shadow-sm`}>
+            <motion.div
+              whileHover={{ y: -2, scale: 1.005 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={`p-5 rounded-2xl ${cardBg} shadow-sm`}
+            >
               <div className="flex items-center gap-1.5 mb-3">
                 <GraduationCap className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{t[lang].credits}</span>
@@ -165,20 +175,28 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-100'}`}>
                 {lang === 'en' ? 'Selected' : '履修中'}
               </div>
-            </div>
+            </motion.div>
             {/* Classes Today (desktop only) */}
-            <div className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}>
+            <motion.div
+              whileHover={{ y: -2, scale: 1.005 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}
+            >
               <div className="flex items-center gap-1.5 mb-3">
                 <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
               </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{getClassesForDate(new Date()).length}</div>
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{getClassesForDate(new Date(), selectedCourseIds).length}</div>
               <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
                 {lang === 'en' ? 'Scheduled' : '予定'}
               </div>
-            </div>
+            </motion.div>
             {/* Due Soon (desktop only) */}
-            <div className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}>
+            <motion.div
+              whileHover={{ y: -2, scale: 1.005 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}
+            >
               <div className="flex items-center gap-1.5 mb-3">
                 <AlertCircle className={`w-3.5 h-3.5 ${textMuted}`} />
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
@@ -187,7 +205,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold">
                 {lang === 'en' ? 'This Week' : '今週'}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* Category Filter Pills */}
@@ -240,14 +258,17 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               {filteredItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div
+                  <motion.div
                     key={item.id}
                     onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                     role="button"
                     tabIndex={0}
                     aria-label={`View details for ${item.title[lang]} by ${item.teacher[lang]}. Time: ${item.time}. Location: ${item.location[lang]}.`}
                     onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                    className="w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
+                    whileHover={{ y: -2, scale: 1.005 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
                   >
                     {/* Screen Layer (Top ~60%) */}
                     <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
@@ -308,7 +329,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </motion.div>
@@ -342,10 +363,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               </h2>
               <div className="space-y-3">
                 {deadlines.map(deadline => (
-                  <div
+                  <motion.div
                     key={deadline.id}
                     onClick={() => setTimeout(() => navigate('/assignments'), 150)}
-                    className={`p-4 rounded-xl ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} flex items-center justify-between gap-3 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all`}
+                    whileHover={{ y: -2, scale: 1.005 }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between gap-3 cursor-pointer shadow-sm`}
                   >
                     <div className="min-w-0">
                       <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{deadline.title[lang]}</h3>
@@ -354,7 +378,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     <div className={`px-3 py-1.5 rounded-lg ${deadline.color} text-brand-black font-semibold text-xs shadow-sm shrink-0`}>
                       {t[lang].dueIn} {deadline.daysLeft} {t[lang].days}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>
@@ -363,7 +387,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
             <motion.div variants={itemVariants}>
               <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
               <div className="space-y-3">
-                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
+                <motion.div
+                  whileHover={{ y: -2, scale: 1.005 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm`}
+                >
                   <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
                     <Bell className="w-5 h-5 text-brand-black" />
                   </div>
@@ -372,8 +401,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Due by April 15th' : '4月15日までにお願いします'}</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
-                </div>
-                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -2, scale: 1.005 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm`}
+                >
                   <div className="w-10 h-10 bg-brand-green rounded-full flex items-center justify-center shrink-0">
                     <Calendar className="w-5 h-5 text-brand-black" />
                   </div>
@@ -382,7 +416,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Closed this weekend' : '今週末は閉館します'}</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
           </div>
@@ -395,9 +429,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
+          whileHover={{ scale: 1.02, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8, delay: 0.4 }}
           onClick={() => setIsScheduleSheetOpen(true)}
-          className="bg-[#0B1F3A] rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
+          className="bg-[#0B1F3A] rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl"
         >
           <div className="flex items-center gap-4 pl-2">
             <div className="w-12 h-12 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-lg text-brand-black">
@@ -432,7 +467,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 20, stiffness: 300, mass: 0.8 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
               className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[80%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
@@ -464,7 +499,17 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
                     <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
-                    <p className={`text-sm font-medium ${textMuted}`}>{t[lang].noItems}</p>
+                    <p className={`text-sm font-medium ${textMuted}`}>
+                      {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
+                    </p>
+                    {selectedCourseIds.length === 0 && (
+                      <button
+                        onClick={() => { setIsScheduleSheetOpen(false); setTimeout(() => navigate('/editProfile'), 200); }}
+                        className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
+                      >
+                        {lang === 'en' ? 'Edit Profile' : 'プロフィール編集'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -488,7 +533,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
               className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
@@ -589,7 +634,17 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
                           <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
-                          <p className={`text-sm font-medium ${textMuted}`}>{t[lang].noItems}</p>
+                          <p className={`text-sm font-medium ${textMuted}`}>
+                            {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
+                          </p>
+                          {selectedCourseIds.length === 0 && (
+                            <button
+                              onClick={() => { setIsCalendarSheetOpen(false); setTimeout(() => navigate('/editProfile'), 200); }}
+                              className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
+                            >
+                              {lang === 'en' ? 'Edit Profile' : 'プロフィール編集'}
+                            </button>
+                          )}
                         </div>
                       )}
                     </motion.div>

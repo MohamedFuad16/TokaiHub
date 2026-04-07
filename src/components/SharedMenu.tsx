@@ -70,10 +70,13 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                 const active = isActive(path);
                 const label = lang === 'en' ? labelEn : labelJp;
                 return (
-                  <button
+                  <motion.button
                     key={path}
                     onClick={() => { onClose(); setTimeout(() => navigate(path), 150); }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-base transition-all text-left w-full ${
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-base transition-colors text-left w-full ${
                       active
                         ? (isDark ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900')
                         : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900')
@@ -84,7 +87,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                     {active && (
                       <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-yellow shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
                     )}
-                  </button>
+                  </motion.button>
                 );
               })}
             </nav>

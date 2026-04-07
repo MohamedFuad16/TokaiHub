@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { ChevronLeft, Menu, Clock, MapPin } from 'lucide-react';
+import { ChevronLeft, Menu } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { getClassesForDate, allItems } from '../data';
+import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const t = {
   en: {
@@ -15,6 +16,8 @@ const t = {
     noClasses: "No classes today.",
     noClassesWeek: "No classes this week.",
     classesOn: (d: Date) => `Classes on ${d.toLocaleString('en-US', { month: 'long' })} ${d.getDate()}`,
+    noCourses: "Select your courses in Edit Profile to see your schedule",
+    goToEditProfile: "Edit Profile",
   },
   jp: {
     schedule: "スケジュール",
@@ -24,6 +27,8 @@ const t = {
     noClasses: "今日の授業はありません。",
     noClassesWeek: "今週の授業はありません。",
     classesOn: (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日の授業`,
+    noCourses: "プロフィール編集で授業を選択してスケジュールを表示しましょう",
+    goToEditProfile: "プロフィール編集",
   }
 };
 
@@ -67,13 +72,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   }, [setSearchParams]);
 
   const [baseDate, setBaseDate] = useState(new Date(2026, 3, 8));
-  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   // Separate selected date for monthly view so calendar selection doesn't break daily
   const [monthlySelected, setMonthlySelected] = useState<Date>(new Date(2026, 3, 8));
 
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-900' : 'bg-brand-black';
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
   const handlePrevMonth = useCallback(() => {
     setMonthlySelected(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -171,8 +174,22 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
         <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-8 max-w-4xl w-full mx-auto min-h-0">
 
+          {/* ─── NO COURSES SELECTED ─── */}
+          {selectedCourseIds.length === 0 && (
+            <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
+              <img src={mascotIdle} alt="No courses selected" className="w-24 h-24 object-contain drop-shadow-md opacity-80" />
+              <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
+              <button
+                onClick={() => navigate('/editProfile')}
+                className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
+              >
+                {t[lang].goToEditProfile}
+              </button>
+            </motion.div>
+          )}
+
           {/* ─── DAILY VIEW ─── */}
-          {view === 'daily' && (
+          {view === 'daily' && selectedCourseIds.length > 0 && (
             <>
               <motion.div variants={itemVariants} className="flex justify-between gap-2 overflow-x-auto no-scrollbar mb-8 shrink-0">
                 {dailyDates.map((d, i) => {
@@ -226,26 +243,33 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   </motion.div>
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
-                  <div className="text-center text-white/50 py-8 absolute inset-0 flex items-center justify-center">{t[lang].noClasses}</div>
+                  <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
+                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+                    <p className="text-white/50 text-sm font-medium">
+                      {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noClasses}
+                    </p>
+                    {selectedCourseIds.length === 0 && (
+                      <button
+                        onClick={() => navigate('/editProfile')}
+                        className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
+                      >
+                        {t[lang].goToEditProfile}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </>
           )}
 
           {/* ─── WEEKLY TIMETABLE VIEW ─── */}
-          {view === 'weekly' && (
+          {view === 'weekly' && selectedCourseIds.length > 0 && (
             <motion.div variants={itemVariants} className="flex flex-col">
               {/* Header */}
-              <div className="flex justify-between items-center mb-4 shrink-0">
-                <button onClick={() => setCurrentWeekOffset(p => p - 1)} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
-                  <ChevronLeft className="w-5 h-5 text-white" />
-                </button>
+              <div className="flex justify-center items-center mb-4 shrink-0">
                 <div className="font-bold text-base text-white">
                   {lang === 'en' ? '2026 — 1st Semester' : '2026年 1学期'}
                 </div>
-                <button onClick={() => setCurrentWeekOffset(p => p + 1)} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
-                  <ChevronLeft className="w-5 h-5 text-white rotate-180" />
-                </button>
               </div>
 
               {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
@@ -288,7 +312,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
                   {/* ── Class cards — placed with gridColumn + gridRow span ── */}
                   {allItems
-                    .filter(item => item.type === 'Classes')
+                    .filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id))
                     .map(item => {
                       const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
                       if (colIdx === -1) return null;
@@ -338,7 +362,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
 
           {/* ─── MONTHLY VIEW ─── */}
-          {view === 'monthly' && (
+          {view === 'monthly' && selectedCourseIds.length > 0 && (
             <motion.div variants={itemVariants} className="flex flex-col gap-4">
               {/* Calendar */}
               <div className="bg-white/5 rounded-[32px] p-4 sm:p-6 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
@@ -436,6 +460,20 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   </motion.div>
                 </AnimatePresence>
               </div>
+            </motion.div>
+          )}
+
+          {/* Empty state for weekly/monthly when no courses selected */}
+          {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
+            <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
+              <img src={mascotIdle} alt="No courses" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+              <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
+              <button
+                onClick={() => navigate('/editProfile')}
+                className="px-4 py-2 rounded-xl bg-brand-yellow text-brand-black font-bold text-sm active:scale-95 transition-transform"
+              >
+                {t[lang].goToEditProfile}
+              </button>
             </motion.div>
           )}
 

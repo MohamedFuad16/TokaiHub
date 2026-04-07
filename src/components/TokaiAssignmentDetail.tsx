@@ -1,14 +1,25 @@
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, UploadCloud } from 'lucide-react';
 import { ScreenProps } from '../App';
+import type { LocalizedString } from '../lib/types';
+import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
-const deadlines: Record<string, any> = {
+interface AssignmentDetail {
+  title: LocalizedString;
+  course: LocalizedString;
+  daysLeft: number;
+  color: string;
+  desc: LocalizedString;
+}
+
+const deadlines: Record<string, AssignmentDetail> = {
   '1': { title: { en: 'VR Project Draft', jp: 'VRプロジェクト草案' }, course: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' }, daysLeft: 2, color: 'bg-brand-yellow', desc: { en: 'Submit a 2-page PDF outlining your VR interaction models.', jp: 'VRインタラクションモデルの概要をまとめた2ページのPDFを提出してください。' } },
   '2': { title: { en: 'Cloud Architecture Essay', jp: 'クラウドアーキテクチャレポート' }, course: { en: 'Cloud Computing', jp: 'クラウドコンピューティング' }, daysLeft: 5, color: 'bg-brand-pink', desc: { en: 'Write a comparative essay between AWS and GCP serverless runtimes.', jp: 'AWSとGCPのサーバーレスランタイムを比較するレポートを作成してください。' } },
   '3': { title: { en: 'Mobile App Outline', jp: 'モバイルアプリの概要' }, course: { en: 'Mobile App Dev', jp: 'モバイルアプリケーション開発' }, daysLeft: 0, color: 'bg-brand-green', desc: { en: 'Wireframes and Figma link submission.', jp: 'ワイヤーフレームとFigmaのリンクを提出。' } },
 };
 
-export default function TokaiAssignmentDetail({ lang, settings }: ScreenProps) {
+const TokaiAssignmentDetail = React.memo(function TokaiAssignmentDetail({ lang, settings }: ScreenProps) {
   const { id } = useParams();
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
@@ -16,7 +27,20 @@ export default function TokaiAssignmentDetail({ lang, settings }: ScreenProps) {
   const assignment = id ? deadlines[id] : null;
 
   if (!assignment) {
-    return <div className="p-8 font-bold">Assignment not found...</div>;
+    return (
+      <div className={`h-full flex flex-col items-center justify-center gap-4 p-8 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <img src={mascotIdle} alt="Not found" className="w-24 h-24 object-contain drop-shadow-md opacity-80" />
+        <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-brand-black'}`}>
+          {lang === 'en' ? 'Assignment not found' : '課題が見つかりません'}
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-6 py-3 rounded-2xl bg-brand-black text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+        >
+          {lang === 'en' ? 'Go Back' : '戻る'}
+        </button>
+      </div>
+    );
   }
 
   const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-brand-black';
@@ -56,4 +80,6 @@ export default function TokaiAssignmentDetail({ lang, settings }: ScreenProps) {
       </div>
     </div>
   );
-}
+});
+
+export default TokaiAssignmentDetail;

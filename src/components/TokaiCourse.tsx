@@ -1,8 +1,10 @@
+import React from 'react';
 import { ChevronLeft, Clock, BookOpen, Award, CheckCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { allItems } from '../data';
+import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -14,7 +16,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiCourse({ lang, settings }: ScreenProps) {
+const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenProps) {
   const navigate = useNavigate();
   const goBack = () => navigate(-1);
   const { id } = useParams();
@@ -90,18 +92,18 @@ export default function TokaiCourse({ lang, settings }: ScreenProps) {
           {/* Details Grid */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
             <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Clock className="w-6 h-6 text-brand-black mb-3" />
+              <Clock className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               <div className={`text-xs ${textMuted} font-bold mb-1`}>Time</div>
               <div className="font-bold text-sm">{t[lang].time}</div>
             </div>
             <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Award className="w-6 h-6 text-brand-black mb-3" />
+              <Award className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               <div className={`text-xs ${textMuted} font-bold mb-1`}>Credits</div>
               <div className="font-bold text-sm">{t[lang].credits}</div>
             </div>
             <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
               <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
-                <BookOpen className="w-6 h-6 text-brand-black" />
+                <BookOpen className={`w-6 h-6 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               </div>
               <div>
                 <div className={`text-xs ${textMuted} font-bold mb-1`}>Field</div>
@@ -155,4 +157,6 @@ export default function TokaiCourse({ lang, settings }: ScreenProps) {
       </div>
     </div>
   );
-}
+});
+
+export default TokaiCourse;

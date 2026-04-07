@@ -4,9 +4,36 @@
  * Currently uses mock data. Each function is structured so you can replace
  * the mock return with a real fetch() call once the API Gateway endpoint is available.
  *
- * Pattern for migration:
- *   const res = await fetch(`${API_BASE_URL}/courses`);
+ * ─── Future Backend Endpoints ────────────────────────────────────────────────
+ *
+ * GET  /courses                      → getCourses()          → CourseItem[]
+ * GET  /courses/:id                  → (future) getCourse()  → CourseItem
+ *
+ * GET  /assignments                  → getAssignments()      → Assignment[]
+ * GET  /assignments/:id              → (future) getAssignment()
+ * POST /assignments                  → (future) createAssignment()
+ * PUT  /assignments/:id              → (future) updateAssignment()
+ * DEL  /assignments/:id              → (future) deleteAssignment()
+ *
+ * GET  /users/:userId                → getUserProfile()      → UserProfileAPI | null
+ * PUT  /users/:userId                → updateUserProfile()   → void
+ *
+ * GET  /schedule?date=YYYY-MM-DD     → (future) getScheduleForDate()
+ * GET  /schedule?userId=:id&date=... → (future) getUserSchedule() (with selectedCourseIds filter)
+ *
+ * ─── Migration Pattern ───────────────────────────────────────────────────────
+ *
+ *   // Before (mock):
+ *   return allItems as CourseItem[];
+ *
+ *   // After (real API):
+ *   const res = await fetch(`${API_BASE_URL}/courses`, {
+ *     headers: { Authorization: `Bearer ${token}` },
+ *   });
+ *   if (!res.ok) throw new Error(`getCourses failed: ${res.status}`);
  *   return res.json();
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { allItems } from '../data';

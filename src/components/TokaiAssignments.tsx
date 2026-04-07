@@ -1,6 +1,8 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, CheckCircle2, Clock } from 'lucide-react';
 import { ScreenProps } from '../App';
+import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const deadlines = [
   { id: '1', title: { en: 'VR Project Draft', jp: 'VRプロジェクト草案' }, course: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' }, daysLeft: 2, color: 'bg-brand-yellow', status: 'pending' },
@@ -8,14 +10,14 @@ const deadlines = [
   { id: '3', title: { en: 'Mobile App Outline', jp: 'モバイルアプリの概要' }, course: { en: 'Mobile App Dev', jp: 'モバイルアプリケーション開発' }, daysLeft: 0, color: 'bg-brand-green', status: 'submitted' },
 ];
 
-export default function TokaiAssignments({ lang, settings }: ScreenProps) {
+const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }: ScreenProps) {
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-brand-black';
 
   return (
     <div className={`h-full flex flex-col ${bgClass}`}>
-      <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 shrink-0 border-b border-gray-100 dark:border-gray-800">
+      <header className={`flex items-center gap-4 p-4 sm:p-6 pt-8 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
         <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors`}>
           <ChevronLeft className="w-5 h-5"/>
         </button>
@@ -23,11 +25,18 @@ export default function TokaiAssignments({ lang, settings }: ScreenProps) {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-        {deadlines.map(item => (
+        {deadlines.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <img src={mascotIdle} alt="No assignments" className="w-24 h-24 object-contain drop-shadow-md opacity-80" />
+            <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {lang === 'en' ? 'No assignments yet' : 'まだ課題はありません'}
+            </p>
+          </div>
+        ) : deadlines.map(item => (
           <div 
             key={item.id} 
             onClick={() => navigate(`/assignments/${item.id}`)}
-            className={`p-5 rounded-[24px] cursor-pointer hover:scale-[1.02] transition-transform ${item.status === 'submitted' ? (isDark ? 'bg-gray-800 opacity-60' : 'bg-gray-50 opacity-70') : item.color} text-brand-black`}
+            className={`p-5 rounded-[32px] cursor-pointer hover:scale-[1.02] transition-transform ${item.status === 'submitted' ? (isDark ? 'bg-gray-800 opacity-60' : 'bg-gray-50 opacity-70') : item.color} text-brand-black`}
           >
             <div className="flex justify-between items-start mb-3">
               <div className="flex gap-3 items-center">
@@ -41,7 +50,7 @@ export default function TokaiAssignments({ lang, settings }: ScreenProps) {
               </div>
             </div>
             {item.status !== 'submitted' && (
-              <div className="flex items-center gap-2 mt-4 bg-white/30 self-start px-3 py-1.5 rounded-lg inline-flex">
+              <div className="inline-flex items-center gap-2 mt-4 bg-white/30 px-3 py-1.5 rounded-lg">
                 <Clock className="w-4 h-4" />
                 <span className="text-sm font-bold">{item.daysLeft} {lang === 'en' ? 'days left' : '日後'}</span>
               </div>
@@ -49,6 +58,9 @@ export default function TokaiAssignments({ lang, settings }: ScreenProps) {
           </div>
         ))}
       </div>
+
     </div>
   );
-}
+});
+
+export default TokaiAssignments;

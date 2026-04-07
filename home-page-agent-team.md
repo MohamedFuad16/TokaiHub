@@ -1,20 +1,34 @@
-# TokaiHub — Frontend Optimization Agent System
+# TokaiHub — Frontend Optimization & Feature Enhancement Agent System
 
-Build a structured multi-agent workflow to fix, improve, and optimize the TokaiHub React frontend (starting with the Home page). The system ensures UI consistency, performance efficiency, and future backend readiness.
+Build a structured multi-agent system to **fix UI/UX bugs, improve performance, ensure data consistency, and introduce controlled feature enhancements** in the TokaiHub React frontend.
+
+This system also introduces a **developer toggle system** to enable/disable new features safely.
 
 ---
 
 ## Problem Statement
 
-The current frontend has:
+The current frontend suffers from:
 
-- UI inconsistencies and layout issues
-- No clear ownership of responsibilities
-- No structured optimization workflow
-- No preparation for backend (AWS API Gateway + Lambda)
-- Performance inefficiencies (rendering, bundle size, etc.)
+- UI/UX inconsistencies and layout issues
+- Poor animation quality (non-smooth transitions)
+- Performance inefficiencies (rendering + bundle usage)
+- Broken or inconsistent schedule data (daily/weekly/monthly mismatch)
+- Weekly schedule showing incorrect data (not user-selected courses)
+- Lack of structured feature rollout control
+- No systematic bug validation process
 
-**Solution**: Introduce a coordinated agent system with clear ownership, responsibilities, and execution flow.
+---
+
+## Core Objectives
+
+- Fix UI/UX bugs across all key screens
+- Improve rendering performance and responsiveness
+- Ensure **data consistency across schedule views**
+- Add **advanced animations where appropriate**
+- Introduce **feature toggle system (developer control)**
+- Enable **safe feature experimentation**
+- Perform **regressive bug testing across flows**
 
 ---
 
@@ -22,89 +36,116 @@ The current frontend has:
 
 ### 🧭 Team Leader (Architecture Owner)
 
-The Team Leader is responsible for maintaining **system coherence**.
+Owns **system integrity, feature coherence, and final validation**
 
 #### Responsibilities:
 - Ensure all changes align with:
   - App design system
-  - Component structure
-  - Future backend architecture
+  - UX consistency
+  - Data architecture
 - Coordinate all agents
-- Prevent conflicting implementations
-- Review and merge all changes
+- Validate feature toggles
+- Resolve cross-agent conflicts
 
 #### Capabilities:
-- Access to `notion-doc-refactor`
+- `notion-doc-refactor`
 - MCP Notion integration
 
-#### Final Responsibility:
-- Produce a **clean documentation page** summarizing all changes
+#### Final Output:
+- Full structured documentation of:
+  - Fixes
+  - Enhancements
+  - New features
+  - Known issues
 
 ---
 
 ## Agent Roles
 
+---
+
 ### 🎨 UI/UX Agent
 
-Focus: **Visual quality and user experience**
+Focus: **Bug fixing + visual refinement + animation upgrades**
 
 #### Responsibilities:
 
-**1. Layout & Structure**
-- Fix spacing, padding, alignment
-- Improve grid usage
+**1. UI Bug Fixes**
+- Fix layout breaking issues
+- Resolve spacing inconsistencies
+- Fix misaligned elements
 
-**2. Visual Hierarchy**
-- Ensure clear content priority
-- Improve readability
+**2. Home Screen Animation Fix**
+- Fix bottom sliding bar:
+  - Smooth easing
+  - Proper timing
+  - Remove jank
+- Replace with **advanced motion system (framer-motion tuned)**
 
-**3. Responsiveness**
-- Mobile-first adjustments
-- Tablet + desktop scaling
+**3. Animation Enhancements**
+- Add subtle animations to:
+  - Cards
+  - Navigation transitions
+  - Page entry/exit
+- Avoid over-animation (performance-aware)
 
 **4. Visual Consistency**
-- Standardize colors, typography, buttons
-- Ensure consistent icon usage (Lucide)
+- Normalize:
+  - Typography
+  - Colors
+  - Component styling
+- Ensure design system alignment
 
-**5. Component-Level Improvements**
-Work across:
-- Sidebar
-- Home screen
-- Cards
-- Buttons
-- Headers
+**5. Responsiveness**
+- Fix mobile + tablet layouts
+- Ensure consistent scaling
 
 ---
 
-### 🌐 Networking Agent
+### 🌐 Networking & Data Consistency Agent
 
-Focus: **Preparing frontend for backend integration**
+Focus: **Fix schedule data logic + prepare backend integration**
 
-#### Responsibilities:
+#### Critical Issues to Fix:
 
-**1. API Layer Setup**
-- Centralize API calls (`api.ts`)
-- Remove hardcoded endpoints
+**1. Schedule Data Inconsistency**
+- Daily / Weekly / Monthly views MUST match
+- All views must derive from **same source of truth**
 
-**2. AWS Readiness**
-Prepare for:
-- API Gateway
-- Lambda
-- Cognito
+**2. Weekly View Bug (IMPORTANT)**
+❌ Currently:
+- Shows all class data
 
-**3. Data Flow**
-- Standardize request/response handling
-- Add proper error handling
+✅ Fix:
+- Only show **selected courses**
+- Must match:
+  - Settings page selections
+  - User profile data
 
-**4. Contract Awareness**
-- Define expected API shapes
-- Avoid breaking future backend integration
+**3. Single Source of Truth**
+- Use:
+  - `selectedCourseIds`
+- Ensure:
+  - Home
+  - Schedule
+  - Settings
+ALL use the same dataset
+
+**4. Data Flow Fix**
+- Normalize data transformation
+- Remove duplicate filtering logic
+
+**5. Future API Readiness**
+- Prepare structure for:
+  - API Gateway
+  - Lambda
+- Centralize API layer (`api.ts`)
 
 ---
 
 ### ⚡ Performance Agent
 
-Focus: **Efficiency and scalability**
+Focus: **Speed, efficiency, and smooth UX**
 
 #### Responsibilities:
 
@@ -115,160 +156,227 @@ Focus: **Efficiency and scalability**
   - `useMemo`
   - `useCallback`
 
-**2. Lazy Loading**
-- Route-based splitting
-- Component-level lazy loading
+**2. Animation Performance**
+- Ensure animations:
+  - Do not block main thread
+  - Use GPU-friendly transforms
+  - Avoid layout thrashing
 
-**3. Bundle Optimization**
-- Remove unused imports
-- Reduce dependency size
+**3. Lazy Loading**
+- Optimize route-based loading
+- Defer heavy components
 
-**4. State Management**
-- Avoid unnecessary global state
-- Reduce prop drilling
+**4. Bundle Optimization**
+- Remove unused code
+- Optimize imports
+- Reduce bundle size
 
-**5. UX Performance**
-- Eliminate lag
-- Prevent layout shifts
-
----
-
-## Execution Flow
-
-### Phase 1 — Leader Planning
-
-- Identify issues
-- Define priorities
-- Assign tasks to agents
+**5. State Optimization**
+- Avoid redundant state
+- Clean data flow
 
 ---
 
-### Phase 2 — Parallel Execution
+### 🧪 QA / Regression Testing Agent
 
-Agents work independently within scope:
+Focus: **Stability and validation**
 
-| Agent | Scope |
-|------|------|
-| UI/UX | Components, layout, design |
-| Networking | API layer, integration readiness |
-| Performance | Optimization |
+#### Responsibilities:
+
+**1. Regression Testing**
+- Test:
+  - Home screen
+  - Schedule (daily/weekly/monthly)
+  - Settings
+- Ensure no new bugs introduced
+
+**2. Data Consistency Testing**
+- Verify:
+  - Selected courses = displayed courses
+- Cross-check all views
+
+**3. Animation Testing**
+- Ensure:
+  - Smooth transitions
+  - No flicker or jump
+
+**4. Edge Cases**
+- Empty states
+- No courses selected
+- Large datasets
 
 ---
 
-### ⚠️ Critical Rule
 
-Agents MUST NOT override each other’s work directly.
+## Feature System — Developer Toggle
 
-All changes must go through:
+### 🎛️ Developer Feature Toggle (NEW)
 
-👉 **Leader Review**
+Add toggle in **Settings → Developer Section**
+
+#### Purpose:
+- Enable/disable new enhancements safely
+
+#### Behavior:
+
+```ts
+settings: {
+  enableEnhancedUI: boolean;
+}
 
 ---
 
-### Phase 3 — Leader Integration
+## 🧠 Team Leader — MCP Execution & Documentation System (CRITICAL)
 
-- Merge all contributions
-- Resolve conflicts
-- Ensure design + architecture consistency
+The Team Leader is not just coordinating — they are an **agent orchestrator + documentation owner**.
+
+They use:
+
+- MCP (Model Context Protocol)
+- `notion-doc-refactor` skill
+
+to **transform implementation work into structured documentation automatically**
 
 ---
 
-### Phase 4 — Documentation
+### 🧩 Leader Workflow (Step-by-Step)
+
+#### Step 1 — Planning Phase
+- Analyze current issues:
+  - UI bugs
+  - Schedule inconsistencies
+  - Performance problems
+- Break work into:
+  - UI tasks
+  - Data tasks
+  - Performance tasks
+
+---
+
+#### Step 2 — Agent Orchestration
+
+Leader spawns and manages:
+
+- UI/UX Agent
+- Networking Agent
+- Performance Agent
+- QA Agent
+
+Each agent:
+- Works independently
+- Reports changes back to Leader
+
+---
+
+#### Step 3 — Review & Integration
+
+Leader:
+- Reviews all changes
+- Ensures:
+  - No conflicting logic
+  - UI consistency
+  - Correct data flow
+- Approves or rejects agent outputs
+
+---
+
+#### Step 4 — Documentation via MCP + Skill
+
+After implementation is complete:
 
 Leader uses:
 
 👉 `notion-doc-refactor`
 
-to generate a structured documentation page.
++ MCP Notion integration
+
+to generate a **clean, structured documentation page**
 
 ---
 
-## Documentation Structure (Notion)
+### 📝 Documentation Generation Rules
 
-The final document must include:
+The Leader MUST:
 
-### 1. Overview
-- What was improved
+- Convert raw implementation into:
+  - Clean sections
+  - Standardized formatting
+  - Clear explanations
 
-### 2. Issues Identified
-- UI problems
-- Performance bottlenecks
-- Missing architecture
-
-### 3. UI/UX Improvements
-- Layout fixes
-- Design consistency updates
-
-### 4. Networking Preparation
-- API structure
-- Future AWS readiness
-
-### 5. Performance Enhancements
-- Rendering improvements
-- Bundle optimizations
-
-### 6. Before vs After
-- Clear comparison
-
-### 7. Metrics (if available)
-- Load time improvements
-- Render optimization results
-
-### 8. Next Steps
-- Backend integration
-- Further improvements
+- Remove:
+  - messy notes
+  - duplicate info
+  - unclear reasoning
 
 ---
 
-## Standards
+### 📄 Final Notion Output Structure
 
-### UI/UX
-- Consistent spacing and typography
-- Clean layout
-- No visual clutter
+The generated Notion page MUST include:
 
-### Code Quality
-- No duplication
-- Reusable components
-- No hardcoded values
+#### 1. Overview
+- What was fixed and improved
 
-### Performance
-- Efficient rendering
-- Lazy loading where applicable
+#### 2. UI/UX Fixes
+- Layout issues resolved
+- Animation improvements
+- Visual consistency updates
 
-### Architecture
-- Must support AWS backend integration
+#### 3. Schedule Data Fix (CRITICAL)
+- Root cause of inconsistency
+- Fix using `selectedCourseIds`
+- Alignment across:
+  - Daily
+  - Weekly
+  - Monthly
 
----
+#### 4. Performance Improvements
+- Rendering optimizations
+- Lazy loading updates
+- Bundle size improvements
 
-## Constraints
+#### 5. New Features
+- Developer toggle system
+- Enhanced UI mode
 
-- No mixing of agent responsibilities
-- No breaking existing app structure
-- No ignoring performance considerations
-- No inconsistent design patterns
+#### 6. Animation Enhancements
+- Bottom bar fix
+- New motion improvements
 
----
+#### 7. Regression Testing Results
+- What was tested
+- What passed
+- Edge cases handled
 
-## Goal
+#### 8. Before vs After
+- Clear comparison of improvements
 
-A clean, scalable frontend where:
+#### 9. Known Issues
+- Remaining bugs (if any)
 
-- UI is consistent and responsive
-- Codebase is structured and maintainable
-- Performance is optimized
-- System is ready for backend integration
-
----
-
-## Next Step
-
-Start execution with:
-
-1. Leader defines issues
-2. Agents begin parallel work
-3. Leader integrates changes
-4. Documentation is generated
+#### 10. Next Steps
+- Backend integration (AWS)
+- Future enhancements
 
 ---
 
+### ⚠️ Leader Constraints
+
+- MUST NOT skip documentation
+- MUST ensure all agents’ work is reflected
+- MUST maintain consistency with app architecture
+- MUST produce clean, readable Notion output
+
+---
+
+### ✅ Success Criteria
+
+The Leader is successful if:
+
+- All agents complete tasks without conflict
+- UI is consistent
+- Schedule data is correct
+- Performance is improved
+- Documentation is clean, structured, and usable
+
+---
