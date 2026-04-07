@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, Check } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -123,17 +123,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
+  const isEnrolled = useCallback((item: CourseItem) =>
+    selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''),
+  [selectedCourseIds]);
+
   const filteredItems = useMemo(() => {
-    const isSelected = (item: CourseItem) =>
-      selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? '');
     if (activeCategory === 'All') {
-      return courseItems.filter(item => item.type !== 'Classes' || isSelected(item));
+      return courseItems;
     }
     if (activeCategory === 'Classes') {
-      return courseItems.filter(item => item.type === 'Classes' && isSelected(item));
+      return courseItems.filter(item => item.type === 'Classes');
     }
     return courseItems.filter(item => item.type === activeCategory);
-  }, [activeCategory, selectedCourseIds, courseItems]);
+  }, [activeCategory, courseItems]);
 
   const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds, courseItems), [selectedCourseIds, courseItems]);
   const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
@@ -296,18 +298,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             >
               {filteredItems.map((item) => {
                 const Icon = item.icon;
+                const enrolled = isEnrolled(item);
                 return (
                   <motion.div
                     key={item.id}
                     onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                     role="button"
                     tabIndex={0}
-                    aria-label={`View details for ${item.title[lang]} by ${item.teacher[lang]}. Time: ${item.time}. Location: ${item.location[lang]}.`}
+                    aria-label={`View details for ${item.title[lang]}${item.teacher ? ` by ${item.teacher[lang]}` : ''}. Time: ${item.time}. Location: ${item.location?.[lang] ?? ''}.`}
                     onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                     whileHover={{ y: -2, scale: 1.005 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className="w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
+                    className={`w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] ${enrolled ? 'border border-green-500/40' : 'border border-white/5'}`}
                   >
                     {/* Screen Layer (Top ~60%) */}
                     <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
@@ -323,9 +326,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       {/* Content inside screen */}
                       <div className="relative z-10 p-4 h-full flex flex-col justify-between">
                         <div className="flex justify-between items-start">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
-                            {item.type}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
+                              {item.type}
+                            </span>
+                            {enrolled && (
+                              <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 w-fit shadow-sm">
+                                <Check className="w-2.5 h-2.5" />Enrolled
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] font-bold text-white/70 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm">
                             {item.time}
                           </span>

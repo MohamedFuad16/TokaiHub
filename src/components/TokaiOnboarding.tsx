@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
-import { fetchAvailableCourses, enrollCourses } from '../lib/api';
+import { enrollCourses } from '../lib/api';
 import type { CourseItem } from '../lib/types';
 import { allItems } from '../data';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
@@ -69,50 +69,14 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
+  // Populate available courses from local data when entering step 2.
+  // All classes (allowedClasses A, B, or both) are shown so the student
+  // sees the full catalogue with teacher, time, and location info.
   useEffect(() => {
     if (step !== 2) return;
-
-    const derivedClass = deriveStudentClass(studentId.toUpperCase());
-
-    console.log("🚀 FETCHING COURSES WITH:", {
-      studentId: studentId.toUpperCase(),
-      studentClass: derivedClass
-    });
-
-    setLoadingCourses(true);
-    setCoursesError('');
-
-    fetchAvailableCourses(studentId.toUpperCase(), derivedClass)
-      .then(data => {
-        console.log("🔥 RAW API RESPONSE:", data);
-
-        // ✅ FIX: map backend → frontend shape
-        const mapped = (data || []).map((c: any) => ({
-          id: c.courseId,
-          title: {
-            en: c.courseName,
-            jp: c.courseName
-          },
-          credits: c.credits ?? 0,
-          code: c.courseId,
-          location: {
-            en: "Shinagawa Campus",
-            jp: "品川キャンパス"
-          },
-          color: "bg-brand-yellow"
-        }));
-
-        console.log("✅ MAPPED COURSES:", mapped);
-
-        setAvailableCourses(mapped);
-      })
-      .catch((err: Error) => {
-        console.error("❌ COURSE FETCH ERROR:", err);
-        setCoursesError(err.message);
-      })
-      .finally(() => setLoadingCourses(false));
-
-  }, [step, studentId]);
+    const courses = allItems.filter(item => item.type === 'Classes') as CourseItem[];
+    setAvailableCourses(courses);
+  }, [step]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
@@ -294,28 +258,27 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           password
         });
 
-        // ✅ Save enrolled courses to DynamoDB via EnrollCourses Lambda
+        // Send course CODES to backend (e.g. "TTK085"), not local IDs.
+        // Local IDs (e.g. "mon-1-2") are what allItems uses; codes are what DynamoDB uses.
+        const courseCodes = selectedCourseIds.map(localId => {
+          const item = allItems.find(i => i.id === localId);
+          return item?.code ?? localId;
+        });
+
         try {
-          await enrollCourses(selectedCourseIds);
+          await enrollCourses(courseCodes);
         } catch (enrollErr) {
           console.error('enrollCourses failed:', enrollErr);
           // Non-fatal — user still proceeds; they can re-select later
         }
 
-        // Translate API course codes (e.g. "TTK085") → local data IDs (e.g. "mon-1-2")
-        // so TokaiHome / TokaiSchedule can match courses against allItems.
-        const localCourseIds = selectedCourseIds.map(apiId => {
-          const localItem = allItems.find(item => item.code === apiId);
-          return localItem ? localItem.id : apiId;
-        });
-
-        // ✅ Continue to app
+        // selectedCourseIds are already local IDs since we use allItems in step 2
         onComplete({
           name: name.trim(),
           email: email.trim(),
           studentId: studentId.toUpperCase(),
           campus,
-          selectedCourseIds: localCourseIds,
+          selectedCourseIds,
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         });
@@ -346,6 +309,37 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     }`;
 
   const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
+
+  // Full-screen loading overlay shown while creating account (step 3 submitting)
+  if (isSubmitting && step === 3) {
+    return (
+      <div className={`h-full w-full flex flex-col items-center justify-center gap-6 transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center gap-6"
+        >
+          <motion.img
+            src={mascotVerify}
+            alt="Loading"
+            className="w-28 h-28 object-contain drop-shadow-lg"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
+            <p className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
+              {lang === 'en' ? 'Setting up your account…' : 'アカウントを設定中…'}
+            </p>
+            <p className={`text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              {lang === 'en' ? 'This only takes a moment' : 'しばらくお待ちください'}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className={`h-full w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-y-auto relative ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
@@ -711,9 +705,16 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                               }`}>
                               {course.title[lang]}
                             </div>
+                            {/* Teacher row */}
+                            {course.teacher && (
+                              <div className={`text-xs mt-0.5 truncate ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>
+                                {course.teacher[lang]}
+                              </div>
+                            )}
                             <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
                               }`}>
                               {course.code && <span>{course.code}</span>}
+                              {course.time && <><span>·</span><span>{course.time}</span></>}
                               {course.location && (
                                 <>
                                   <span>·</span>
