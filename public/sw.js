@@ -14,6 +14,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through — no caching yet
-  event.respondWith(fetch(event.request));
+  // Only handle same-origin requests — let cross-origin requests (API calls, etc.) bypass the SW entirely
+  if (event.request.url.startsWith(self.location.origin)) {
+    event.respondWith(fetch(event.request));
+  }
 });
