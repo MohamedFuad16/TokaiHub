@@ -71,9 +71,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     setSearchParams({ view: v }, { replace: true });
   }, [setSearchParams]);
 
-  const [baseDate, setBaseDate] = useState(new Date(2026, 3, 8));
+  const [baseDate, setBaseDate] = useState(new Date());
   // Separate selected date for monthly view so calendar selection doesn't break daily
-  const [monthlySelected, setMonthlySelected] = useState<Date>(new Date(2026, 3, 8));
+  const [monthlySelected, setMonthlySelected] = useState<Date>(new Date());
 
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-900' : 'bg-brand-black';
@@ -129,7 +129,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   }, [monthlySelected, selectedCourseIds]);
 
   // Actual selected date (highlighted in calendar)
-  const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date(2026, 3, 8));
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date());
 
   const handleCalendarDayClick = useCallback((date: Date) => {
     setCalendarSelectedDate(date);
@@ -191,55 +191,93 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── DAILY VIEW ─── */}
           {view === 'daily' && selectedCourseIds.length > 0 && (
             <>
-              <motion.div variants={itemVariants} className="flex justify-between gap-2 overflow-x-auto no-scrollbar mb-8 shrink-0">
-                {dailyDates.map((d, i) => {
-                  const isSelected = d.getDate() === baseDate.getDate() && d.getMonth() === baseDate.getMonth();
-                  return (
-                    <div
-                      key={i}
-                      onClick={() => setBaseDate(new Date(d))}
-                      className={`flex flex-col items-center justify-center min-w-[60px] lg:min-w-[80px] h-[80px] lg:h-[90px] rounded-[24px] cursor-pointer transition-all duration-75 active:scale-95 ${
-                        isSelected
-                          ? 'bg-brand-yellow text-brand-black shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.5)]'
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
-                    >
-                      <span className="text-sm font-medium mb-1">{lang === 'en' ? shortDaysOfWeekEn[d.getDay()] : shortDaysOfWeekJp[d.getDay()]}</span>
-                      <span className="text-xl font-bold">{d.getDate()}</span>
-                    </div>
-                  );
-                })}
-              </motion.div>
+              <div className="flex items-center gap-2 mb-8">
+                <motion.div variants={itemVariants} className="flex justify-between gap-2 overflow-x-auto no-scrollbar shrink-0 flex-1">
+                  {dailyDates.map((d, i) => {
+                    const isSelected = d.getDate() === baseDate.getDate() && d.getMonth() === baseDate.getMonth();
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => setBaseDate(new Date(d))}
+                        className={`flex flex-col items-center justify-center min-w-[60px] lg:min-w-[80px] h-[80px] lg:h-[90px] rounded-[24px] cursor-pointer transition-all duration-75 active:scale-95 ${
+                          isSelected
+                            ? 'bg-brand-yellow text-brand-black shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.5)]'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                      >
+                        <span className="text-sm font-medium mb-1">{lang === 'en' ? shortDaysOfWeekEn[d.getDay()] : shortDaysOfWeekJp[d.getDay()]}</span>
+                        <span className="text-xl font-bold">{d.getDate()}</span>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+                {settings.enableEnhancedUI && (
+                  <button
+                    onClick={() => setBaseDate(new Date())}
+                    className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold hover:bg-white/20 active:scale-95 transition-all shrink-0"
+                  >
+                    {lang === 'en' ? 'Today' : '今日'}
+                  </button>
+                )}
+              </div>
 
               <div className="space-y-0 relative min-h-[300px]">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={baseDate.toISOString()}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: { opacity: 1, transition: { staggerChildren: 0.06 } }
+                    }}
+                    initial="hidden"
+                    animate="show"
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                     className="space-y-0"
                   >
-                    {dailyClasses.length > 0 && dailyClasses.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        variants={itemVariants}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                        className={`p-5 rounded-[32px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4`}
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                      >
-                        <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                          {item.time.split(' ')[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-lg leading-tight truncate">{item.title[lang]}</div>
-                          <div className="text-sm font-medium opacity-80 truncate">{item.location[lang]}</div>
-                        </div>
-                      </motion.div>
-                    ))}
+                    {dailyClasses.length > 0 && (
+                      <>
+                        {settings.enableEnhancedUI && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-brand-yellow/20 border border-brand-yellow/30 mb-4"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-brand-yellow shrink-0" />
+                            <span className="text-brand-yellow text-xs font-bold truncate">
+                              {lang === 'en' ? 'Next Class' : '次の授業'} · {dailyClasses[0].title[lang]} · {dailyClasses[0].time.split(' ')[0]}
+                            </span>
+                          </motion.div>
+                        )}
+                        {dailyClasses.map((item) => (
+                          <motion.div
+                            key={item.id}
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
+                            className={`p-5 rounded-[32px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4 ${settings.enableEnhancedUI ? 'relative overflow-hidden' : ''}`}
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/course/${item.id}`), 150)}
+                          >
+                            {settings.enableEnhancedUI && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-black/20 rounded-l-[32px]" />
+                            )}
+                            <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                              {item.time.split(' ')[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-lg leading-tight truncate">{item.title[lang]}</div>
+                              <div className="text-sm font-medium opacity-80 truncate">{item.location[lang]}</div>
+                            </div>
+                            {settings.enableEnhancedUI && (
+                              <span className="text-[9px] font-bold text-brand-black/50 bg-white/30 rounded px-1.5 py-0.5 shrink-0 self-end">
+                                P{(item.periods ?? [1]).join('-')}
+                              </span>
+                            )}
+                          </motion.div>
+                        ))}
+                      </>
+                    )}
                   </motion.div>
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
@@ -288,15 +326,19 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 >
                   {/* ── Day header cells (Row 1) ── */}
                   <div style={{ gridRow: 1, gridColumn: 1 }} />
-                  {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, i) => (
-                    <div
-                      key={day}
-                      style={{ gridRow: 1, gridColumn: i + 2 }}
-                      className="text-center text-xs font-bold text-white/50 pb-2 pt-1"
-                    >
-                      {day}
-                    </div>
-                  ))}
+                  {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, i) => {
+                    const isToday = settings.enableEnhancedUI && WEEK_DAY_NUMS[i] === new Date().getDay();
+                    return (
+                      <div
+                        key={day}
+                        style={{ gridRow: 1, gridColumn: i + 2 }}
+                        className={`text-center text-xs font-bold pb-2 pt-1 ${isToday ? 'text-brand-yellow' : 'text-white/50'}`}
+                      >
+                        {day}
+                        {isToday && <div className="w-1 h-1 rounded-full bg-brand-yellow mx-auto mt-0.5" />}
+                      </div>
+                    );
+                  })}
 
                   {/* ── Period label cells (Col 1, Rows 2-7) ── */}
                   {PERIODS.map((period, pIdx) => (
@@ -440,7 +482,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           key={cls.id}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
+                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4`}
                           tabIndex={0}
                         >
                           <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">

@@ -181,6 +181,9 @@ export const allItems = [
 ];
 
 export const getClassesForDate = (date: Date, selectedCourseIds: string[]) => {
+  // Guard: nothing to show when no courses are selected
+  if (!selectedCourseIds?.length) return [];
+
   // Classes start from April 8th, 2026
   const startDate = new Date(2026, 3, 8); // Month is 0-indexed, so 3 is April
   const endDate = new Date(2026, 9, 31); // October 31st

@@ -92,9 +92,15 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
-  const filteredItems = useMemo(() => activeCategory === 'All'
-    ? allItems
-    : allItems.filter(item => item.type === activeCategory), [activeCategory]);
+  const filteredItems = useMemo(() => {
+    if (activeCategory === 'All') {
+      return allItems.filter(item => item.type !== 'Classes' || selectedCourseIds.includes(item.id));
+    }
+    if (activeCategory === 'Classes') {
+      return allItems.filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id));
+    }
+    return allItems.filter(item => item.type === activeCategory);
+  }, [activeCategory, selectedCourseIds]);
 
   const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds), [selectedCourseIds]);
   const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds), [selectedDate, selectedCourseIds]);

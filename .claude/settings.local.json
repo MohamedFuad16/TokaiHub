@@ -5,7 +5,14 @@
       "Bash(npx tsc:*)",
       "Bash(echo \"TSC_EXIT:$?\")",
       "Bash(/Users/mfuad16/Documents/TokaiHub/node_modules/.bin/tsc --noEmit -p /Users/mfuad16/Documents/TokaiHub/tsconfig.json)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(python3 -c \"import sys,json; data=sys.stdin.read\\(\\); msgs=[l for l in data.split\\('\\\\n'\\) if l.strip\\(\\)]; [print\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content',''\\)[:800] if isinstance\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content'\\),str\\) else ''\\) for m in msgs[-3:] if m.strip\\(\\)]\")",
+      "Bash(python3 -c \"import sys,json; data=sys.stdin.read\\(\\); msgs=[l for l in data.split\\('\\\\n'\\) if l.strip\\(\\)]; [print\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content',''\\)[:1200] if isinstance\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content'\\),str\\) else ''\\) for m in msgs[-3:] if m.strip\\(\\)]\")",
+      "Bash(python3:*)",
+      "mcp__claude_ai_Notion__notion-update-page"
     ]
   }
 }

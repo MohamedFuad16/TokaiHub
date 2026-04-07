@@ -68,7 +68,7 @@ const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel }: { on: boo
       aria-label={ariaLabel}
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onToggle()}
-      className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-brand-yellow' : 'bg-gray-300'}`}
+      className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-brand-yellow' : 'bg-gray-300 dark:bg-gray-600'}`}
     >
       <motion.div
         className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm"
@@ -220,7 +220,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
             <div className={`${isDark ? 'bg-gray-800 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'} border-2 rounded-3xl p-2`}>
               {/* Toggle verification badge */}
               <div
-                onClick={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })}
+                onClick={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })}
                 className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
               >
                 <div className="flex items-center gap-4 text-left">
@@ -229,7 +229,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <div className="font-bold text-sm">{tx.devVerify}</div>
                 </div>
-                <Toggle on={!!userProfile?.isVerified} onToggle={() => setUserProfile?.({ ...userProfile!, isVerified: !userProfile?.isVerified })} ariaLabel={tx.devVerify} />
+                <Toggle on={!!userProfile?.isVerified} onToggle={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })} ariaLabel={tx.devVerify} />
               </div>
 
               {/* Skip login (dev mode) */}

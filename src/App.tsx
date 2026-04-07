@@ -86,6 +86,14 @@ const DEV_PROFILE: UserProfile = {
   isVerified: true,
 };
 
+const DEFAULT_SETTINGS: AppSettings = {
+  isDarkMode: false,
+  notifications: true,
+  privacy: true,
+  devSkipAuth: false,
+  enableEnhancedUI: false,
+};
+
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -200,7 +208,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
                 <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
                 <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
-                <Route path="/editProfile" element={<TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} />} />
+                <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
@@ -217,17 +225,21 @@ export default function App() {
     return browserLang.startsWith('ja') ? 'jp' : 'en';
   });
 
-  const [settings, setSettings] = useState<AppSettings>({
-    isDarkMode: false,
-    notifications: true,
-    privacy: true,
-    devSkipAuth: false,
-    enableEnhancedUI: false,
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    try {
+      const stored = localStorage.getItem('tokaihub_settings');
+      return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+    } catch { return DEFAULT_SETTINGS; }
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('signIn');
-  const [userProfile, setUserProfile] = useState<UserProfile | undefined>(undefined);
+  const [userProfile, setUserProfile] = useState<UserProfile | undefined>(() => {
+    try {
+      const stored = localStorage.getItem('tokaihub_user_profile');
+      return stored ? (JSON.parse(stored) as UserProfile) : undefined;
+    } catch { return undefined; }
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -235,16 +247,18 @@ export default function App() {
       try {
         const user = await getCurrentUser();
         const attrs = await fetchUserAttributes();
-        setUserProfile({
+        // Preserve any persisted profile data (e.g. selectedCourseIds edited by the user)
+        // and only fall back to defaults for fields not stored yet.
+        setUserProfile(prev => ({
           name: attrs.name || 'Student',
           email: attrs.email || user.username,
           studentId: (attrs['custom:studentId'] as string) || '4CJE1108',
-          campus: 'shinagawa',
-          selectedCourseIds: ['mon-1-2', 'tue-1', 'tue-3'],
-          cumulativeGpa: 3.66,
-          lastSemGpa: 3.73,
+          campus: prev?.campus ?? 'shinagawa',
+          selectedCourseIds: prev?.selectedCourseIds ?? ['mon-1-2', 'tue-1', 'tue-3'],
+          cumulativeGpa: prev?.cumulativeGpa ?? 3.66,
+          lastSemGpa: prev?.lastSemGpa ?? 3.73,
           isVerified: true,
-        });
+        }));
         setIsAuthenticated(true);
         preloadRoutes();
       } catch (e) {
@@ -260,6 +274,18 @@ export default function App() {
       setIsLoading(false);
     }
   }, [settings.devSkipAuth]);
+
+  // Persist userProfile to localStorage whenever it changes
+  useEffect(() => {
+    if (userProfile) {
+      localStorage.setItem('tokaihub_user_profile', JSON.stringify(userProfile));
+    }
+  }, [userProfile]);
+
+  // Persist settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('tokaihub_settings', JSON.stringify(settings));
+  }, [settings]);
 
   const handleSignIn = async (_email: string) => {
     setIsLoading(true);
@@ -295,10 +321,14 @@ export default function App() {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+    // Clear persisted data so next login starts fresh
+    localStorage.removeItem('tokaihub_user_profile');
+    localStorage.removeItem('tokaihub_settings');
     // Reset URL to root so next login lands on home
     window.history.replaceState(null, '', '/');
     setIsAuthenticated(false);
     setUserProfile(undefined);
+    setSettings(DEFAULT_SETTINGS);
     setAuthScreen('signIn');
   }, []);
 
