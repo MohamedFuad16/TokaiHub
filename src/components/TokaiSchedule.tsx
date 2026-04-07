@@ -241,11 +241,20 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           <motion.div
                             initial={{ opacity: 0, y: -8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-brand-yellow/20 border border-brand-yellow/30 mb-4"
+                            className="flex items-center gap-3 px-4 py-3 rounded-[20px] bg-white/8 border border-white/10 mb-5"
                           >
-                            <div className="w-2 h-2 rounded-full bg-brand-yellow shrink-0" />
-                            <span className="text-brand-yellow text-xs font-bold truncate">
-                              {lang === 'en' ? 'Next Class' : '次の授業'} · {dailyClasses[0].title[lang]} · {dailyClasses[0].time.split(' ')[0]}
+                            <div className="w-9 h-9 rounded-full bg-brand-yellow/15 flex items-center justify-center shrink-0">
+                              <div className="w-2.5 h-2.5 rounded-full bg-brand-yellow shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.12em] leading-none mb-1">
+                                {lang === 'en' ? 'Up Next' : '次の授業'}
+                              </p>
+                              <p className="text-white text-sm font-bold truncate leading-tight">{dailyClasses[0].title[lang]}</p>
+                              <p className="text-white/40 text-xs truncate mt-0.5">{dailyClasses[0].location[lang]}</p>
+                            </div>
+                            <span className="text-brand-yellow text-xs font-bold bg-brand-yellow/10 px-2.5 py-1 rounded-full shrink-0">
+                              {dailyClasses[0].time.split(' ')[0]}
                             </span>
                           </motion.div>
                         )}
@@ -255,22 +264,19 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                             variants={itemVariants}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                            className={`p-5 rounded-[32px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4 ${settings.enableEnhancedUI ? 'relative overflow-hidden' : ''}`}
+                            className={`p-4 rounded-[28px] ${item.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.5)] border border-black/5 hover:translate-y-[-2px] mb-3`}
                             tabIndex={0}
                             onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/course/${item.id}`), 150)}
                           >
-                            {settings.enableEnhancedUI && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-black/20 rounded-l-[32px]" />
-                            )}
-                            <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                            <div className="w-12 h-12 bg-black/15 rounded-[14px] flex items-center justify-center font-bold text-sm shrink-0">
                               {item.time.split(' ')[0]}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-bold text-lg leading-tight truncate">{item.title[lang]}</div>
-                              <div className="text-sm font-medium opacity-80 truncate">{item.location[lang]}</div>
+                              <div className="font-bold text-base leading-tight truncate">{item.title[lang]}</div>
+                              <div className="text-sm font-medium opacity-60 truncate mt-0.5">{item.location[lang]}</div>
                             </div>
                             {settings.enableEnhancedUI && (
-                              <span className="text-[9px] font-bold text-brand-black/50 bg-white/30 rounded px-1.5 py-0.5 shrink-0 self-end">
+                              <span className="text-[9px] font-bold text-brand-black/40 bg-black/10 rounded-full px-2 py-1 shrink-0">
                                 P{(item.periods ?? [1]).join('-')}
                               </span>
                             )}
@@ -374,7 +380,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                             {item.title[lang]}
                           </div>
                           <div className="mt-1 pt-1 overflow-hidden shrink-0">
-                            <span className="text-[8px] font-semibold text-brand-black/60 bg-white/40 rounded px-1 py-0.5 block text-center truncate">
+                            <span className="text-[8px] font-semibold text-brand-black/60 bg-black/10 rounded-full px-1.5 py-0.5 block text-center truncate">
                               {item.location[lang].replace('品川キャンパス ', '').replace('Shinagawa ', '')}
                             </span>
                           </div>
@@ -482,15 +488,15 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           key={cls.id}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px] mb-4`}
+                          className={`p-4 rounded-[28px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.5)] border border-black/5 hover:translate-y-[-2px] mb-3`}
                           tabIndex={0}
                         >
-                          <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                          <div className="w-12 h-12 bg-black/15 rounded-[14px] flex items-center justify-center font-bold text-sm shrink-0">
                             {cls.time.split(' ')[0]}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
-                            <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
+                            <div className="font-bold text-base leading-tight truncate">{cls.title[lang]}</div>
+                            <div className="text-sm font-medium opacity-60 truncate mt-0.5">{cls.location[lang]}</div>
                           </div>
                         </motion.div>
                       ))
