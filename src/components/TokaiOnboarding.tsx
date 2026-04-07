@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
-import { allItems } from '../data';
+import { fetchAvailableCourses, enrollCourses } from '../lib/api';
+import type { CourseItem } from '../lib/types';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
 interface OnboardingProps {
@@ -20,7 +21,6 @@ const CAMPUSES = [
 ];
 
 const MAX_CREDITS = 20;
-const courses = allItems.filter(i => i.type === 'Classes');
 
 // Color accent per step
 const STEP_COLORS = ['bg-brand-yellow', 'bg-brand-pink', 'bg-brand-green'];
@@ -40,6 +40,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
   // Step 1
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [coursesError, setCoursesError] = useState('');
 
   // Step 2
   const [cumulativeGpa, setCumulativeGpa] = useState('');
@@ -52,8 +55,21 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
   const isDark = settings.isDarkMode;
 
+  // Fetch available courses when entering step 1.
+  // studentId (entered in step 0) is sent as x-student-id header so the Lambda
+  // can determine the student's class (A, B, etc.) and return only the correct sections.
+  useEffect(() => {
+    if (step !== 1) return;
+    setLoadingCourses(true);
+    setCoursesError('');
+    fetchAvailableCourses(studentId.toUpperCase())
+      .then(data => setAvailableCourses(data))
+      .catch(() => setCoursesError('Could not load courses. Please try again.'))
+      .finally(() => setLoadingCourses(false));
+  }, [step, studentId]);
+
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
-    const c = courses.find(c => c.id === id);
+    const c = availableCourses.find(c => c.id === id);
     return acc + (c?.credits || 0);
   }, 0);
   const creditsLeft = MAX_CREDITS - selectedCredits;
@@ -230,6 +246,14 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           password
         });
 
+        // ✅ Save enrolled courses to DynamoDB via EnrollCourses Lambda
+        try {
+          await enrollCourses(selectedCourseIds);
+        } catch (enrollErr) {
+          console.error('enrollCourses failed:', enrollErr);
+          // Non-fatal — user still proceeds; they can re-select later
+        }
+
         // ✅ Continue to app
         onComplete({
           name: name.trim(),
@@ -253,11 +277,11 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
 
   const toggleCourse = (id: string) => {
-    const c = courses.find(c => c.id === id)!;
+    const c = availableCourses.find(c => c.id === id)!;
     if (selectedCourseIds.includes(id)) {
       setSelectedCourseIds(p => p.filter(x => x !== id));
     } else {
-      if (selectedCredits + c.credits > MAX_CREDITS) return;
+      if (selectedCredits + (c?.credits ?? 0) > MAX_CREDITS) return;
       setSelectedCourseIds(p => [...p, id]);
     }
     setErrors({});
@@ -461,55 +485,79 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
                 {errors.courses && <p className="text-red-500 text-xs font-bold px-1 mb-3">{errors.courses}</p>}
 
-                <div className="space-y-3">
-                  {courses.map(course => {
-                    const isSelected = selectedCourseIds.includes(course.id);
-                    const wouldExceed = !isSelected && selectedCredits + course.credits > MAX_CREDITS;
-                    return (
-                      <button
-                        key={course.id}
-                        type="button"
-                        onClick={() => toggleCourse(course.id)}
-                        disabled={wouldExceed}
-                        className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${isSelected
-                          ? `border-brand-black ${course.color} shadow-md`
-                          : wouldExceed
-                            ? (isDark ? 'border-transparent bg-gray-800/50 opacity-40 cursor-not-allowed' : 'border-transparent bg-gray-100 opacity-40 cursor-not-allowed')
-                            : (isDark ? 'border-transparent bg-gray-800 hover:border-gray-700' : 'border-transparent bg-white hover:border-gray-200 shadow-sm')
-                          }`}
-                      >
-                        {/* Checkbox */}
-                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-brand-black border-brand-black' : (isDark ? 'border-gray-600' : 'border-gray-300')
-                          }`}>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                        </div>
+                {/* Loading state */}
+                {loadingCourses && (
+                  <div className="flex items-center justify-center gap-3 py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {lang === 'en' ? 'Loading your courses…' : '授業を読み込み中…'}
+                    </span>
+                  </div>
+                )}
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className={`font-bold text-sm leading-tight truncate ${isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
-                            }`}>
-                            {course.title[lang]}
-                          </div>
-                          <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
-                            }`}>
-                            <span>{course.code}</span>
-                            <span>·</span>
-                            <MapPin className="w-3 h-3" />
-                            <span className="truncate">{course.location.en.replace('Shinagawa ', '')}</span>
-                          </div>
-                        </div>
+                {/* Error state */}
+                {!loadingCourses && coursesError && (
+                  <div className={`rounded-2xl p-4 text-center ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                    <p className="text-sm font-bold">{coursesError}</p>
+                  </div>
+                )}
 
-                        {/* Credits badge */}
-                        <div className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold ${isSelected
-                          ? 'bg-brand-black text-white'
-                          : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
-                          }`}>
-                          {course.credits}cr
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Course list */}
+                {!loadingCourses && !coursesError && (
+                  <div className="space-y-3">
+                    {availableCourses.map(course => {
+                      const isSelected = selectedCourseIds.includes(course.id);
+                      const wouldExceed = !isSelected && selectedCredits + (course.credits ?? 0) > MAX_CREDITS;
+                      return (
+                        <button
+                          key={course.id}
+                          type="button"
+                          onClick={() => toggleCourse(course.id)}
+                          disabled={wouldExceed}
+                          className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${isSelected
+                            ? `border-brand-black ${course.color ?? 'bg-brand-yellow'} shadow-md`
+                            : wouldExceed
+                              ? (isDark ? 'border-transparent bg-gray-800/50 opacity-40 cursor-not-allowed' : 'border-transparent bg-gray-100 opacity-40 cursor-not-allowed')
+                              : (isDark ? 'border-transparent bg-gray-800 hover:border-gray-700' : 'border-transparent bg-white hover:border-gray-200 shadow-sm')
+                            }`}
+                        >
+                          {/* Checkbox */}
+                          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-brand-black border-brand-black' : (isDark ? 'border-gray-600' : 'border-gray-300')
+                            }`}>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-bold text-sm leading-tight truncate ${isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
+                              }`}>
+                              {course.title[lang]}
+                            </div>
+                            <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
+                              }`}>
+                              {course.code && <span>{course.code}</span>}
+                              {course.location && (
+                                <>
+                                  <span>·</span>
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate">{course.location.en.replace('Shinagawa ', '')}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Credits badge */}
+                          <div className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold ${isSelected
+                            ? 'bg-brand-black text-white'
+                            : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
+                            }`}>
+                            {course.credits ?? '—'}cr
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

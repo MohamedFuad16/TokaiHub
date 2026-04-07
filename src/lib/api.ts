@@ -71,6 +71,50 @@ export async function getCourseDetails(courseId: string): Promise<CourseItem> {
   return apiFetch<CourseItem>(`/course-details/${courseId}`);
 }
 
+// ─── Available Courses (for onboarding) ────────────────────────────────────────
+
+/**
+ * Fetches available courses filtered by the student's class (A, B, etc.).
+ * During sign-up (no JWT yet), pass the studentId so the Lambda can derive the class.
+ * After login, the JWT is used automatically and studentId is optional.
+ *
+ * Lambda reads x-student-id header → looks up class in tokai-classes table →
+ * joins with tokai-courses → returns only the correct class sections for the student.
+ */
+export async function fetchAvailableCourses(studentId: string): Promise<CourseItem[]> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-student-id': studentId,
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE_URL}/courses`, { headers });
+  if (!res.ok) throw new Error(`fetchAvailableCourses → ${res.status}`);
+  return res.json() as Promise<CourseItem[]>;
+}
+
+// ─── Enroll Courses ────────────────────────────────────────────────────────────
+
+/**
+ * Saves the student's selected course IDs to DynamoDB via the EnrollCourses Lambda.
+ * Requires an active Cognito session — call only after signIn() completes.
+ */
+export async function enrollCourses(courseIds: string[]): Promise<void> {
+  const token = await getAuthToken();
+  if (!token) throw new Error('enrollCourses: no auth session — call after signIn()');
+
+  const res = await fetch(`${API_BASE_URL}/enroll-courses`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ courseIds }),
+  });
+  if (!res.ok) throw new Error(`enrollCourses → ${res.status}`);
+}
+
 // ─── Legacy helpers (kept for compatibility) ───────────────────────────────────
 
 const _mockAssignments: Assignment[] = [
