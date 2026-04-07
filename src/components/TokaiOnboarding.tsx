@@ -82,8 +82,27 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
     fetchAvailableCourses(studentId.toUpperCase(), studentClass)
       .then(data => {
-        console.log("🔥 COURSES FROM API:", data);
-        setAvailableCourses(data);
+        console.log("🔥 RAW API RESPONSE:", data);
+
+        // ✅ FIX: map backend → frontend shape
+        const mapped = (data || []).map((c: any) => ({
+          id: c.courseId, // 🔥 IMPORTANT
+          title: {
+            en: c.courseName,
+            jp: c.courseName
+          },
+          credits: c.credits ?? 0,
+          code: c.courseId,
+          location: {
+            en: "Shinagawa Campus",
+            jp: "品川キャンパス"
+          },
+          color: "bg-brand-yellow"
+        }));
+
+        console.log("✅ MAPPED COURSES:", mapped);
+
+        setAvailableCourses(mapped);
       })
       .catch((err: Error) => {
         console.error("❌ COURSE FETCH ERROR:", err);
