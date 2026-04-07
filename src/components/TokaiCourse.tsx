@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronLeft, Clock, BookOpen, Award, CheckCircle } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';

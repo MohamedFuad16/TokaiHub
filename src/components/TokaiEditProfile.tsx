@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, MapPin, GraduationCap, Star, Save } from 'lucide-react';
-import { Language, AppSettings, UserProfile, Screen } from '../App';
+import { Language, AppSettings, UserProfile } from '../App';
 import { allItems } from '../data';
 
 interface EditProfileProps {
@@ -34,7 +34,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
 
   const creditsLeft = MAX_CREDITS - selectedCredits;
 
-  const toggleCourse = (id: string) => {
+  const toggleCourse = useCallback((id: string) => {
     const c = courses.find(c => c.id === id)!;
     if (selectedCourseIds.includes(id)) {
       setSelectedCourseIds(p => p.filter(x => x !== id));
@@ -43,9 +43,9 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       setSelectedCourseIds(p => [...p, id]);
     }
     setSaved(false);
-  };
+  }, [selectedCourseIds, selectedCredits]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!userProfile) return;
     const gpaRe = /^([0-3](\.\d{0,2})?|4(\.0{0,2})?)$/;
     const cumValid = gpaRe.test(cumulativeGpa);
@@ -63,7 +63,7 @@ export default function TokaiEditProfile({ goBack, lang, settings, userProfile, 
       setSaved(false);
       navigate('/');
     }, 1200);
-  };
+  }, [userProfile, cumulativeGpa, lastSemGpa, selectedCourseIds, onSave, navigate]);
 
   const t = {
     en: {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronLeft, Menu, Clock, MapPin } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -62,9 +62,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   // Persist view in URL so back navigation restores it
   const viewParam = searchParams.get('view') as 'daily' | 'weekly' | 'monthly' | null;
   const view = viewParam && ['daily', 'weekly', 'monthly'].includes(viewParam) ? viewParam : 'daily';
-  const setView = (v: 'daily' | 'weekly' | 'monthly') => {
+  const setView = useCallback((v: 'daily' | 'weekly' | 'monthly') => {
     setSearchParams({ view: v }, { replace: true });
-  };
+  }, [setSearchParams]);
 
   const [baseDate, setBaseDate] = useState(new Date(2026, 3, 8));
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
@@ -75,15 +75,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const bgClass = isDark ? 'bg-gray-900' : 'bg-brand-black';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  const handlePrevMonth = () => {
-    const d = new Date(monthlySelected.getFullYear(), monthlySelected.getMonth() - 1, 1);
-    setMonthlySelected(d);
-  };
+  const handlePrevMonth = useCallback(() => {
+    setMonthlySelected(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  }, []);
 
-  const handleNextMonth = () => {
-    const d = new Date(monthlySelected.getFullYear(), monthlySelected.getMonth() + 1, 1);
-    setMonthlySelected(d);
-  };
+  const handleNextMonth = useCallback(() => {
+    setMonthlySelected(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  }, []);
 
   const monthYear = monthlySelected;
   const daysInMonth = new Date(monthYear.getFullYear(), monthYear.getMonth() + 1, 0).getDate();
@@ -130,10 +128,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   // Actual selected date (highlighted in calendar)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date(2026, 3, 8));
 
-  const handleCalendarDayClick = (date: Date) => {
+  const handleCalendarDayClick = useCallback((date: Date) => {
     setCalendarSelectedDate(date);
     setMonthlySelected(date);
-  };
+  }, []);
 
   return (
     <div className="h-full relative flex flex-col">

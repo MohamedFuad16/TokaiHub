@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Amplify } from 'aws-amplify';
 import { getCurrentUser, fetchUserAttributes, signOut, signIn } from 'aws-amplify/auth';
 import { AnimatePresence, motion } from 'motion/react';
@@ -281,7 +281,7 @@ export default function App() {
     setIsLoading(false);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await signOut();
     } catch (error) {
@@ -292,9 +292,9 @@ export default function App() {
     setIsAuthenticated(false);
     setUserProfile(undefined);
     setAuthScreen('signIn');
-  };
+  }, []);
 
-  const handleDevSkipChange = (val: boolean) => {
+  const handleDevSkipChange = useCallback((val: boolean) => {
     setSettings(s => ({ ...s, devSkipAuth: val }));
     if (val) {
       setUserProfile(DEV_PROFILE);
@@ -302,17 +302,17 @@ export default function App() {
     } else {
       handleSignOut();
     }
-  };
+  }, [handleSignOut]);
 
-  const handleUpdateProfile = (updated: UserProfile) => {
+  const handleUpdateProfile = useCallback((updated: UserProfile) => {
     setUserProfile(updated);
-  };
+  }, []);
 
-  const handleOnboardingComplete = (profile: UserProfile) => {
+  const handleOnboardingComplete = useCallback((profile: UserProfile) => {
     setUserProfile(profile);
     setIsAuthenticated(true);
     preloadRoutes();
-  };
+  }, []);
 
   const isDark = settings.isDarkMode;
 

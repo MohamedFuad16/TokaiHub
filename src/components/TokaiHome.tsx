@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
+import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const t = {
   en: {
@@ -100,21 +101,22 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const cardBg = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
+  const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
 
   return (
-    <div className="h-full relative flex flex-col">
+    <div className={`h-full relative flex flex-col ${pageBg}`}>
       {/* Header */}
-      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0">
-        <div className="font-bold text-xl tracking-tighter leading-none lg:hidden">
+      <header className={`flex justify-between items-center px-4 sm:px-6 pt-8 sm:pt-12 lg:pt-8 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}>
+        <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
           TOKAI<br/>HUB
         </div>
         <div className="hidden lg:block">
-          <h2 className={`text-sm font-bold ${textMuted}`}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
+          <h2 className={`text-sm font-semibold ${textMuted}`}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
         </div>
-        <button 
+        <button
           onClick={() => setIsMenuOpen(true)}
           aria-label="Open navigation menu"
-          className={`w-12 h-12 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} lg:hidden`}
+          className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-50 text-gray-900'} lg:hidden`}
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -123,86 +125,97 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-48 lg:pb-32">
-          
-          {/* Title */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-2">
-            <h1 className="text-[32px] sm:text-[40px] lg:text-[48px] xl:text-[56px] font-bold leading-[1.1] tracking-tight whitespace-pre-line">
+
+          {/* Title + Student ID badge */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6">
+            <h1 className={`text-[32px] sm:text-[40px] lg:text-[48px] xl:text-[56px] font-bold leading-[1.1] tracking-tight whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {lang === 'en' ? `Welcome,\n${firstName}` : `ようこそ、\n${firstName}さん`}
             </h1>
-            <p className={`${textMuted} font-bold mt-2`}>{lang === 'en' ? `ID: ${studentIdDisplay}` : `学籍番号: ${studentIdDisplay}`}</p>
+            {/* Student ID — styled as subtle badge */}
+            <div className="mt-3 inline-flex items-center gap-1.5">
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>
+                {lang === 'en' ? 'Student ID' : '学籍番号'}
+              </span>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-600'}`}>
+                {studentIdDisplay}
+              </span>
+            </div>
           </motion.div>
 
-          {/* Academic Overview (GPA & Credits) */}
+          {/* Academic Overview (GPA & Credits) — label → value → sublabel hierarchy */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Cumulative GPA */}
-            <div className={`p-5 rounded-[28px] ${cardBg} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Target className={`w-4 h-4 ${textMuted}`} />
-                <div className={`text-xs font-bold ${textMuted}`}>{t[lang].gpa}</div>
+            <div className={`p-5 rounded-2xl ${cardBg} shadow-sm`}>
+              <div className={`flex items-center gap-1.5 mb-3`}>
+                <Target className={`w-3.5 h-3.5 ${textMuted}`} />
+                <span className={`text-xs font-medium ${textMuted}`}>{t[lang].gpa}</span>
               </div>
-              <div className="text-4xl font-bold tracking-tight">{cumGpa.toFixed(2)}</div>
-              <div className="text-xs font-bold text-green-500 mt-2 bg-green-500/10 inline-block px-2 py-1 rounded-md">
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{cumGpa.toFixed(2)}</div>
+              <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-green-500/10 text-green-500 text-xs font-semibold">
                 {lang === 'en' ? `Last Sem: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
               </div>
             </div>
             {/* Selected Credits */}
-            <div className={`p-5 rounded-[28px] ${cardBg} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className={`w-4 h-4 ${textMuted}`} />
-                <div className={`text-xs font-bold ${textMuted}`}>{t[lang].credits}</div>
+            <div className={`p-5 rounded-2xl ${cardBg} shadow-sm`}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <GraduationCap className={`w-3.5 h-3.5 ${textMuted}`} />
+                <span className={`text-xs font-medium ${textMuted}`}>{t[lang].credits}</span>
               </div>
-              <div className="text-4xl font-bold tracking-tight">{selectedCredits}</div>
-              <div className={`text-xs font-bold mt-2 inline-block px-2 py-1 rounded-md ${isDark ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-100'}`}>
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedCredits}</div>
+              <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-100'}`}>
                 {lang === 'en' ? 'Selected' : '履修中'}
               </div>
             </div>
             {/* Classes Today (desktop only) */}
-            <div className={`hidden lg:block p-5 rounded-[28px] ${cardBg} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className={`w-4 h-4 ${textMuted}`} />
-                <div className={`text-xs font-bold ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</div>
+            <div className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
+                <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
               </div>
-              <div className="text-4xl font-bold tracking-tight">{getClassesForDate(new Date()).length}</div>
-              <div className={`text-xs font-bold mt-2 inline-block px-2 py-1 rounded-md ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{getClassesForDate(new Date()).length}</div>
+              <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
                 {lang === 'en' ? 'Scheduled' : '予定'}
               </div>
             </div>
             {/* Due Soon (desktop only) */}
-            <div className={`hidden lg:block p-5 rounded-[28px] ${cardBg} shadow-sm`}>
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className={`w-4 h-4 ${textMuted}`} />
-                <div className={`text-xs font-bold ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</div>
+            <div className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}>
+              <div className="flex items-center gap-1.5 mb-3">
+                <AlertCircle className={`w-3.5 h-3.5 ${textMuted}`} />
+                <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
               </div>
-              <div className="text-4xl font-bold tracking-tight">{deadlines.length}</div>
-              <div className="text-xs font-bold text-orange-500 mt-2 bg-orange-500/10 inline-block px-2 py-1 rounded-md">
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{deadlines.length}</div>
+              <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold">
                 {lang === 'en' ? 'This Week' : '今週'}
               </div>
             </div>
           </motion.div>
 
-          {/* Categories */}
-          <motion.div variants={itemVariants} className="flex gap-3 sm:gap-4 px-4 sm:px-6 mt-10 overflow-x-auto no-scrollbar pb-4 relative">
-            {['All', 'Classes', 'Events', 'Clubs'].map(cat => {
+          {/* Category Filter Pills */}
+          <motion.div variants={itemVariants} className="flex gap-2 sm:gap-3 px-4 sm:px-6 mt-10 overflow-x-auto no-scrollbar pb-1">
+            {(['All', 'Classes', 'Events', 'Clubs'] as const).map(cat => {
               const catLabel = cat === 'All' ? t[lang].all : cat === 'Classes' ? t[lang].classes : cat === 'Events' ? t[lang].events : t[lang].clubs;
+              const isActive = activeCategory === cat;
               return (
-                <button 
+                <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`relative px-5 sm:px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-75 active:scale-95 ${
-                    activeCategory === cat 
-                      ? 'text-white' 
-                      : `border ${borderClass} shadow-[0_2px_5px_rgba(0,0,0,0.05)] active:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)] ${isDark ? 'hover:bg-gray-800 bg-gray-900' : 'hover:bg-gray-50 bg-white'}`
+                  className={`relative px-4 sm:px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${
+                    isActive
+                      ? 'bg-[#0B1F3A] text-white shadow-md'
+                      : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
                   }`}
                 >
-                  {activeCategory === cat && (
+                  {isActive && (
                     <motion.div
                       layoutId="activeTab"
-                      className="absolute inset-0 bg-brand-black rounded-full shadow-[inset_3px_3px_6px_rgba(0,0,0,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.1)]"
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="absolute inset-0 bg-[#0B1F3A] rounded-full"
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     />
                   )}
                   <span className="relative z-10 flex items-center gap-2">
-                    {activeCategory === cat && <span className="w-2 h-2 rounded-full bg-brand-yellow shadow-[0_0_4px_rgba(250,204,21,0.8)]"></span>}
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
+                    )}
                     {catLabel}
                   </span>
                 </button>
@@ -211,106 +224,134 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           </motion.div>
 
           {/* Collections Title */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-4 flex items-center gap-2">
-            <h2 className="text-xl font-bold">
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6 flex items-center gap-2">
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {activeCategory === 'All' ? t[lang].allActivities : `${t[lang].todays} ${activeCategory === 'Classes' ? t[lang].classes : activeCategory === 'Events' ? t[lang].events : t[lang].clubs}`}
             </h2>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className={`w-4 h-4 ${textMuted}`} />
           </motion.div>
 
-          {/* Cards — horizontal scroll on mobile, wrapping grid on desktop */}
-          <motion.div variants={itemVariants} className="flex lg:grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 px-4 sm:px-6 mt-2 overflow-x-auto lg:overflow-x-visible overflow-y-visible no-scrollbar py-6 snap-x snap-mandatory lg:snap-none">
-            {filteredItems.length > 0 ? filteredItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div 
-                  key={item.id}
-                  onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View details for ${item.title[lang]} by ${item.teacher[lang]}. Time: ${item.time}. Location: ${item.location[lang]}.`}
-                  onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                  className="w-[280px] lg:w-full h-[320px] shrink-0 lg:shrink snap-center bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
-                >
-                  {/* Screen Layer (Top ~60%) */}
-                  <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
-                    {/* Image / Neon Content */}
-                    <img 
-                      src={item.image} 
-                      alt="Course visual" 
-                      className="absolute inset-0 w-full h-full object-cover opacity-70 saturate-150 contrast-125"
-                    />
-                    {/* Glossy overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
-                    
-                    {/* Content inside screen */}
-                    <div className="relative z-10 p-4 h-full flex flex-col justify-between">
-                      <div className="flex justify-between items-start">
-                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
-                          {item.time}
-                        </span>
+          {/* Cards — horizontal scroll on mobile with snap, wrapping grid on desktop */}
+          {filteredItems.length > 0 ? (
+            <motion.div
+              variants={itemVariants}
+              className="flex lg:grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 px-4 sm:px-6 mt-4 overflow-x-auto lg:overflow-x-visible overflow-y-visible no-scrollbar py-4 snap-x snap-mandatory lg:snap-none scroll-pl-4"
+            >
+              {filteredItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View details for ${item.title[lang]} by ${item.teacher[lang]}. Time: ${item.time}. Location: ${item.location[lang]}.`}
+                    onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
+                    className="w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] border border-white/5"
+                  >
+                    {/* Screen Layer (Top ~60%) */}
+                    <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
+                      {/* Image / Neon Content */}
+                      <img
+                        src={item.image}
+                        alt="Course visual"
+                        className="absolute inset-0 w-full h-full object-cover opacity-70 saturate-150 contrast-125"
+                      />
+                      {/* Glossy overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+
+                      {/* Content inside screen */}
+                      <div className="relative z-10 p-4 h-full flex flex-col justify-between">
+                        <div className="flex justify-between items-start">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
+                            {item.type}
+                          </span>
+                          <span className="text-[10px] font-bold text-white/70 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm">
+                            {item.time}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-semibold text-white leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-2">
+                            {item.title[lang]}
+                          </h3>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-sm sm:text-base font-bold text-white leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-2">
-                          {item.title[lang]}
-                        </h3>
+                    </div>
+
+                    {/* Hardware Buttons (Bottom) */}
+                    <div className="flex gap-[1px] h-[76px] shrink-0 bg-[#0a0a0c] rounded-[18px] p-[1px] shadow-[0_1px_1px_rgba(255,255,255,0.05)]">
+                      {/* Location — widest */}
+                      <div className="flex-[2] min-w-0 bg-[#1e1e20] rounded-l-[17px] rounded-r-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-2">
+                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
+                          <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.location[lang]}</span>
+                        </div>
+                      </div>
+                      {/* Teacher */}
+                      <div className="flex-[1.5] min-w-0 bg-[#1e1e20] rounded-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-1">
+                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
+                          <User className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.teacher[lang]}</span>
+                        </div>
+                      </div>
+                      {/* Open */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 150);
+                        }}
+                        className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group"
+                      >
+                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75">
+                          <Icon className="w-4 h-4 text-white" />
+                          <span className="text-[9px] font-bold text-white uppercase tracking-wider">Open</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Hardware Buttons (Bottom) */}
-                  <div className="flex gap-[1px] h-[76px] shrink-0 bg-[#0a0a0c] rounded-[18px] p-[1px] shadow-[0_1px_1px_rgba(255,255,255,0.05)]">
-                    {/* Location — widest */}
-                    <div className="flex-[2] min-w-0 bg-[#1e1e20] rounded-l-[17px] rounded-r-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-2">
-                      <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
-                        <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-[8px] font-bold text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.location[lang]}</span>
-                      </div>
-                    </div>
-                    {/* Teacher */}
-                    <div className="flex-[1.5] min-w-0 bg-[#1e1e20] rounded-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-1">
-                      <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
-                        <User className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-[8px] font-bold text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.teacher[lang]}</span>
-                      </div>
-                    </div>
-                    {/* Open */}
-                    <div 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setTimeout(() => navigate(`/${item.action}/${item.id}`), 150); 
-                      }}
-                      className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group"
-                    >
-                      <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75">
-                        <Icon className="w-4 h-4 text-white" />
-                        <span className="text-[9px] font-bold text-white uppercase tracking-wider">Open</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }) : (
-              <div className={`${textMuted} font-medium py-8`}>{t[lang].noItems}</div>
-            )}
-          </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            /* Empty state */
+            <motion.div
+              variants={itemVariants}
+              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
+            >
+              <img
+                src={mascotIdle}
+                alt="Mascot — nothing here"
+                className="w-24 h-24 object-contain drop-shadow-md opacity-80"
+              />
+              <div>
+                <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {lang === 'en' ? 'Nothing here yet' : 'まだ何もありません'}
+                </p>
+                <p className={`text-xs mt-1 ${textMuted}`}>{t[lang].noItems}</p>
+              </div>
+            </motion.div>
+          )}
 
           {/* Two-column layout for Deadlines + News on desktop */}
-          <div className="lg:grid lg:grid-cols-2 lg:gap-6 px-4 sm:px-6">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6 px-4 sm:px-6 mt-8">
             {/* Deadlines Section */}
-            <motion.div variants={itemVariants} className="mt-4">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-brand-yellow" />
+            <motion.div variants={itemVariants} className="mb-6 lg:mb-0">
+              <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <AlertCircle className="w-4 h-4 text-brand-yellow" />
                 {t[lang].deadlines}
               </h2>
               <div className="space-y-3">
                 {deadlines.map(deadline => (
-                  <div key={deadline.id} onClick={() => setTimeout(() => navigate('/assignments'), 150)} className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform`}>
-                    <div>
-                      <h3 className="font-bold text-sm">{deadline.title[lang]}</h3>
-                      <p className={`text-xs ${textMuted} mt-1`}>{deadline.course[lang]}</p>
+                  <div
+                    key={deadline.id}
+                    onClick={() => setTimeout(() => navigate('/assignments'), 150)}
+                    className={`p-4 rounded-xl ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} flex items-center justify-between gap-3 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all`}
+                  >
+                    <div className="min-w-0">
+                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{deadline.title[lang]}</h3>
+                      <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{deadline.course[lang]}</p>
                     </div>
-                    <div className={`px-3 py-1.5 rounded-xl ${deadline.color} text-brand-black font-bold text-xs shadow-sm`}>
+                    <div className={`px-3 py-1.5 rounded-lg ${deadline.color} text-brand-black font-semibold text-xs shadow-sm shrink-0`}>
                       {t[lang].dueIn} {deadline.daysLeft} {t[lang].days}
                     </div>
                   </div>
@@ -318,29 +359,29 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               </div>
             </motion.div>
 
-            {/* Other Information Section */}
-            <motion.div variants={itemVariants} className="mt-4">
-              <h2 className="text-xl font-bold mb-4">{t[lang].otherInfo}</h2>
+            {/* Campus News Section */}
+            <motion.div variants={itemVariants}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
               <div className="space-y-3">
-                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
+                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
                   <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
                     <Bell className="w-5 h-5 text-brand-black" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-sm">{lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について'}</h3>
-                    <p className={`text-xs ${textMuted} mt-1`}>{lang === 'en' ? 'Due by April 15th' : '4月15日までにお願いします'}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について'}</h3>
+                    <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Due by April 15th' : '4月15日までにお願いします'}</p>
                   </div>
-                  <ChevronRight className={`w-5 h-5 ${textMuted}`} />
+                  <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
                 </div>
-                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
+                <div className={`${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'} rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-colors`}>
                   <div className="w-10 h-10 bg-brand-green rounded-full flex items-center justify-center shrink-0">
                     <Calendar className="w-5 h-5 text-brand-black" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-sm">{lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス'}</h3>
-                    <p className={`text-xs ${textMuted} mt-1`}>{lang === 'en' ? 'Closed this weekend' : '今週末は閉館します'}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス'}</h3>
+                    <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Closed this weekend' : '今週末は閉館します'}</p>
                   </div>
-                  <ChevronRight className={`w-5 h-5 ${textMuted}`} />
+                  <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
                 </div>
               </div>
             </motion.div>
@@ -356,18 +397,18 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
           onClick={() => setIsScheduleSheetOpen(true)}
-          className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
+          className="bg-[#0B1F3A] rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl hover:scale-[1.02] transition-transform"
         >
           <div className="flex items-center gap-4 pl-2">
             <div className="w-12 h-12 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-lg text-brand-black">
               {todayClasses.length}
             </div>
             <div className="text-white">
-              <div className="font-bold text-lg leading-tight">{t[lang].schedule}</div>
+              <div className="font-bold text-base leading-tight">{t[lang].schedule}</div>
               <div className="text-xs opacity-60 font-medium">{t[lang].classesToday}</div>
             </div>
           </div>
-          <div 
+          <div
             onClick={(e) => { e.stopPropagation(); setIsCalendarSheetOpen(true); }}
             className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center text-brand-black hover:bg-gray-100 transition-colors"
           >
@@ -380,23 +421,26 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       <AnimatePresence>
         {isScheduleSheetOpen && (
           <>
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setIsScheduleSheetOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
             />
-            <motion.div 
-              initial={{ y: '100%' }} 
-              animate={{ y: 0 }} 
-              exit={{ y: '100%' }} 
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 20, stiffness: 300, mass: 0.8 }}
-              className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900' : 'bg-white'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[80%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
+              className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[80%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-2xl font-bold">{t[lang].classesToday}</h2>
-                <button onClick={() => setIsScheduleSheetOpen(false)} className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                <button
+                  onClick={() => setIsScheduleSheetOpen(false)}
+                  className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center`}
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -408,17 +452,20 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
                     onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
                   >
-                     <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                       {cls.time.split(' ')[0]}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
-                       <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
-                     </div>
+                    <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                      {cls.time.split(' ')[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
+                      <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
+                    </div>
                   </motion.div>
                 ))}
                 {todayClasses.length === 0 && (
-                  <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>
+                  <div className="flex flex-col items-center gap-4 py-8 text-center">
+                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+                    <p className={`text-sm font-medium ${textMuted}`}>{t[lang].noItems}</p>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -430,24 +477,24 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       <AnimatePresence>
         {isCalendarSheetOpen && (
           <>
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setIsCalendarSheetOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
             />
-            <motion.div 
-              initial={{ y: '100%' }} 
-              animate={{ y: 0 }} 
-              exit={{ y: '100%' }} 
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900' : 'bg-white'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
+              className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-2xl font-bold">{lang === 'en' ? 'Calendar' : 'カレンダー'}</h2>
-                <button 
-                  onClick={() => setIsCalendarSheetOpen(false)} 
+                <button
+                  onClick={() => setIsCalendarSheetOpen(false)}
                   aria-label="Close calendar"
                   className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center transition-transform active:scale-95`}
                 >
@@ -457,87 +504,93 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
                 {/* Calendar UI */}
                 <div className="mb-6">
-                   <div className="flex justify-between items-center mb-4">
-                     <button 
-                       onClick={handlePrevMonth} 
-                       aria-label="Previous month"
-                       className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
-                     >
-                       <ChevronLeft className="w-5 h-5"/>
-                     </button>
-                     <div className="font-bold text-lg" aria-live="polite">
-                       {lang === 'en' 
-                         ? currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' }) 
-                         : `${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}
-                     </div>
-                     <button 
-                       onClick={handleNextMonth} 
-                       aria-label="Next month"
-                       className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
-                     >
-                       <ChevronRight className="w-5 h-5"/>
-                     </button>
-                   </div>
-                   <div className="grid grid-cols-7 gap-2 text-center mb-2">
-                     {['S','M','T','W','T','F','S'].map((d, i) => <div key={i} className={`text-xs font-bold ${textMuted}`}>{d}</div>)}
-                   </div>
-                   <div className="grid grid-cols-7 gap-2 text-center">
-                     {Array.from({length: firstDayOfMonth}).map((_, i) => <div key={`empty-${i}`} />)}
-                      {Array.from({length: daysInMonth}).map((_, i) => {
-                        const dateNum = i + 1;
-                        const isSelected = selectedDate.getDate() === dateNum && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
-                        return (
-                          <button 
-                            key={i} 
-                            onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
-                            aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
-                            aria-pressed={isSelected}
-                            className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-bold text-sm transition-all active:scale-95 ${
-                              isSelected 
-                                ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-brand-black text-white shadow-lg shadow-black/20') 
-                                : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-brand-black')}`}
-                          >
-                            {dateNum}
-                          </button>
-                        );
-                      })}
+                  <div className="flex justify-between items-center mb-4">
+                    <button
+                      onClick={handlePrevMonth}
+                      aria-label="Previous month"
+                      className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <div className="font-bold text-lg" aria-live="polite">
+                      {lang === 'en'
+                        ? currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+                        : `${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`}
                     </div>
-                 </div>
+                    <button
+                      onClick={handleNextMonth}
+                      aria-label="Next month"
+                      className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2 text-center mb-2">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <div key={i} className={`text-xs font-semibold ${textMuted}`}>{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-2 text-center">
+                    {Array.from({ length: firstDayOfMonth }).map((_, i) => <div key={`empty-${i}`} />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                      const dateNum = i + 1;
+                      const isSelected = selectedDate.getDate() === dateNum && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
+                          aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
+                          aria-pressed={isSelected}
+                          className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${
+                            isSelected
+                              ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
+                              : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900')
+                          }`}
+                        >
+                          {dateNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                 {/* Classes for selected date */}
-                 <h3 className="font-bold text-lg mb-4">
-                   {lang === 'en' 
-                     ? `Classes on ${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getDate()}` 
-                     : `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の授業`}
-                 </h3>
-                 <div className="relative min-h-[200px]">
-                   <AnimatePresence mode="wait">
-                     <motion.div
-                       key={selectedDate.toISOString()}
-                       initial={{ opacity: 0 }}
-                       animate={{ opacity: 1 }}
-                       exit={{ opacity: 0 }}
-                       transition={{ duration: 0.15 }}
-                       className="space-y-4"
-                     >
-                       {calendarClasses.map(cls => (
-                         <motion.div 
-                           key={cls.id} 
-                           whileTap={{ scale: 0.98 }}
-                           className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`} 
-                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                         >
-                           <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                             {cls.time.split(' ')[0]}
-                           </div>
-                           <div className="flex-1 min-w-0">
-                             <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
-                             <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
-                           </div>
-                         </motion.div>
-                       ))}
+                {/* Classes for selected date */}
+                <h3 className={`font-semibold text-base mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {lang === 'en'
+                    ? `Classes on ${selectedDate.toLocaleString('en-US', { month: 'long' })} ${selectedDate.getDate()}`
+                    : `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日の授業`}
+                </h3>
+                <div className="relative min-h-[200px]">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={selectedDate.toISOString()}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="space-y-4"
+                    >
+                      {calendarClasses.map(cls => (
+                        <motion.div
+                          key={cls.id}
+                          whileTap={{ scale: 0.98 }}
+                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
+                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
+                        >
+                          <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
+                            {cls.time.split(' ')[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
+                            <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
+                          </div>
+                        </motion.div>
+                      ))}
                       {calendarClasses.length === 0 && (
-                        <div className={`${textMuted} font-medium`}>{t[lang].noItems}</div>
+                        <div className="flex flex-col items-center gap-4 py-8 text-center">
+                          <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+                          <p className={`text-sm font-medium ${textMuted}`}>{t[lang].noItems}</p>
+                        </div>
                       )}
                     </motion.div>
                   </AnimatePresence>
@@ -548,12 +601,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         )}
       </AnimatePresence>
 
-      <SharedMenu 
-        isOpen={isMenuOpen} 
-        onClose={() => setIsMenuOpen(false)} 
-         
-        lang={lang} 
-        setLang={setLang} 
+      <SharedMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        lang={lang}
+        setLang={setLang}
         settings={settings}
       />
     </div>

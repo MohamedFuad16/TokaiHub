@@ -1,3 +1,4 @@
+import React from 'react';
 import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, BadgeCheck } from 'lucide-react';
 import { ScreenProps, UserProfile } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -54,7 +55,7 @@ interface SettingsProps extends ScreenProps {
   onDevSkipChange?: (val: boolean) => void;
 }
 
-function Toggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void; ariaLabel: string }) {
+const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void; ariaLabel: string }) {
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -73,7 +74,7 @@ function Toggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void
       />
     </div>
   );
-}
+});
 
 export default function TokaiSettings({ lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange }: SettingsProps) {
   const navigate = useNavigate();

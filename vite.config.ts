@@ -20,10 +20,14 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'build',
+      target: 'esnext',
+      minify: 'esbuild',
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom', 'motion', 'lucide-react'],
+            vendor: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
+            motion: ['motion'],
+            aws: ['aws-amplify'],
           },
         },
       },
