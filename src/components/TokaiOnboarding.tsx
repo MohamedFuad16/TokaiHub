@@ -20,8 +20,6 @@ const CAMPUSES = [
   { id: 'shonan', labelEn: 'Shonan Campus', labelJp: '湘南キャンパス', icon: Waves },
 ];
 
-const MAX_CREDITS = 20;
-
 // Color accent per step
 const STEP_COLORS = ['bg-brand-yellow', 'bg-brand-pink', 'bg-brand-green'];
 
@@ -55,24 +53,30 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
   const isDark = settings.isDarkMode;
 
-  // Fetch available courses when entering step 1.
-  // studentId (entered in step 0) is sent as x-student-id header so the Lambda
-  // can determine the student's class (A, B, etc.) and return only the correct sections.
+  // Dynamic credit limit: >3.8 GPA → 24 credits, otherwise 20
+  const cumGpaNum = parseFloat(cumulativeGpa);
+  const maxCredits = !isNaN(cumGpaNum) && cumGpaNum > 3.8 ? 24 : 20;
+
+  // A valid student ID is exactly 8 chars and starts with "4C"
+  const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
+
+  // Pre-fetch courses as soon as a valid student ID is entered — so by the time
+  // the user reaches step 1 the list is already ready.
   useEffect(() => {
-    if (step !== 1) return;
+    if (!studentIdValid) return;
     setLoadingCourses(true);
     setCoursesError('');
     fetchAvailableCourses(studentId.toUpperCase())
       .then(data => setAvailableCourses(data))
       .catch(() => setCoursesError('Could not load courses. Please try again.'))
       .finally(() => setLoadingCourses(false));
-  }, [step, studentId]);
+  }, [studentId, studentIdValid]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
     return acc + (c?.credits || 0);
   }, 0);
-  const creditsLeft = MAX_CREDITS - selectedCredits;
+  const creditsLeft = maxCredits - selectedCredits;
 
   const t = {
     en: {
@@ -87,19 +91,19 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       passwordLbl: 'Password',
       passwordPh: 'Create a password',
       idLbl: 'Student ID',
-      idPh: 'Starts with 4C — e.g. 4CJE1108',
+      idPh: '4C + 6 chars — e.g. 4CJE1108',
       campusLbl: 'Your Campus',
       // Step 1
       courseTitle: 'Pick your courses',
-      courseSub: `Select up to ${MAX_CREDITS} credits`,
+      courseSub: (max: number) => `Select up to ${max} credits`,
       creditsUsed: (u: number, max: number) => `${u} / ${max} credits`,
-      tooMany: `You've exceeded ${MAX_CREDITS} credits`,
+      tooMany: (max: number) => `You've exceeded ${max} credits`,
       // Step 2
       gpaTitle: 'Previous scores',
       gpaSub: 'Used to personalise your dashboard',
       cumGpaLbl: 'Cumulative GPA',
       semGpaLbl: 'Last Semester GPA',
-      gpaPlaceholder: '0.00 – 4.00',
+      gpaPlaceholder: '0.00 – 4.30',
       // Step 3
       verifyTitle: 'Check your email',
       verifySub: 'We sent a verification code to your email',
@@ -115,10 +119,10 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       errName: 'Please enter your name',
       errEmail: 'Enter a valid email address',
       errPassword: 'Min 8 chars, 1 uppercase, 1 number, 1 special char',
-      errId: 'ID must start with 4C',
+      errId: 'Must be exactly 8 characters starting with 4C',
       errCampus: 'Please select a campus',
       errCourses: 'Select at least 1 course',
-      errGpa: 'Enter a value between 0.00 and 4.00',
+      errGpa: 'Enter a value between 0.00 and 4.30',
     },
     jp: {
       stepLabels: ['プロフィール', '授業', 'GPA', '確認'],
@@ -131,17 +135,17 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       passwordLbl: 'パスワード',
       passwordPh: 'パスワードを作成',
       idLbl: '学籍番号',
-      idPh: '4Cで始まる — 例: 4CJE1108',
+      idPh: '4C + 6文字 — 例: 4CJE1108',
       campusLbl: 'キャンパス',
       courseTitle: '履修科目を選択',
-      courseSub: `最大${MAX_CREDITS}単位まで`,
+      courseSub: (max: number) => `最大${max}単位まで`,
       creditsUsed: (u: number, max: number) => `${u} / ${max} 単位`,
-      tooMany: `${MAX_CREDITS}単位を超えています`,
+      tooMany: (max: number) => `${max}単位を超えています`,
       gpaTitle: '成績の入力',
       gpaSub: 'ダッシュボードのパーソナライズに使用します',
       cumGpaLbl: '累積 GPA',
       semGpaLbl: '前学期 GPA',
-      gpaPlaceholder: '0.00 – 4.00',
+      gpaPlaceholder: '0.00 – 4.30',
       verifyTitle: 'メールを確認してください',
       verifySub: 'メールアドレスに確認コードを送信しました',
       otpLbl: '確認コード',
@@ -154,10 +158,10 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       errName: '名前を入力してください',
       errEmail: '有効なメールアドレスを入力してください',
       errPassword: '8文字以上、大文字1つ、数字1つ、記号1つが必要です',
-      errId: '学籍番号は4Cで始まる必要があります',
+      errId: '4Cで始まる8文字の学籍番号を入力してください',
       errCampus: 'キャンパスを選択してください',
       errCourses: '1つ以上の授業を選択してください',
-      errGpa: '0.00から4.00の値を入力してください',
+      errGpa: '0.00から4.30の値を入力してください',
     },
   };
   const tx = t[lang];
@@ -166,25 +170,25 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     const e: Record<string, string> = {};
     if (step === 0) {
       if (!name.trim()) e.name = tx.errName;
-      // Email validation
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRe.test(email)) e.email = tx.errEmail;
-
-      // Password validation (min 8 chars, 1 uppercase, 1 number, 1 special char)
       const pwRe = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()[\]{},.<>/?_=+\-|;:'"`~]).{8,}$/;
       if (!pwRe.test(password)) e.password = tx.errPassword;
-
-      if (!studentId.toUpperCase().startsWith('4C')) e.id = tx.errId;
+      // Must be exactly 8 chars and start with 4C
+      if (!studentIdValid) e.id = tx.errId;
       if (!campus) e.campus = tx.errCampus;
     }
     if (step === 1) {
       if (selectedCourseIds.length === 0) e.courses = tx.errCourses;
-      if (selectedCredits > MAX_CREDITS) e.courses = tx.tooMany;
+      if (selectedCredits > maxCredits) e.courses = tx.tooMany(maxCredits);
     }
     if (step === 2) {
-      const gpaRe = /^([0-3](\.\d{0,2})?|4(\.0{0,2})?)$/;
-      if (!gpaRe.test(cumulativeGpa)) e.cumGpa = tx.errGpa;
-      if (!gpaRe.test(lastSemGpa)) e.semGpa = tx.errGpa;
+      // GPA range: 0.00 – 4.30
+      const gpaRe = /^([0-3](\.\d{0,2})?|4(\.[0-2]\d?|\.3[0]?|\.30?)?)$/;
+      const cumVal = parseFloat(cumulativeGpa);
+      const semVal = parseFloat(lastSemGpa);
+      if (isNaN(cumVal) || cumVal < 0 || cumVal > 4.3) e.cumGpa = tx.errGpa;
+      if (isNaN(semVal) || semVal < 0 || semVal > 4.3) e.semGpa = tx.errGpa;
     }
     if (step === 3) {
       if (otpCode.length < 3) e.otp = tx.errOtp;
@@ -281,7 +285,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     if (selectedCourseIds.includes(id)) {
       setSelectedCourseIds(p => p.filter(x => x !== id));
     } else {
-      if (selectedCredits + (c?.credits ?? 0) > MAX_CREDITS) return;
+      if (selectedCredits + (c?.credits ?? 0) > maxCredits) return;
       setSelectedCourseIds(p => [...p, id]);
     }
     setErrors({});
@@ -409,10 +413,38 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
                   {/* Student ID */}
                   <div className="space-y-1.5">
-                    <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.idLbl}</label>
-                    <input type="text" placeholder={tx.idPh} value={studentId}
-                      onChange={e => { setStudentId(e.target.value); setErrors(p => ({ ...p, id: '' })); }}
-                      className={inputCls} autoCapitalize="characters" />
+                    <div className="flex items-center justify-between ml-1">
+                      <label className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.idLbl}</label>
+                      <span className={`text-xs font-bold tabular-nums ${studentId.length === 8 ? 'text-green-500' : (isDark ? 'text-gray-600' : 'text-gray-400')}`}>
+                        {studentId.length}/8
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder={tx.idPh}
+                        value={studentId}
+                        maxLength={8}
+                        onChange={e => {
+                          // Only allow alphanumeric, force uppercase, max 8 chars
+                          const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+                          setStudentId(val);
+                          setErrors(p => ({ ...p, id: '' }));
+                        }}
+                        className={inputCls}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                      />
+                      {studentIdValid && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          {loadingCourses
+                            ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            : <Check className="w-4 h-4 text-green-500" />
+                          }
+                        </div>
+                      )}
+                    </div>
                     {errors.id && <p className="text-red-500 text-xs font-bold px-1">{errors.id}</p>}
                   </div>
 
@@ -453,7 +485,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
                     {tx.courseTitle}
                   </h2>
-                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.courseSub}</p>
+                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.courseSub(maxCredits)}</p>
                 </div>
 
                 {/* Credits bar */}
@@ -461,19 +493,19 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className="flex-1 mr-4">
                     <div className="flex justify-between text-xs font-bold mb-2">
                       <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Credits</span>
-                      <span className={selectedCredits > MAX_CREDITS ? 'text-red-500' : (isDark ? 'text-white' : 'text-brand-black')}>
-                        {tx.creditsUsed(selectedCredits, MAX_CREDITS)}
+                      <span className={selectedCredits > maxCredits ? 'text-red-500' : (isDark ? 'text-white' : 'text-brand-black')}>
+                        {tx.creditsUsed(selectedCredits, maxCredits)}
                       </span>
                     </div>
                     <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
                       <motion.div
-                        animate={{ width: `${Math.min((selectedCredits / MAX_CREDITS) * 100, 100)}%` }}
+                        animate={{ width: `${Math.min((selectedCredits / maxCredits) * 100, 100)}%` }}
                         transition={{ duration: 0.4 }}
-                        className={`h-full rounded-full ${selectedCredits > MAX_CREDITS ? 'bg-red-500' : 'bg-brand-yellow'}`}
+                        className={`h-full rounded-full ${selectedCredits > maxCredits ? 'bg-red-500' : 'bg-brand-yellow'}`}
                       />
                     </div>
                   </div>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${selectedCredits > MAX_CREDITS
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm ${selectedCredits > maxCredits
                     ? 'bg-red-100 text-red-600'
                     : creditsLeft === 0
                       ? 'bg-green-100 text-green-700'
@@ -497,8 +529,22 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
                 {/* Error state */}
                 {!loadingCourses && coursesError && (
-                  <div className={`rounded-2xl p-4 text-center ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                  <div className={`rounded-2xl p-4 text-center space-y-3 ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
                     <p className="text-sm font-bold">{coursesError}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoadingCourses(true);
+                        setCoursesError('');
+                        fetchAvailableCourses(studentId.toUpperCase())
+                          .then(data => setAvailableCourses(data))
+                          .catch(() => setCoursesError('Could not load courses. Please try again.'))
+                          .finally(() => setLoadingCourses(false));
+                      }}
+                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
+                    >
+                      {lang === 'en' ? 'Retry' : '再試行'}
+                    </button>
                   </div>
                 )}
 
@@ -507,7 +553,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className="space-y-3">
                     {availableCourses.map(course => {
                       const isSelected = selectedCourseIds.includes(course.id);
-                      const wouldExceed = !isSelected && selectedCredits + (course.credits ?? 0) > MAX_CREDITS;
+                      const wouldExceed = !isSelected && selectedCredits + (course.credits ?? 0) > maxCredits;
                       return (
                         <button
                           key={course.id}
@@ -578,7 +624,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     <div className="relative">
                       <GraduationCap className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
                       <input
-                        type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
+                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
                         value={cumulativeGpa}
                         onChange={e => { setCumulativeGpa(e.target.value); setErrors(p => ({ ...p, cumGpa: '' })); }}
                         className={`${inputCls} pl-12`}
@@ -591,7 +637,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       <div className="mt-2">
                         <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
                           <motion.div
-                            animate={{ width: `${(parseFloat(cumulativeGpa) / 4) * 100}%` }}
+                            animate={{ width: `${Math.min((parseFloat(cumulativeGpa) / 4.3) * 100, 100)}%` }}
                             className="h-full rounded-full bg-brand-yellow"
                           />
                         </div>
@@ -605,7 +651,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     <div className="relative">
                       <Star className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
                       <input
-                        type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
+                        type="number" step="0.01" min="0" max="4.3" placeholder={tx.gpaPlaceholder}
                         value={lastSemGpa}
                         onChange={e => { setLastSemGpa(e.target.value); setErrors(p => ({ ...p, semGpa: '' })); }}
                         className={`${inputCls} pl-12`}
@@ -617,7 +663,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       <div className="mt-2">
                         <div className={`w-full h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
                           <motion.div
-                            animate={{ width: `${(parseFloat(lastSemGpa) / 4) * 100}%` }}
+                            animate={{ width: `${Math.min((parseFloat(lastSemGpa) / 4.3) * 100, 100)}%` }}
                             className="h-full rounded-full bg-brand-pink"
                           />
                         </div>
@@ -629,8 +675,17 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <div className={`text-xs font-medium ${isDark ? 'text-gray-600' : 'text-gray-400'} flex justify-between`}>
                     <span>0.00 — Failing</span>
                     <span>2.00 — Passing</span>
-                    <span>4.00 — Perfect</span>
+                    <span>4.30 — Perfect</span>
                   </div>
+                  {/* Credit limit hint based on GPA */}
+                  {cumulativeGpa && !isNaN(parseFloat(cumulativeGpa)) && (
+                    <div className={`text-xs font-bold px-3 py-2 rounded-xl text-center ${parseFloat(cumulativeGpa) > 3.8 ? 'bg-green-100 text-green-700' : (isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500')}`}>
+                      {parseFloat(cumulativeGpa) > 3.8
+                        ? (lang === 'en' ? '★ GPA above 3.8 — you can enroll up to 24 credits' : '★ GPA 3.8超 — 最大24単位まで履修可能')
+                        : (lang === 'en' ? 'GPA 3.8 or below — up to 20 credits allowed' : 'GPA 3.8以下 — 最大20単位まで')
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
             )}
