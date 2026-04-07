@@ -33,10 +33,15 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
   const [course, setCourse] = useState<CourseItem>(localCourse);
 
   useEffect(() => {
-    getCourseDetails(courseId)
-      .then(data => setCourse(data))
+    // The API uses course codes (e.g. "TTK085"), not local data IDs (e.g. "mon-1-2")
+    const apiCourseId = localCourse.code ?? courseId;
+    getCourseDetails(apiCourseId)
+      .then(data => {
+        // Merge API data with local data so rich fields (teacher, location, etc.) are preserved
+        setCourse(prev => ({ ...prev, ...data }));
+      })
       .catch(() => { /* keep local fallback */ });
-  }, [courseId]);
+  }, [courseId, localCourse.code]);
 
   const t = {
     en: {
