@@ -95,7 +95,7 @@ export async function fetchAvailableCourses(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/courses`, { headers });
+    res = await fetch(`${API_BASE_URL}/course`, { headers });
   } catch (networkErr: any) {
     throw new Error(`Network error: ${networkErr?.message ?? 'failed to reach server'}`);
   }
