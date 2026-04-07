@@ -12,7 +12,10 @@
       "Bash(python3 -c \"import sys,json; data=sys.stdin.read\\(\\); msgs=[l for l in data.split\\('\\\\n'\\) if l.strip\\(\\)]; [print\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content',''\\)[:800] if isinstance\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content'\\),str\\) else ''\\) for m in msgs[-3:] if m.strip\\(\\)]\")",
       "Bash(python3 -c \"import sys,json; data=sys.stdin.read\\(\\); msgs=[l for l in data.split\\('\\\\n'\\) if l.strip\\(\\)]; [print\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content',''\\)[:1200] if isinstance\\(json.loads\\(m\\).get\\('message',{}\\).get\\('content'\\),str\\) else ''\\) for m in msgs[-3:] if m.strip\\(\\)]\")",
       "Bash(python3:*)",
-      "mcp__claude_ai_Notion__notion-update-page"
+      "mcp__claude_ai_Notion__notion-update-page",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   }
 }

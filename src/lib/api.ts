@@ -17,7 +17,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { allItems } from '../data';
 import type { Assignment, CourseItem, UserProfileAPI } from './types';
 
-export const API_BASE_URL = 'https://4tsr153t0m.execute-api.ap-northeast-1.amazonaws.com';
+export const API_BASE_URL = 'https://4tsr153t0m.execute-api.ap-northeast-1.amazonaws.com/dev';
 
 // ─── Auth Token ────────────────────────────────────────────────────────────────
 
