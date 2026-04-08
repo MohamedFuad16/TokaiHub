@@ -250,18 +250,19 @@ export default function App() {
 
   // Dynamic Font Loading & Styling
   useEffect(() => {
+    // Gilroy is served locally — only the JP fallback font is loaded from Google Fonts
     const fontConfigs = {
       modern: {
-        link: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap',
-        family: '"Outfit", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        link: 'https://fonts.googleapis.com/css2?family=M+PLUS+2:wght@300;400;500;600;700;800;900&display=swap',
+        family: '"Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, sans-serif'
       },
       elegant: {
-        link: 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap',
-        family: '"Poppins", "Noto Sans JP", sans-serif'
+        link: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=M+PLUS+2:wght@300;400;500;600;700;800;900&display=swap',
+        family: '"Poppins", "M PLUS 2", sans-serif'
       },
       minimal: {
-        link: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Zen+Maru+Gothic:wght@300;400;500;700;900&display=swap',
-        family: '"JetBrains Mono", "Zen Maru Gothic", monospace'
+        link: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=M+PLUS+2:wght@300;400;500;700;900&display=swap',
+        family: '"JetBrains Mono", "M PLUS 2", monospace'
       }
     };
 

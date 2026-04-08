@@ -1,7 +1,65 @@
 @import "tailwindcss";
 
+/* ── Gilroy local font-face ───────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Light.woff') format('woff'),
+       url('/fonts/Gilroy-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Regular.woff') format('woff'),
+       url('/fonts/Gilroy-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Medium.woff') format('woff'),
+       url('/fonts/Gilroy-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-SemiBold.woff') format('woff'),
+       url('/fonts/Gilroy-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Bold.woff') format('woff'),
+       url('/fonts/Gilroy-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-ExtraBold.woff') format('woff'),
+       url('/fonts/Gilroy-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Heavy.woff') format('woff'),
+       url('/fonts/Gilroy-Heavy.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --font-sans: var(--app-font-family, "Outfit", ui-sans-serif, system-ui, sans-serif);
+  --font-sans: var(--app-font-family, "Gilroy", ui-sans-serif, system-ui, sans-serif);
   --color-brand-black: #1A1A1A;
   --color-brand-yellow: #FFD747;
   --color-brand-pink: #FFD6E0;
@@ -11,7 +69,7 @@
 
 /* Safe area insets for notch devices */
 :root {
-  --app-font-family: "Outfit", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --app-font-family: "Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --sat: env(safe-area-inset-top, 0px);
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
@@ -26,15 +84,13 @@ html, body, #root {
 }
 
 body {
-  font-family: "Outfit", sans-serif;
+  font-family: var(--app-font-family);
   background-color: #ffffff;
   color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent pull-to-refresh on mobile */
   overscroll-behavior-y: contain;
 }
-
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -63,6 +119,7 @@ button, a, [role="button"] {
   -webkit-user-select: none;
   user-select: none;
 }
+
 /* Shimmer Animation for Skeletons */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
@@ -71,9 +128,9 @@ button, a, [role="button"] {
 
 .shimmer {
   background: linear-gradient(
-    90deg, 
-    #1A1A1A 25%, 
-    #222222 50%, 
+    90deg,
+    #1A1A1A 25%,
+    #222222 50%,
     #1A1A1A 75%
   );
   background-size: 200% 100%;
@@ -82,9 +139,9 @@ button, a, [role="button"] {
 
 .shimmer-light {
   background: linear-gradient(
-    90deg, 
-    #F3F4ED 25%, 
-    #E8F5A266 50%, 
+    90deg,
+    #F3F4ED 25%,
+    #E8F5A266 50%,
     #F3F4ED 75%
   );
   background-size: 200% 100%;
