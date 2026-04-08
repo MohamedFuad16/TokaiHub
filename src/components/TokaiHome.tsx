@@ -103,7 +103,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         // Restore enrolledCourseIds only when the profile has no courses
         // (e.g. after localStorage clear). Never overwrite a live selection.
-        if (data.enrolledCourseIds?.length && userProfile && setUserProfile) {
+        if (
+          data.enrolledCourseIds?.length &&
+          userProfile &&
+          setUserProfile &&
+          !userProfile.selectedCourseIds?.length
+        ) {
           if ((userProfile.selectedCourseIds ?? []).length === 0) {
             setUserProfile({ ...userProfile, selectedCourseIds: data.enrolledCourseIds });
           }
@@ -112,7 +117,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile]);
+  }, []);
 
   // Derive live values from userProfile
   const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';
@@ -121,10 +126,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const lastSemGpa = userProfile?.lastSemGpa ?? 0;
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
   const selectedCredits = useMemo(() =>
-    (allItems as CourseItem[])
+    courseItems
       .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
       .reduce((acc, item) => acc + (item.credits || 0), 0),
-    [selectedCourseIds]);
+    [selectedCourseIds, courseItems]);
 
   const [activeCategory, setActiveCategory] = useState('Classes');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -635,10 +640,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
-                      <img 
-                        src={mascotIdle} 
-                        alt="No classes" 
-                        className="w-full h-full object-contain mix-blend-multiply opacity-100" 
+                      <img
+                        src={mascotIdle}
+                        alt="No classes"
+                        className="w-full h-full object-contain mix-blend-multiply opacity-100"
                       />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
@@ -775,10 +780,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
                           <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
-                            <img 
-                              src={mascotIdle} 
-                              alt="No classes" 
-                              className="w-full h-full object-contain mix-blend-multiply opacity-100" 
+                            <img
+                              src={mascotIdle}
+                              alt="No classes"
+                              className="w-full h-full object-contain mix-blend-multiply opacity-100"
                             />
                           </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
