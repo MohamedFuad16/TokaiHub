@@ -538,8 +538,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         </motion.div>
       </div>
 
-      {/* Floating Schedule Bar — mobile only */}
-      <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
+      <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -612,8 +611,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden`}>
-                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
+                      <img 
+                        src={mascotIdle} 
+                        alt="No classes" 
+                        className="w-full h-full object-contain mix-blend-multiply opacity-100" 
+                      />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
@@ -748,8 +751,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       ))}
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
-                          <div className={`w-20 h-20 rounded-full overflow-hidden`}>
-                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
+                          <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
+                            <img 
+                              src={mascotIdle} 
+                              alt="No classes" 
+                              className="w-full h-full object-contain mix-blend-multiply opacity-100" 
+                            />
                           </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}

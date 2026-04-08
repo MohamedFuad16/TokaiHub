@@ -115,9 +115,8 @@ interface MainAppContentProps {
 function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handleUpdateProfile, handleDevSkipChange }: MainAppContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
-
   return (
-    <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+    <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 pb-[env(safe-area-inset-bottom)] ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
         <div className="p-8 pb-4">
