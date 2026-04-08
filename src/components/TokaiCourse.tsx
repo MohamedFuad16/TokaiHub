@@ -7,7 +7,7 @@ import { allItems } from '../data';
 import { getCourseDetails } from '../lib/api';
 import type { CourseItem } from '../lib/types';
 
-// 🔹 Optional: local JP fallback (you can expand this later)
+// 🔹 Local JP fallback
 const courseFallbacks: Record<string, { jp?: { overview?: string; evaluation?: string } }> = {
   TTK000: {
     jp: {
@@ -52,13 +52,9 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
         setCourse(prev => ({
           ...prev,
           ...rest,
-
-          // ✅ Normalize overview (string → object)
           overview: typeof overview === "string"
             ? { en: overview }
             : overview || prev.overview,
-
-          // ✅ Normalize evaluation
           evaluation: typeof evaluation === "string"
             ? { en: evaluation }
             : evaluation || prev.evaluation,
@@ -67,7 +63,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
       .catch(() => { });
   }, [courseId, localCourse.code]);
 
-  // 🔹 UI TEXT ONLY (no dynamic data here)
+  // UI text
   const t = {
     en: {
       status: "Confirmed",
@@ -92,23 +88,21 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
   const apiCourseId = course.code || "TTK000";
   const fallback = courseFallbacks[apiCourseId];
 
-  // ✅ FINAL OVERVIEW LOGIC
+  // Overview logic
   const overviewText =
     lang === "jp"
       ? fallback?.jp?.overview || course.overview?.jp
       : course.overview?.en;
 
-  const finalOverview =
-    overviewText || t[lang].fallbackOverview;
+  const finalOverview = overviewText || t[lang].fallbackOverview;
 
-  // ✅ FINAL EVALUATION LOGIC
+  // Evaluation logic
   const evaluationText =
     lang === "jp"
       ? fallback?.jp?.evaluation || course.evaluation?.jp
       : course.evaluation?.en;
 
-  const finalEvaluation =
-    evaluationText || t[lang].fallbackEvaluation;
+  const finalEvaluation = evaluationText || t[lang].fallbackEvaluation;
 
   return (
     <div className="h-full relative flex flex-col">
@@ -128,7 +122,12 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto flex flex-col">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-12 max-w-4xl w-full mx-auto">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="pb-12 max-w-4xl w-full mx-auto"
+        >
 
           {/* Title */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-2">
@@ -141,16 +140,18 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
               </span>
             </div>
 
-            <h1 className="text-[28px] sm:text-[36px] lg:text-[42px] font-bold leading-[1.1] tracking-tight">
+            <h1 className="text-[28px] sm:text-[36px] lg:text-[42px] font-bold leading-[1.1] tracking-tight whitespace-pre-line">
               {course.title[lang]}
             </h1>
           </motion.div>
 
           {/* Grid */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4">
-
+          <motion.div
+            variants={itemVariants}
+            className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Clock className="w-6 h-6 mb-3" />
+              <Clock className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               <div className={`text-xs ${textMuted} font-bold mb-1`}>
                 {lang === 'en' ? 'Time' : '時間'}
               </div>
@@ -158,7 +159,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
             </div>
 
             <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Award className="w-6 h-6 mb-3" />
+              <Award className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               <div className={`text-xs ${textMuted} font-bold mb-1`}>
                 {t[lang].credits}
               </div>
@@ -167,34 +168,46 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
               </div>
             </div>
 
-            <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1`}>
-              <BookOpen className="w-6 h-6 mb-3" />
-              <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                {lang === 'en' ? 'Field' : '分野'}
+            <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
+              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
+                <BookOpen className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
               </div>
-              <div className="font-bold text-base">
-                {t[lang].field}
+              <div>
+                <div className={`text-xs ${textMuted} font-bold mb-1`}>
+                  {lang === 'en' ? 'Field' : '分野'}
+                </div>
+                <div className="font-bold text-base">
+                  {t[lang].field}
+                </div>
               </div>
             </div>
           </motion.div>
 
-          {/* Overview */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8">
-            <h3 className="font-bold text-xl mb-3">
-              {t[lang].overviewTitle}
-            </h3>
-            <p className={`${textNormal} p-5 rounded-3xl`}>
-              {finalOverview}
-            </p>
-          </motion.div>
+          {/* Overview + Evaluation */}
+          <motion.div
+            variants={itemVariants}
+            className="px-4 sm:px-6 mt-8 lg:grid lg:grid-cols-2 lg:gap-8 space-y-8 lg:space-y-0"
+          >
+            {/* Overview */}
+            <div>
+              <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-pink"></span>
+                {t[lang].overviewTitle}
+              </h3>
+              <p className={`${textNormal} text-base leading-relaxed font-medium ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-5 rounded-3xl`}>
+                {finalOverview}
+              </p>
+            </div>
 
-          {/* Evaluation */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6">
-            <h3 className="font-bold text-xl mb-3">
-              {t[lang].evalTitle}
-            </h3>
-            <div className="p-5 rounded-3xl">
-              {finalEvaluation}
+            {/* Evaluation */}
+            <div>
+              <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
+                {t[lang].evalTitle}
+              </h3>
+              <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-3xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]`}>
+                {finalEvaluation}
+              </div>
             </div>
           </motion.div>
 
