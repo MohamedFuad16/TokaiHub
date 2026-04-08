@@ -202,8 +202,12 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
-              <img src={mascotIdle} alt="No courses selected" className="w-full h-full object-contain opacity-80 mix-blend-multiply" />
+            <div className={`w-24 h-24 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
+              <img 
+                src={mascotIdle} 
+                alt="No courses selected" 
+                className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-80'}`} 
+              />
             </div>
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
               <button
@@ -294,8 +298,12 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
-                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                    <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
+                      <img 
+                        src={mascotIdle} 
+                        alt="No classes" 
+                        className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`} 
+                      />
                     </div>
                     <p className="text-white/50 text-sm font-medium">
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noClasses}
@@ -522,8 +530,12 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* Empty state for weekly/monthly when no courses selected */}
           {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
-                <img src={mascotIdle} alt="No courses" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+              <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
+                <img 
+                  src={mascotIdle} 
+                  alt="No courses" 
+                  className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`} 
+                />
               </div>
               <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
               <button

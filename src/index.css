@@ -71,3 +71,30 @@ button, a, [role="button"] {
   -webkit-user-select: none;
   user-select: none;
 }
+/* Shimmer Animation for Skeletons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg, 
+    #1A1A1A 25%, 
+    #222222 50%, 
+    #1A1A1A 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.shimmer-light {
+  background: linear-gradient(
+    90deg, 
+    #F3F4ED 25%, 
+    #E8F5A266 50%, 
+    #F3F4ED 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}

@@ -18,17 +18,20 @@ interface AuthProps {
 /* ═══════════════════════════════════════════════════════════════
    Premium App Mascot
    ═══════════════════════════════════════════════════════════════ */
-function AppMascot({ covering }: { covering: boolean }) {
+function AppMascot({ covering, isDark }: { covering: boolean; isDark: boolean }) {
+  // Hardcoded background colors to prevent "white box" flicker during blend transition
+  const mascotBg = isDark ? 'bg-gray-900' : 'bg-[#EBF2D9]';
+  
   return (
-    <div className="relative w-full h-full">
-      <AnimatePresence>
+    <div className={`relative w-full h-full rounded-full overflow-hidden ${mascotBg}`}>
+      <AnimatePresence mode="wait">
         <motion.img
           key={covering ? 'cover' : 'idle'}
           src={covering ? mascotCover : mascotIdle}
           alt="Tokai Mascot"
-          initial={{ opacity: 0, filter: 'blur(4px)', scale: 0.95 }}
-          animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-          exit={{ opacity: 0, filter: 'blur(4px)', position: 'absolute' }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, position: 'absolute' }}
           transition={{ duration: 0.3 }}
           className="absolute inset-0 w-full h-full object-contain mix-blend-multiply"
         />
@@ -262,7 +265,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full h-full"
             >
-              <AppMascot covering={isPasswordFocused} />
+              <AppMascot covering={isPasswordFocused} isDark={isDark} />
             </motion.div>
           </div>
 

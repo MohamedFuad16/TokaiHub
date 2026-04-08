@@ -114,6 +114,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const [isCalendarSheetOpen, setIsCalendarSheetOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+
+  const handleImageLoad = (id: string) => {
+    setLoadedImages(prev => new Set(prev).add(id));
+  };
 
   const handlePrevMonth = useCallback(() => {
     setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
@@ -318,10 +323,15 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     {/* Screen Layer (Top ~60%) */}
                     <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
                       {/* Image / Neon Content */}
+                      {!loadedImages.has(item.id) && (
+                        <div className={`absolute inset-0 z-0 ${isDark ? 'shimmer' : 'shimmer-light'}`} />
+                      )}
                       <img
                         src={item.image}
                         alt="Course visual"
-                        className="absolute inset-0 w-full h-full object-cover opacity-70 saturate-150 contrast-125"
+                        onLoad={() => handleImageLoad(item.id)}
+                        loading="lazy"
+                        className={`absolute inset-0 w-full h-full object-cover saturate-150 contrast-125 transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
                       />
                       {/* Glossy overlay */}
                       <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
