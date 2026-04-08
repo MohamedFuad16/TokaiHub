@@ -122,7 +122,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
       <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
         <div className="p-8 pb-4">
           <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
-            TOKAI<br />HUB
+            TOKAI<br /><span className="text-brand-yellow">HUB</span>
           </div>
           <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Student Hub v1.0</p>
           {userProfile && (

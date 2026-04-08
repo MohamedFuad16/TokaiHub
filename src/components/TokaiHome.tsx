@@ -180,7 +180,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       {/* Header */}
       <header className={`flex justify-between items-center px-4 sm:px-6 pt-8 sm:pt-12 lg:pt-8 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}>
         <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          TOKAI<br/>HUB
+          TOKAI<br/><span className="text-brand-yellow">HUB</span>
         </div>
         <div className="hidden lg:block">
           <h2 className={`text-sm font-semibold ${textMuted}`}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
@@ -543,14 +543,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       </div>
 
       {/* Floating Schedule Bar — mobile only */}
-      <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
+          <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           whileHover={{ scale: 1.02, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
           transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8, delay: 0.4 }}
           onClick={() => setIsScheduleSheetOpen(true)}
-          className="bg-[#0B1F3A] rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl"
+          className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl"
         >
           <div className="flex items-center gap-4 pl-2">
             <div className="w-12 h-12 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-lg text-brand-black">

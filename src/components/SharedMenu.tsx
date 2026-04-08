@@ -54,7 +54,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
           >
             {/* Menu header */}
             <div className={`flex justify-between items-center mb-10 mt-6 pb-6 border-b ${borderClass}`}>
-              <div className="font-bold text-2xl leading-none tracking-tighter">TOKAI<br/>HUB</div>
+              <div className="font-bold text-2xl leading-none tracking-tighter">TOKAI<br/><span className="text-brand-yellow">HUB</span></div>
               <button
                 onClick={onClose}
                 aria-label="Close menu"

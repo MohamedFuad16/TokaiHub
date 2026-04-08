@@ -243,7 +243,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         {/* Logo — above mascot */}
         <div className="flex flex-col items-center mb-4">
           <div className={`font-black text-3xl tracking-tighter leading-none ${isDark ? 'text-white' : 'text-brand-black'}`}>
-            TOKAI<span className={`${isDark ? 'text-brand-yellow' : 'text-[#3B82F6]'}`}>HUB</span>
+            TOKAI<span className="text-brand-yellow">HUB</span>
           </div>
           <p className={`text-[10px] font-semibold tracking-widest uppercase mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
             {lang === 'en' ? 'Student Portal' : '学生ポータル'}
