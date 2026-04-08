@@ -74,10 +74,26 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       .then(data => {
         if (data?.length) {
           const merged = data.map(apiItem => {
-            const local = (allItems as CourseItem[]).find(item => item.id === apiItem.id || item.code === apiItem.code);
-            if (!local) return apiItem;
+            const local = (allItems as CourseItem[]).find(
+              item => item.id === apiItem.id || item.code === apiItem.code
+            );
+
+            // 🔥 normalize dayOfWeek (fix)
+            let normalizedDay = apiItem.dayOfWeek;
+
+            // If API uses 0–6 (Sun–Sat), convert to 1–6 (Mon–Sat)
+            if (normalizedDay === 0) return null; // ignore Sunday
+            if (normalizedDay >= 1 && normalizedDay <= 6) {
+              // OK already
+            } else if (normalizedDay >= 0 && normalizedDay <= 6) {
+              normalizedDay = normalizedDay === 0 ? 1 : normalizedDay;
+            }
+
+            if (!local) return { ...apiItem, dayOfWeek: normalizedDay };
+
             return {
               ...apiItem,
+              dayOfWeek: normalizedDay, // ✅ FIX HERE
               title: typeof apiItem.title === 'string'
                 ? { en: apiItem.title, jp: local.title.jp }
                 : (apiItem.title ? { ...local.title, ...apiItem.title } : local.title),
@@ -88,8 +104,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 ? { en: apiItem.teacher, jp: local.teacher?.jp || '' }
                 : (apiItem.teacher ? { ...local.teacher, ...apiItem.teacher } : local.teacher),
             };
-          });
+          }).filter(Boolean);
           setScheduleItems(merged);
+          console.log('selectedCourseIds:', selectedCourseIds);
+          console.log('scheduleItems:', scheduleItems);
         }
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
