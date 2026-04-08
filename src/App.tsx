@@ -249,16 +249,16 @@ export default function App() {
   useEffect(() => {
     const fontConfigs = {
       modern: {
-        link: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap',
-        family: '"Outfit", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        link: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap',
+        family: '"Plus Jakarta Sans", "Noto Sans JP", sans-serif'
       },
       elegant: {
-        link: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap',
-        family: '"Playfair Display", "Shippori Mincho", serif'
+        link: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Shippori+Mincho+B1:wght@400;500;600;700;800&display=swap',
+        family: '"Cormorant Garamond", "Shippori Mincho B1", serif'
       },
       minimal: {
-        link: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Zen+Maru+Gothic:wght@300;400;500;700;900&display=swap',
-        family: '"JetBrains Mono", "Zen Maru Gothic", monospace'
+        link: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=BIZ+UDPGothic:wght@400;700&display=swap',
+        family: '"Space Grotesk", "BIZ UDPGothic", sans-serif'
       }
     };
 

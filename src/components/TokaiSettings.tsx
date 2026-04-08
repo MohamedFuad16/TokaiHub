@@ -112,37 +112,65 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
       <div className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto overflow-x-hidden">
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-3xl w-full mx-auto">
 
-          {/* Profile Section */}
-          <motion.div variants={itemVariants} className={`flex items-center gap-4 ${bgClass} p-4 sm:p-5 rounded-3xl`}>
-            <div className="w-14 h-14 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-xl text-brand-black shrink-0">
-              {userProfile?.name?.charAt(0) ?? 'T'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="font-bold text-lg truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
-                <AnimatePresence>
-                  {userProfile?.isVerified && (
-                    <motion.div
-                      key="verified-badge"
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                      className="bg-blue-500 rounded-full p-0.5 flex items-center justify-center shrink-0"
-                    >
-                      <BadgeCheck className="w-3.5 h-3.5 text-white" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+          {/* Digital Student ID Section */}
+          <motion.div 
+            variants={itemVariants} 
+            className={`relative overflow-hidden rounded-[32px] p-6 sm:p-7 border ${borderClass} shadow-xl group`}
+          >
+            {/* Background elements */}
+            <div className={`absolute inset-0 opacity-10 ${isDark ? 'bg-gradient-to-br from-brand-yellow via-brand-pink to-brand-green' : 'bg-gradient-to-br from-brand-yellow/30 via-brand-pink/30 to-brand-green/30'}`} />
+            <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl opacity-20 bg-brand-yellow -translate-y-1/2 translate-x-1/2 rounded-full`} />
+            
+            <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
+              {/* Profile Avatar with status ring */}
+              <div className="relative shrink-0">
+                <div className={`w-20 h-20 rounded-full border-4 ${isDark ? 'border-gray-800' : 'border-white'} overflow-hidden shadow-lg flex items-center justify-center bg-brand-yellow font-black text-3xl text-brand-black`}>
+                  {userProfile?.name?.charAt(0) ?? 'T'}
+                </div>
+                <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-white dark:border-gray-900 shadow-sm" />
               </div>
-              <p className={`text-sm font-medium ${textMuted}`}>{userProfile?.studentId ?? '—'}</p>
-              <p className={`text-xs font-medium mt-0.5 capitalize ${textMuted}`}>
-                {userProfile?.campus === 'shinagawa' ? (lang === 'en' ? 'Shinagawa Campus' : '品川キャンパス') :
-                 userProfile?.campus === 'shonan' ? (lang === 'en' ? 'Shonan Campus' : '湘南キャンパス') : '—'}
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg">GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}</div>
+
+              {/* Patient/Student Info */}
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                  <h2 className="font-black text-2xl tracking-tighter truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
+                  <AnimatePresence>
+                    {userProfile?.isVerified && (
+                      <motion.div
+                        key="verified-token"
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-blue-500 rounded-full px-2 py-0.5 flex items-center gap-1 w-fit mx-auto sm:mx-0"
+                      >
+                        <BadgeCheck className="w-3 h-3 text-white" />
+                        <span className="text-[9px] font-black text-white uppercase tracking-wider">{lang === 'en' ? 'Verified' : '認証済み'}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                <div className="flex flex-col gap-1">
+                  <div className={`flex items-center justify-center sm:justify-start gap-2 text-sm font-bold ${textMuted}`}>
+                    <span className="tracking-widest uppercase text-[10px] opacity-60">{lang === 'en' ? 'ID' : '身分'}</span>
+                    <span className="font-black">{userProfile?.studentId ?? '—'}</span>
+                  </div>
+                  <div className={`flex items-center justify-center sm:justify-start gap-2 text-xs font-bold ${textMuted}`}>
+                    <span className="tracking-widest uppercase text-[10px] opacity-60">{lang === 'en' ? 'Campus' : 'キャンパス'}</span>
+                    <span>
+                      {userProfile?.campus === 'shinagawa' ? (lang === 'en' ? 'Shinagawa' : '品川') :
+                       userProfile?.campus === 'shonan' ? (lang === 'en' ? 'Shonan' : '湘南') : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* GPA Badge - Floating right */}
+              <div className={`mt-4 sm:mt-0 px-5 py-3 rounded-3xl ${isDark ? 'bg-gray-800/80' : 'bg-white/80'} backdrop-blur-md shadow-lg border ${borderClass} flex flex-col items-center justify-center shrink-0`}>
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">GPA</div>
+                <div className="text-2xl font-black tracking-tighter text-brand-black dark:text-brand-yellow">
+                  {userProfile?.cumulativeGpa?.toFixed(2) ?? '0.00'}
+                </div>
+              </div>
             </div>
           </motion.div>
 
@@ -227,25 +255,28 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { id: 'modern', name: lang === 'en' ? 'Modern Sans' : 'モダンサンス', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Outfit", sans-serif' },
-                    { id: 'elegant', name: lang === 'en' ? 'Elegant Serif' : 'エレガントセリフ', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Playfair Display", serif' },
-                    { id: 'minimal', name: lang === 'en' ? 'Tech Minimal' : 'テックミニマル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"JetBrains Mono", monospace' }
+                    { id: 'modern', name: lang === 'en' ? 'Neo-Modern' : 'ネオ・モダン', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Plus Jakarta Sans", sans-serif' },
+                    { id: 'elegant', name: lang === 'en' ? 'Heritage Serif' : 'ヘリテージ・セリフ', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Cormorant Garamond", serif' },
+                    { id: 'minimal', name: lang === 'en' ? 'Digital Geometric' : 'デジタル・ジオメトリック', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Space Grotesk", sans-serif' }
                   ].map((font) => (
                     <button
                       key={font.id}
                       onClick={() => setSettings(s => ({ ...s, fontFamily: font.id as any }))}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${settings.fontFamily === font.id ? 'border-brand-yellow bg-brand-yellow/5' : `${borderClass} ${hoverClass}`}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${settings.fontFamily === font.id ? 'border-brand-yellow bg-brand-yellow/5 shadow-md' : `${borderClass} ${hoverClass} opacity-60 hover:opacity-100`}`}
                     >
                       <div className="text-left overflow-hidden">
                         <div className="font-bold text-[10px] mb-1 opacity-60 uppercase tracking-widest">{font.name}</div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                           <span style={{ fontFamily: font.family }} className="text-lg font-medium whitespace-nowrap">{font.previewEn}</span>
-                           <span style={{ fontFamily: font.family }} className="text-base font-medium whitespace-nowrap">{font.previewJp}</span>
+                        <div className="flex items-center overflow-hidden">
+                           {lang === 'en' ? (
+                             <span style={{ fontFamily: font.family }} className="text-xl font-medium whitespace-nowrap">{font.previewEn}</span>
+                           ) : (
+                             <span style={{ fontFamily: font.family }} className="text-lg font-medium whitespace-nowrap tracking-tight">{font.previewJp}</span>
+                           )}
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center justify-center ml-2">
                         {settings.fontFamily === font.id ? (
-                          <div className="w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-sm">
+                          <div className="w-7 h-7 bg-brand-yellow rounded-full flex items-center justify-center shadow-lg transform scale-110">
                             <CheckCircle className="w-4 h-4 text-brand-black" />
                           </div>
                         ) : (
