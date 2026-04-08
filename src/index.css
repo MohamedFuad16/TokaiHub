@@ -35,15 +35,6 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Standalone PWA mode — remove safe area padding conflicts */
-@media all and (display-mode: standalone) {
-  body {
-    padding-top: var(--sat);
-    padding-bottom: var(--sab);
-    padding-left: var(--sal);
-    padding-right: var(--sar);
-  }
-}
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
