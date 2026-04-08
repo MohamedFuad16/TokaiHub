@@ -68,7 +68,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
       <div className="flex items-center justify-between px-1">
         <div>
           <h3 className="font-bold text-xl flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand-green"></span>
+            <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
             {lang === 'en' ? 'Attendance Tracker' : '出席トラッカー'}
           </h3>
         </div>
@@ -87,13 +87,13 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
         <div className="mb-8">
           <div className="flex justify-between items-end mb-2 px-1">
              <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
-             <span className={`text-xs font-bold ${isDark ? 'text-brand-yellow' : 'text-brand-black'} opacity-80`}>{percentage}%</span>
+             <span className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-600'} opacity-80`}>{percentage}%</span>
           </div>
           <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: `${percentage}%` }}
-               className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-brand-green'} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
+               className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-amber-500'} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
                transition={{ type: 'spring', stiffness: 50, damping: 15 }}
              />
           </div>
@@ -115,14 +115,14 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                   ${isAttended 
                     ? 'border-brand-green bg-brand-green/10 shadow-sm' 
                     : isToday 
-                      ? 'border-brand-yellow bg-white dark:bg-gray-900 shadow-md' 
+                      ? 'border-amber-500 bg-amber-500/5 shadow-md scale-[1.02]' 
                       : isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-white shadow-sm'}
                 `}
               >
-                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-brand-yellow' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-brand-black dark:text-brand-yellow' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-amber-600 dark:text-amber-400' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
                   {date.getDate()}
                 </span>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
@@ -132,7 +132,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 `}>
                   {isAttended && <CheckCircle className="w-4 h-4 text-white" />}
                 </div>
-                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-brand-yellow text-brand-black text-[7px] font-bold rounded-full shadow-md">TODAY</div>}
+                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-amber-500 text-white text-[7px] font-bold rounded-full shadow-md">TODAY</div>}
               </button>
             );
           })}
@@ -322,7 +322,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
             </div>
 
             <div className={`${bgClass} p-5 rounded-3xl flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
                 <User className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
               </div>
               <div>
@@ -379,7 +379,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
             {/* Overview */}
             <div>
               <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-brand-pink"></span>
+                <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
                 {t[lang].overviewTitle}
               </h3>
               <p className={`${textNormal} text-base leading-relaxed font-medium ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-5 rounded-3xl`}>
