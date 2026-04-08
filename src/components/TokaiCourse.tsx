@@ -223,7 +223,44 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                 {t[lang].evalTitle}
               </h3>
               <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-3xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]`}>
-                {finalEvaluation}
+                {course.evaluationBreakdown && course.evaluationBreakdown.length > 0 ? (
+                  <div className="space-y-6">
+                    {course.evaluationBreakdown.map((item, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex justify-between items-end px-1">
+                          <span className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                            {item.label[lang]}
+                          </span>
+                          <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-black'} opacity-80`}>
+                            {item.percentage}%
+                          </span>
+                        </div>
+                        <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
+                          <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${item.percentage}%` }}
+                            viewport={{ once: true }}
+                            transition={{ 
+                              type: 'spring', 
+                              stiffness: 100, 
+                              damping: 20, 
+                              delay: 0.1 + (idx * 0.1) 
+                            }}
+                            className={`h-full ${item.color} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {/* Additional text note if available */}
+                    <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} text-xs ${textNormal} leading-relaxed italic`}>
+                      {finalEvaluation}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`${textNormal} text-base leading-relaxed font-medium`}>
+                    {finalEvaluation}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
