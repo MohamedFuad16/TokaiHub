@@ -113,21 +113,21 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 onClick={() => toggleAttendance(dateStr)}
                 className={`flex-shrink-0 w-16 h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all snap-start relative
                   ${isAttended 
-                    ? 'border-brand-green bg-brand-green/10 shadow-sm' 
+                    ? 'border-amber-500 bg-amber-500/10 shadow-sm' 
                     : isToday 
                       ? 'border-amber-500 bg-amber-500/5 shadow-md scale-[1.02]' 
                       : isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-white shadow-sm'}
                 `}
               >
-                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday || isAttended ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-amber-600 dark:text-amber-400' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                <span className={`text-xl font-bold tracking-tighter ${isToday || isAttended ? 'text-amber-600 dark:text-amber-400' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
                   {date.getDate()}
                 </span>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
                   ${isAttended 
-                    ? 'bg-brand-green border-brand-green' 
+                    ? 'bg-amber-500 border-amber-500' 
                     : isDark ? 'border-gray-700' : 'border-gray-300'}
                 `}>
                   {isAttended && <CheckCircle className="w-4 h-4 text-white" />}
