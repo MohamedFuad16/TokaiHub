@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, GraduationCap, Star, Save, AlertCircle, Loader } from 'lucide-react';
 import { Language, AppSettings, UserProfile } from '../App';
 import { allItems } from '../data';
-import { updateProfile } from '../lib/api';
+import { fetchAvailableCourses, updateProfile } from '../lib/api';
+import type { CourseItem } from '../lib/types';
 
 interface EditProfileProps {
   lang: Language;
@@ -14,9 +15,9 @@ interface EditProfileProps {
 }
 
 const MAX_CREDITS = 20;
-const courses = allItems.filter(i => i.type === 'Classes');
 
 const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, userProfile, onSave }: EditProfileProps) {
+  const [courses, setCourses] = useState<CourseItem[]>([]);
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(userProfile?.selectedCourseIds ?? []);
   const [cumulativeGpa, setCumulativeGpa] = useState(userProfile?.cumulativeGpa?.toString() ?? '');
   const [lastSemGpa, setLastSemGpa] = useState(userProfile?.lastSemGpa?.toString() ?? '');
@@ -29,25 +30,67 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
   const isDark = settings.isDarkMode;
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-600';
 
+  // Fetch all courses from Lambda; merge with local data for localized strings
+  useEffect(() => {
+    let cancelled = false;
+    fetchAvailableCourses()
+      .then(data => {
+        if (cancelled || !data?.length) return;
+        const merged = data.map((apiCourse: any) => {
+          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const local = (allItems as CourseItem[]).find(item =>
+            item.code === courseCode || item.id === courseCode
+          );
+          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          return {
+            ...(local ?? {}),
+            ...apiCourse,
+            id: courseCode,
+            code: courseCode,
+            credits: apiCourse.credits ?? local?.credits,
+            title: local
+              ? { en: enTitle, jp: local.title.jp }
+              : { en: enTitle, jp: enTitle },
+            location: local?.location,
+            color: local?.color,
+            time: local?.time,
+            dayOfWeek: local?.dayOfWeek,
+            periods: local?.periods,
+          } as CourseItem;
+        });
+        if (!cancelled) setCourses(merged);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          const fallback = (allItems as CourseItem[])
+            .filter(item => item.type === 'Classes')
+            .map(item => ({ ...item, id: item.code ?? item.id }));
+          setCourses(fallback as CourseItem[]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const selectedCredits = useMemo(() =>
     selectedCourseIds.reduce((acc, id) => {
-      const c = courses.find(c => c.id === id);
+      const c = courses.find(c => c.id === id || c.code === id);
       return acc + (c?.credits || 0);
-    }, 0), [selectedCourseIds]);
+    }, 0), [selectedCourseIds, courses]);
 
   const creditsLeft = MAX_CREDITS - selectedCredits;
 
   const toggleCourse = useCallback((id: string) => {
-    const c = courses.find(c => c.id === id)!;
+    const c = courses.find(c => c.id === id || c.code === id);
+    if (!c) return;
     if (selectedCourseIds.includes(id)) {
       setSelectedCourseIds(p => p.filter(x => x !== id));
     } else {
-      if (selectedCredits + c.credits > MAX_CREDITS) return;
+      if (selectedCredits + (c.credits ?? 0) > MAX_CREDITS) return;
       setSelectedCourseIds(p => [...p, id]);
     }
     setSaved(false);
     setSaveError(null);
-  }, [selectedCourseIds, selectedCredits]);
+  }, [selectedCourseIds, selectedCredits, courses]);
 
   const handleSave = useCallback(async () => {
     if (!userProfile || isSaving) return;
@@ -55,13 +98,6 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
     const gpaRe = /^([0-3](\.\d{0,2})?|4(\.0{0,2})?)$/;
     if (!gpaRe.test(cumulativeGpa) || !gpaRe.test(lastSemGpa)) return;
 
-    // Convert local IDs (e.g. "mon-1-2") → course codes (e.g. "TTK085")
-    const courseCodes = selectedCourseIds.map(localId => {
-      const item = allItems.find(i => i.id === localId);
-      return item?.code ?? localId;
-    });
-
-    // Cancel any in-flight request from a previous save attempt
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
@@ -69,16 +105,16 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
     setSaveError(null);
 
     try {
+      // selectedCourseIds are already course codes (e.g. "TTK085")
       await updateProfile(
         {
-          selectedCourseIds: courseCodes,
+          selectedCourseIds,
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         },
         abortRef.current.signal,
       );
 
-      // Update local app state after confirmed backend save
       onSave({
         ...userProfile,
         selectedCourseIds,
@@ -141,13 +177,13 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
   return (
     <div className="h-full relative flex flex-col">
       {/* Header */}
-      <header 
+      <header
         style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
         className="flex items-center gap-4 p-4 sm:p-6 shrink-0 max-w-3xl w-full mx-auto"
       >
         <button
           onClick={() => navigate(-1)}
-          aria-label="Go back to settings"
+          aria-label="Go back"
           className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors active:scale-95`}
         >
           <ChevronLeft className="w-5 h-5" />
@@ -162,7 +198,6 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
           <section className="space-y-3">
             <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.gpa}</h3>
             <div className={`${cardBg} rounded-[28px] p-5 space-y-4 shadow-sm ${isDark ? 'border border-gray-700' : ''}`}>
-              {/* Cumulative GPA */}
               <div className="space-y-2">
                 <label className={`text-xs font-bold ml-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{tx.cumGpa}</label>
                 <div className="relative">
@@ -184,7 +219,6 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
                 )}
               </div>
 
-              {/* Last Semester GPA */}
               <div className="space-y-2">
                 <label className={`text-xs font-bold ml-1 ${textMuted}`}>{tx.semGpa}</label>
                 <div className="relative">
@@ -243,19 +277,19 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
             {/* Course list */}
             <div className="space-y-2">
               {courses.map(course => {
-                const isSelected = selectedCourseIds.includes(course.id);
-                const wouldExceed = !isSelected && selectedCredits + course.credits > MAX_CREDITS;
+                const isSelected = selectedCourseIds.includes(course.id) || selectedCourseIds.includes(course.code ?? '');
+                const wouldExceed = !isSelected && selectedCredits + (course.credits ?? 0) > MAX_CREDITS;
                 return (
                   <button
                     key={course.id}
                     type="button"
                     onClick={() => toggleCourse(course.id)}
                     disabled={wouldExceed}
-                    aria-label={`Select course: ${course.title[lang]} by ${course.teacher[lang]}. ${course.credits} credits.`}
+                    aria-label={`${course.title?.[lang] ?? course.id}. ${course.credits} credits.`}
                     aria-pressed={isSelected}
                     className={`w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 active:scale-[0.98] border-2 ${
                       isSelected
-                        ? `border-brand-black ${course.color} shadow-md`
+                        ? `border-brand-black ${course.color ?? 'bg-brand-yellow'} shadow-md`
                         : wouldExceed
                           ? (isDark ? 'border-transparent bg-gray-800/50 opacity-40 cursor-not-allowed' : 'border-transparent bg-gray-100 opacity-40 cursor-not-allowed')
                           : (isDark ? 'border-transparent bg-gray-800 hover:border-gray-700' : 'border-transparent bg-white hover:border-gray-200 shadow-sm')
@@ -270,14 +304,10 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
                       <div className={`font-bold text-sm leading-tight truncate ${
                         isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
                       }`}>
-                        {course.title[lang]}
+                        {course.title?.[lang] ?? course.id}
                       </div>
-                      <div className={`text-xs mt-0.5 flex items-center gap-2 ${
-                        isSelected ? 'text-brand-black/70' : textMuted
-                      }`}>
-                        <span>{course.code}</span>
-                        <span>·</span>
-                        <span className="truncate">{course.teacher[lang]}</span>
+                      <div className={`text-xs mt-0.5 ${isSelected ? 'text-brand-black/70' : textMuted}`}>
+                        {course.code}
                       </div>
                     </div>
                     <div className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold ${
@@ -285,7 +315,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
                         ? 'bg-brand-black text-white'
                         : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')
                     }`}>
-                      {course.credits}cr
+                      {course.credits ?? '—'}cr
                     </div>
                   </button>
                 );

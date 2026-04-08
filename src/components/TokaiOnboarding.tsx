@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, BookOpen, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
 import { enrollCourses, fetchAvailableCourses } from '../lib/api';
@@ -695,17 +695,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                               }`}>
                               {course.title?.[lang]}
                             </div>
-                            <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
-                              }`}>
-                              {course.code && <span>{course.code}</span>}
-                              {course.time && <><span>·</span><span>{course.time}</span></>}
-                              {course.location && (
-                                <>
-                                  <span>·</span>
-                                  <MapPin className="w-3 h-3" />
-                                  <span className="truncate">{course.location.en.replace('Shinagawa ', '')}</span>
-                                </>
-                              )}
+                            <div className={`text-xs mt-0.5 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
+                              {course.code}
                             </div>
                           </div>
 
