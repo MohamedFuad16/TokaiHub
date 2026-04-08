@@ -538,7 +538,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         </motion.div>
       </div>
 
-      <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
+      <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

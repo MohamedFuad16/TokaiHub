@@ -35,7 +35,7 @@ const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }
         <h1 className="text-2xl font-bold tracking-tight">{lang === 'en' ? 'Assignments' : '課題'}</h1>
       </header>
 
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex-1 overflow-y-auto p-4 sm:p-6 pb-32 space-y-4">
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
         {deadlines.length === 0 ? (
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-4 py-16 text-center">
             <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}>

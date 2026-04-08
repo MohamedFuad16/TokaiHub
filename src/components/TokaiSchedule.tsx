@@ -196,7 +196,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
       {/* Dark Container */}
       <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
-        <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-4xl w-full mx-auto min-h-0">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-8 max-w-4xl w-full mx-auto min-h-0">
 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
