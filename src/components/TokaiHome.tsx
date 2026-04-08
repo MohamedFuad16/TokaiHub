@@ -101,13 +101,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         if (data.assignments?.length) setAssignments(data.assignments);
 
-        // Sync selectedCourseIds from DynamoDB — backend is the source of truth.
-        // Only update if the enrolled list differs to avoid unnecessary re-renders.
+        // Restore enrolledCourseIds only when the profile has no courses
+        // (e.g. after localStorage clear). Never overwrite a live selection.
         if (data.enrolledCourseIds?.length && userProfile && setUserProfile) {
-          const current = userProfile.selectedCourseIds ?? [];
-          const same = current.length === data.enrolledCourseIds.length &&
-            data.enrolledCourseIds.every(id => current.includes(id));
-          if (!same) {
+          if ((userProfile.selectedCourseIds ?? []).length === 0) {
             setUserProfile({ ...userProfile, selectedCourseIds: data.enrolledCourseIds });
           }
         }
@@ -115,7 +112,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userProfile]);
 
   // Derive live values from userProfile
   const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';

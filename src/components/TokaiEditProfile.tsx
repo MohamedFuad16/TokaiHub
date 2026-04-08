@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, GraduationCap, Star, Save, AlertCircle, Loader } from 'lucide-react';
 import { Language, AppSettings, UserProfile } from '../App';
 import { allItems } from '../data';
-import { fetchAvailableCourses, updateProfile } from '../lib/api';
+import { fetchAvailableCourses, updateProfile, enrollCourses } from '../lib/api';
 import type { CourseItem } from '../lib/types';
 
 interface EditProfileProps {
@@ -114,6 +114,9 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
         },
         abortRef.current.signal,
       );
+
+      // ENSURE DynamoDB enrolledCourses is updated (matching onboarding behavior)
+      await enrollCourses(selectedCourseIds);
 
       onSave({
         ...userProfile,

@@ -90,9 +90,9 @@ const DEV_PROFILE: UserProfile = {
   email: 'm.fuad@tokai.ac.jp',
   studentId: '4CJE1108',
   campus: 'shinagawa',
-  selectedCourseIds: ['mon-1-2', 'tue-1', 'tue-2', 'tue-3', 'thu-1-2', 'thu-3-4', 'fri-1'],
-  cumulativeGpa: 3.66,
-  lastSemGpa: 3.73,
+  selectedCourseIds: [],
+  cumulativeGpa: 0,
+  lastSemGpa: 0,
   isVerified: true,
 };
 
@@ -299,9 +299,9 @@ export default function App() {
           email: attrs.email || user.username,
           studentId: (attrs['custom:studentId'] as string) || '4CJE1108',
           campus: prev?.campus ?? 'shinagawa',
-          selectedCourseIds: prev?.selectedCourseIds ?? ['mon-1-2', 'tue-1', 'tue-3'],
-          cumulativeGpa: prev?.cumulativeGpa ?? 3.66,
-          lastSemGpa: prev?.lastSemGpa ?? 3.73,
+          selectedCourseIds: prev?.selectedCourseIds ?? [],
+          cumulativeGpa: prev?.cumulativeGpa ?? 0,
+          lastSemGpa: prev?.lastSemGpa ?? 0,
           isVerified: true,
         }));
         setIsAuthenticated(true);
