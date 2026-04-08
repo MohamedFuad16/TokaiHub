@@ -443,7 +443,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <img
                   src={mascotIdle}
                   alt="Mascot — nothing here"
-                  className="w-full h-full object-contain mix-blend-multiply opacity-100"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>
@@ -613,7 +613,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
                     <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
@@ -749,7 +749,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
                           <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
                           </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
