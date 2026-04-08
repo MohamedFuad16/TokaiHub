@@ -296,7 +296,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
-                    <div className="w-20 h-20 rounded-full overflow-hidden relative bg-white scale-[1.05] shadow-inner">
+                    <div className="w-20 h-20 rounded-full overflow-hidden relative  scale-[1.05] shadow-inner">
                       <img
                         src={mascotIdle}
                         alt="No classes"
@@ -531,7 +531,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 <img
                   src={mascotIdle}
                   alt="No courses"
-                  className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`}
+                  className={`w-full h-full object-contain  ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`}
                 />
               </div>
               <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
