@@ -53,11 +53,11 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
           ...prev,
           ...rest,
           overview: typeof overview === "string"
-            ? { en: overview }
-            : overview || prev.overview,
+            ? { ...prev.overview, en: overview }
+            : (overview ? { ...prev.overview, ...overview } : prev.overview),
           evaluation: typeof evaluation === "string"
-            ? { en: evaluation }
-            : evaluation || prev.evaluation,
+            ? { ...prev.evaluation, en: evaluation }
+            : (evaluation ? { ...prev.evaluation, ...evaluation } : prev.evaluation),
         }));
       })
       .catch(() => { });
