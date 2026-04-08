@@ -29,14 +29,17 @@ const TokaiEditProfile = React.lazy(lazyEditProfile);
 
 // Preload all route components after initial paint
 function preloadRoutes() {
-  lazyHome();
-  lazyCourse();
-  lazySchedule();
-  lazySettings();
-  lazyAssignments();
-  lazyAssignmentDetail();
-  lazyEditProfile();
+  lazyHome().catch(() => {});
+  lazyCourse().catch(() => {});
+  lazySchedule().catch(() => {});
+  lazySettings().catch(() => {});
+  lazyAssignments().catch(() => {});
+  lazyAssignmentDetail().catch(() => {});
+  lazyEditProfile().catch(() => {});
 }
+
+// Start preloading immediately to hide chunk fetch times
+preloadRoutes();
 
 export type Language = 'en' | 'jp';
 export type AuthScreen = 'signIn' | 'signUp';
@@ -261,7 +264,6 @@ export default function App() {
           isVerified: true,
         }));
         setIsAuthenticated(true);
-        preloadRoutes();
       } catch (e) {
         setIsAuthenticated(false);
       } finally {
@@ -312,13 +314,11 @@ export default function App() {
       }));
 
       setIsAuthenticated(true);
-      preloadRoutes();
-
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleSignOut = useCallback(async () => {

@@ -115,6 +115,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [selectedNews, setSelectedNews] = useState<{ title: string; detail: string; icon: any; color: string } | null>(null);
 
   const handleImageLoad = (id: string) => {
     setLoadedImages(prev => new Set(prev).add(id));
@@ -227,9 +228,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </motion.div>
             {/* Classes Today (desktop only) */}
             <motion.div
-              whileHover={{ y: -2, scale: 1.005 }}
+              whileHover={{ y: -2, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsScheduleSheetOpen(true)}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}
+              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm cursor-pointer border border-transparent hover:border-brand-yellow/30`}
             >
               <div className="flex items-center gap-1.5 mb-3">
                 <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
@@ -237,7 +240,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               </div>
               <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{todayClasses.length}</div>
               <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
-                {lang === 'en' ? 'Scheduled' : '予定'}
+                {lang === 'en' ? 'Quick View' : 'クイック表示'}
               </div>
             </motion.div>
             {/* Due Soon (desktop only) */}
@@ -321,7 +324,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     className={`w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] ${enrolled ? 'border border-green-500/40' : 'border border-white/5'}`}
                   >
                     {/* Screen Layer (Top ~60%) */}
-                    <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)]">
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
+                      }}
+                      className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)] cursor-pointer group/image"
+                    >
                       {/* Image / Neon Content */}
                       {!loadedImages.has(item.id) && (
                         <div className={`absolute inset-0 z-0 ${isDark ? 'shimmer' : 'shimmer-light'}`} />
@@ -331,7 +340,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                         alt="Course visual"
                         onLoad={() => handleImageLoad(item.id)}
                         loading="lazy"
-                        className={`absolute inset-0 w-full h-full object-cover saturate-150 contrast-125 transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
+                        className={`absolute inset-0 w-full h-full object-cover saturate-150 contrast-125 transition-all duration-500 group-hover/image:scale-105 group-hover/image:opacity-80 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
                       />
                       {/* Glossy overlay */}
                       <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
@@ -381,13 +390,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 150);
+                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
                         }}
-                        className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group"
+                        className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#2a2a2c] active:bg-brand-yellow/20 transition-all duration-75 group cursor-pointer"
                       >
-                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75">
-                          <Icon className="w-4 h-4 text-white" />
-                          <span className="text-[9px] font-bold text-white uppercase tracking-wider">{lang === 'en' ? 'Open' : '開く'}</span>
+                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[2px] transition-all duration-75">
+                          <Icon className={`w-4 h-4 text-white group-active:text-brand-yellow`} />
+                          <span className={`text-[9px] font-bold text-white uppercase tracking-wider group-active:text-brand-yellow`}>{lang === 'en' ? 'Open' : '開く'}</span>
                         </div>
                       </div>
                     </div>
@@ -452,31 +461,43 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
               <div className="space-y-3">
                 <motion.div
-                  whileHover={{ y: -2, scale: 1.005 }}
+                  whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
+                  onClick={() => setSelectedNews({ 
+                    title: lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について',
+                    detail: lang === 'en' ? 'The deadline for the first semester tuition fees is April 15th. Please ensure payment is processed through the university portal or designated bank branches.' : '第1セメスターの授業料納入期限は4月15日です。大学ポータルまたは指定の銀行窓口にてお手続きをお願いいたします。',
+                    icon: Bell,
+                    color: 'bg-brand-yellow'
+                  })}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm`}
+                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm border border-transparent hover:border-brand-yellow/30`}
                 >
                   <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
                     <Bell className="w-5 h-5 text-brand-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について'}</h3>
+                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について'}</h3>
                     <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Due by April 15th' : '4月15日までにお願いします'}</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
                 </motion.div>
                 <motion.div
-                  whileHover={{ y: -2, scale: 1.005 }}
+                  whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
+                  onClick={() => setSelectedNews({ 
+                    title: lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス',
+                    detail: lang === 'en' ? 'The main campus library will be closed this weekend for system upgrades and shelf maintenance. Online resources remain accessible 24/7.' : '今週末、システムアップデートと書架メンテナンスのため、本館は休館いたします。オンラインリソースは通常通りご利用いただけます。',
+                    icon: Calendar,
+                    color: 'bg-brand-green'
+                  })}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm`}
+                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm border border-transparent hover:border-brand-green/30`}
                 >
                   <div className="w-10 h-10 bg-brand-green rounded-full flex items-center justify-center shrink-0">
                     <Calendar className="w-5 h-5 text-brand-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス'}</h3>
+                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス'}</h3>
                     <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Closed this weekend' : '今週末は閉館します'}</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
@@ -724,6 +745,38 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         )}
       </AnimatePresence>
 
+      {/* News Modal */}
+      <AnimatePresence>
+        {selectedNews && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedNews(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg ${isDark ? 'bg-gray-900' : 'bg-white'} rounded-[40px] z-[101] p-8 shadow-2xl`}
+            >
+              <div className={`w-16 h-16 ${selectedNews.color} rounded-full flex items-center justify-center mb-6`}>
+                <selectedNews.icon className="w-8 h-8 text-white shadow-sm" />
+              </div>
+              <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-brand-black'}`}>{selectedNews.title}</h2>
+              <p className={`text-base leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-8`}>{selectedNews.detail}</p>
+              <button
+                onClick={() => setSelectedNews(null)}
+                className={`w-full py-4 rounded-2xl font-bold bg-[#0B1F3A] text-white hover:brightness-110 active:scale-95 transition-all`}
+              >
+                {lang === 'en' ? 'Close' : '閉じる'}
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <SharedMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}

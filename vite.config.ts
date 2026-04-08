@@ -24,10 +24,22 @@ export default defineConfig(({ mode }) => {
       minify: 'esbuild',
       rollupOptions: {
         output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
-            motion: ['motion'],
-            aws: ['aws-amplify'],
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('aws-amplify') || id.includes('@aws-amplify')) {
+                return 'aws-core';
+              }
+              if (id.includes('lucide-react')) {
+                return 'icons';
+              }
+              if (id.includes('motion')) {
+                return 'motion';
+              }
+              if (id.includes('react-router-dom') || id.includes('remix-run') || id.includes('@remix-run')) {
+                return 'routing';
+              }
+              return 'vendor';
+            }
           },
         },
       },
