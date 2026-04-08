@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
-import { enrollCourses } from '../lib/api';
+import { enrollCourses, fetchAvailableCourses } from '../lib/api';
 import type { CourseItem } from '../lib/types';
-import { allItems } from '../data';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
 interface OnboardingProps {
@@ -54,6 +53,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [coursesError, setCoursesError] = useState('');
+  const [classFilter, setClassFilter] = useState<'A' | 'B' | 'all'>('all');
+  const [courseLoadAttempt, setCourseLoadAttempt] = useState(0);
 
   // Step 3 — OTP
   const [otpCode, setOtpCode] = useState('');
@@ -69,14 +70,40 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Populate available courses from local data when entering step 2.
-  // All classes (allowedClasses A, B, or both) are shown so the student
-  // sees the full catalogue with teacher, time, and location info.
+  // Fetch available courses from the API when entering step 2 or when classFilter changes.
   useEffect(() => {
     if (step !== 2) return;
-    const courses = allItems.filter(item => item.type === 'Classes') as CourseItem[];
-    setAvailableCourses(courses);
-  }, [step]);
+    let cancelled = false;
+    const load = async () => {
+      setLoadingCourses(true);
+      setCoursesError('');
+      try {
+        let courses: CourseItem[];
+        if (classFilter === 'all') {
+          const [a, b] = await Promise.all([
+            fetchAvailableCourses(studentId.toUpperCase(), 'A'),
+            fetchAvailableCourses(studentId.toUpperCase(), 'B'),
+          ]);
+          // Merge and deduplicate by id
+          const seen = new Set<string>();
+          courses = [...a, ...b].filter(c => {
+            if (seen.has(c.id)) return false;
+            seen.add(c.id);
+            return true;
+          });
+        } else {
+          courses = await fetchAvailableCourses(studentId.toUpperCase(), classFilter);
+        }
+        if (!cancelled) setAvailableCourses(courses);
+      } catch (err: unknown) {
+        if (!cancelled) setCoursesError(err instanceof Error ? err.message : 'Failed to load courses');
+      } finally {
+        if (!cancelled) setLoadingCourses(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [step, classFilter, studentId, courseLoadAttempt]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
@@ -231,8 +258,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           }
         });
         setStep(3);
-      } catch (err: any) {
-        setBackendError(err.message || 'An error occurred during sign up.');
+      } catch (err: unknown) {
+        setBackendError(err instanceof Error ? err.message : 'An error occurred during sign up.');
       } finally {
         setIsSubmitting(false);
       }
@@ -259,21 +286,14 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           password
         });
 
-        // Send course CODES to backend (e.g. "TTK085"), not local IDs.
-        // Local IDs (e.g. "mon-1-2") are what allItems uses; codes are what DynamoDB uses.
-        const courseCodes = selectedCourseIds.map(localId => {
-          const item = allItems.find(i => i.id === localId);
-          return item?.code ?? localId;
-        });
-
+        // selectedCourseIds are API course IDs (e.g. "TTK085") — send directly to backend.
         try {
-          await enrollCourses(courseCodes);
+          await enrollCourses(selectedCourseIds);
         } catch (enrollErr) {
           console.error('enrollCourses failed:', enrollErr);
           // Non-fatal — user still proceeds; they can re-select later
         }
 
-        // selectedCourseIds are already local IDs since we use allItems in step 2
         onComplete({
           name: name.trim(),
           email: email.trim(),
@@ -284,9 +304,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           lastSemGpa: parseFloat(lastSemGpa),
         });
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
-        setBackendError(err.message || 'Invalid verification code.');
+        setBackendError(err instanceof Error ? err.message : 'Invalid verification code.');
         setIsSubmitting(false);
       }
 
@@ -637,6 +657,23 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   </div>
                 </div>
 
+                {/* Class filter tabs */}
+                <div className="flex gap-2 mb-4">
+                  {(['all', 'A', 'B'] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setClassFilter(f)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${classFilter === f
+                        ? (isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white')
+                        : (isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white text-gray-500 hover:bg-gray-100 shadow-sm')
+                      }`}
+                    >
+                      {f === 'all' ? (lang === 'en' ? 'All' : 'すべて') : `Class ${f}`}
+                    </button>
+                  ))}
+                </div>
+
                 {errors.courses && <p className="text-red-500 text-xs font-bold px-1 mb-3">{errors.courses}</p>}
 
                 {/* Loading state */}
@@ -658,8 +695,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                       type="button"
                       onClick={() => {
                         setCoursesError('');
-                        const courses = allItems.filter(item => item.type === 'Classes') as CourseItem[];
-                        setAvailableCourses(courses);
+                        setCourseLoadAttempt(n => n + 1);
                       }}
                       className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
                     >

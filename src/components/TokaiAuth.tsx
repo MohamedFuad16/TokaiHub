@@ -31,7 +31,7 @@ function AppMascot({ covering, isDark }: { covering: boolean; isDark: boolean })
           alt="Tokai Mascot"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, position: 'absolute' }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           className="absolute inset-0 w-full h-full object-contain mix-blend-multiply"
         />
@@ -205,8 +205,8 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
       setTimeout(() => {
         onSignIn(email);
       }, 1000);
-    } catch (err: any) {
-      setError(err.message || 'Error signing in');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error signing in');
       setIsSigningIn(false);
     }
   };

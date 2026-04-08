@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Clock, BookOpen, Award, CheckCircle, FileText, Calendar, User } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -27,11 +27,12 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
 };
 
+const SEMESTER_START = new Date(2026, 3, 8); // April 8, 2026
+const SEMESTER_END = new Date(2026, 6, 21);   // July 21, 2026
+
 const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: string; courseDay: string; isDark: boolean; lang: string }) => {
   const daysMap: Record<string, number> = { 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 0 };
   const targetDay = daysMap[courseDay?.toLowerCase()] ?? 1;
-  const semesterStart = new Date(2026, 3, 8); // April 8, 2026
-  const semesterEnd = new Date(2026, 6, 21); // July 21, 2026
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -40,28 +41,32 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
     return stored ? JSON.parse(stored) : {};
   });
 
-  const classDates = React.useMemo(() => {
+  const classDates = useMemo(() => {
     const dates: Date[] = [];
-    let current = new Date(semesterStart);
-    while (current.getDay() !== targetDay && current <= semesterEnd) {
+    let current = new Date(SEMESTER_START);
+    while (current.getDay() !== targetDay && current <= SEMESTER_END) {
       current.setDate(current.getDate() + 1);
     }
-    while (current <= semesterEnd) {
+    while (current <= SEMESTER_END) {
       dates.push(new Date(current));
       current.setDate(current.getDate() + 7);
     }
     return dates;
   }, [targetDay]);
 
-  const attendedCount = classDates.filter(d => attendance[d.toISOString().split('T')[0]]).length;
-  const totalCount = classDates.length;
-  const percentage = Math.round((attendedCount / totalCount) * 100);
+  const { attendedCount, totalCount, percentage } = useMemo(() => {
+    const attended = classDates.filter(d => attendance[d.toISOString().split('T')[0]]).length;
+    const total = classDates.length;
+    return { attendedCount: attended, totalCount: total, percentage: Math.round((attended / total) * 100) };
+  }, [classDates, attendance]);
 
-  const toggleAttendance = (dateStr: string) => {
-    const newAttendance = { ...attendance, [dateStr]: !attendance[dateStr] };
-    setAttendance(newAttendance);
-    localStorage.setItem(`attendance_${courseId}`, JSON.stringify(newAttendance));
-  };
+  const toggleAttendance = useCallback((dateStr: string) => {
+    setAttendance(prev => {
+      const next = { ...prev, [dateStr]: !prev[dateStr] };
+      localStorage.setItem(`attendance_${courseId}`, JSON.stringify(next));
+      return next;
+    });
+  }, [courseId]);
 
   return (
     <div className="space-y-4">
@@ -73,7 +78,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
           </h3>
         </div>
         <div className="text-right">
-          <div className="text-xl font-bold tracking-tight text-brand-black dark:text-brand-yellow leading-none">
+          <div className={`text-xl font-bold tracking-tight leading-none ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`}>
             {attendedCount} <span className="text-sm font-medium text-gray-400">/ {totalCount}</span>
           </div>
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
@@ -100,7 +105,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
         </div>
 
         {/* Scrollable Date Section */}
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide snap-x">
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 no-scrollbar snap-x">
           {classDates.map((date) => {
             const dateStr = date.toISOString().split('T')[0];
             const isAttended = attendance[dateStr];
@@ -118,10 +123,10 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                   ${isAttended && !isToday ? (isDark ? 'border-transparent bg-white/5' : 'border-transparent bg-black/5') : ''}
                 `}
               >
-                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? (isDark ? 'text-amber-400' : 'text-amber-600') : 'text-gray-400'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-amber-600 dark:text-amber-400' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                <span className={`text-xl font-bold tracking-tighter ${isToday ? (isDark ? 'text-amber-400' : 'text-amber-600') : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
                   {date.getDate()}
                 </span>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
@@ -143,7 +148,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
 
 const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenProps) {
   const navigate = useNavigate();
-  const goBack = () => navigate(-1);
+  const goBack = useCallback(() => navigate(-1), [navigate]);
   const { id } = useParams();
 
   const isDark = settings.isDarkMode;
@@ -157,9 +162,10 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
   const [course, setCourse] = useState<CourseItem>(localCourse);
 
   useEffect(() => {
+    const controller = new AbortController();
     const apiCourseId = localCourse.code ?? courseId;
 
-    getCourseDetails(apiCourseId)
+    getCourseDetails(apiCourseId, controller.signal)
       .then(data => {
         const { overview, evaluation, title, teacher, location, ...rest } = data;
 
@@ -191,7 +197,8 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
           };
         });
       })
-      .catch(() => { });
+      .catch(err => { if (err?.name !== 'AbortError') { /* keep local data */ } });
+    return () => controller.abort();
   }, [courseId, localCourse.code]);
 
   // UI text

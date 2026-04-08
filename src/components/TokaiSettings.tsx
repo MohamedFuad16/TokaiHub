@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, BadgeCheck, CheckCircle } from 'lucide-react';
 import { ScreenProps, UserProfile } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -82,7 +82,7 @@ const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel, isDark }: {
 
 export default function TokaiSettings({ lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange }: SettingsProps) {
   const navigate = useNavigate();
-  const goBack = () => navigate(-1);
+  const goBack = useCallback(() => navigate(-1), [navigate]);
   const isDark = settings.isDarkMode;
   const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const itemBg = isDark ? 'bg-gray-800' : 'bg-white';
@@ -92,8 +92,8 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
 
   const tx = t[lang];
 
-  const toggleDarkMode = () => setSettings(s => ({ ...s, isDarkMode: !s.isDarkMode }));
-  const togglePrivacy = () => setSettings(s => ({ ...s, privacy: !s.privacy }));
+  const toggleDarkMode = useCallback(() => setSettings(s => ({ ...s, isDarkMode: !s.isDarkMode })), [setSettings]);
+  const togglePrivacy = useCallback(() => setSettings(s => ({ ...s, privacy: !s.privacy })), [setSettings]);
 
   return (
     <div className="h-full relative flex flex-col">
@@ -174,7 +174,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
 
             <div className={`${itemBg} border ${borderClass} rounded-3xl p-2 shadow-sm`}>
               {/* Notifications (disabled) */}
-              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-not-allowed">
+              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl pointer-events-none opacity-50">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                     <Bell className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />

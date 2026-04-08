@@ -38,14 +38,14 @@ const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }
         <h1 className="text-2xl font-bold tracking-tight">{lang === 'en' ? 'Assignments' : '課題'}</h1>
       </header>
 
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex-1 overflow-y-auto p-4 sm:p-6 pb-32 space-y-4">
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex-1 overflow-y-auto p-4 sm:p-6 pb-8 space-y-4">
         {deadlines.length === 0 ? (
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-4 py-16 text-center">
             <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-              <img 
-                src={mascotIdle} 
-                alt="No assignments" 
-                className="w-full h-full object-contain opacity-80 mix-blend-multiply" 
+              <img
+                src={mascotIdle}
+                alt="No assignments"
+                className={`w-full h-full object-contain ${isDark ? 'opacity-80' : 'opacity-80 mix-blend-multiply'}`}
               />
             </div>
             <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -58,7 +58,7 @@ const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }
             variants={itemVariants}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(`/assignments/${item.id}`)}
-            className={`p-5 rounded-[32px] cursor-pointer hover:scale-[1.02] transition-transform ${item.status === 'submitted' ? (isDark ? 'bg-gray-800 opacity-60' : 'bg-gray-50 opacity-70') : item.color} ${item.status === 'submitted' && isDark ? 'text-gray-300' : 'text-brand-black'}`}
+            className={`p-5 rounded-[32px] cursor-pointer ${item.status === 'submitted' ? (isDark ? 'bg-gray-800 opacity-60' : 'bg-gray-50 opacity-70') : item.color} ${item.status === 'submitted' && isDark ? 'text-gray-300' : 'text-brand-black'}`}
           >
             <div className="flex justify-between items-start mb-3">
               <div className="flex gap-3 items-center">

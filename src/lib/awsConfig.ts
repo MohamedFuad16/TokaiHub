@@ -8,8 +8,8 @@ export function configureAmplify(): void {
   Amplify.configure({
     Auth: {
       Cognito: {
-        userPoolId: 'ap-northeast-1_G22UBNCKK',
-        userPoolClientId: '4ej101oqii0dopq22duiodvah7',
+        userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID ?? 'ap-northeast-1_G22UBNCKK',
+        userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID ?? '4ej101oqii0dopq22duiodvah7',
         loginWith: { email: true },
       },
     },

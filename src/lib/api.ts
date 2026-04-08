@@ -9,6 +9,9 @@
  * GET  /dashboard                    → getDashboard()         → DashboardResponse
  * GET  /schedule                     → getSchedule()          → CourseItem[]
  * GET  /course-details/{courseId}    → getCourseDetails()     → CourseItem
+ * GET  /course                       → fetchAvailableCourses() → CourseItem[]
+ * POST /enroll-courses               → enrollCourses()        → void
+ * PUT  /profile                      → updateProfile()        → UpdateProfileResponse
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -17,7 +20,8 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { allItems } from '../data';
 import type { Assignment, CourseItem, UserProfileAPI } from './types';
 
-export const API_BASE_URL = 'https://4tsr153t0m.execute-api.ap-northeast-1.amazonaws.com/dev';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'https://4tsr153t0m.execute-api.ap-northeast-1.amazonaws.com/dev';
 
 // ─── Auth Token ────────────────────────────────────────────────────────────────
 
@@ -33,15 +37,36 @@ async function getAuthToken(): Promise<string | null> {
 
 // ─── Fetch Helper ──────────────────────────────────────────────────────────────
 
+interface ApiFetchOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
 /** Authenticated fetch — attaches Authorization: Bearer <token> header when a session exists. */
-async function apiFetch<T>(path: string): Promise<T> {
+async function apiFetch<T>(path: string, signalOrOptions?: AbortSignal | ApiFetchOptions): Promise<T> {
+  // Support both legacy apiFetch(path, signal) and new apiFetch(path, { method, body, signal })
+  const opts: ApiFetchOptions = signalOrOptions instanceof AbortSignal
+    ? { signal: signalOrOptions }
+    : (signalOrOptions ?? {});
+
   const token = await getAuthToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+  const timeoutSignal = AbortSignal.timeout(15_000);
+  const combinedSignal = opts.signal
+    ? AbortSignal.any([opts.signal, timeoutSignal])
+    : timeoutSignal;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: opts.method ?? 'GET',
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    signal: combinedSignal,
+  });
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
-  return res.json() as Promise<T>;
+  return (await res.json()) as T;
 }
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
@@ -69,22 +94,22 @@ export interface DashboardResponse {
 }
 
 /** Fetches dashboard summary data: courses, assignments, and user profile. */
-export async function getDashboard(): Promise<DashboardResponse> {
-  return apiFetch<DashboardResponse>('/dashboard');
+export async function getDashboard(signal?: AbortSignal): Promise<DashboardResponse> {
+  return apiFetch<DashboardResponse>('/dashboard', signal);
 }
 
 // ─── Schedule ──────────────────────────────────────────────────────────────────
 
 /** Fetches the authenticated user's full schedule. */
-export async function getSchedule(): Promise<CourseItem[]> {
-  return apiFetch<CourseItem[]>('/schedule');
+export async function getSchedule(signal?: AbortSignal): Promise<CourseItem[]> {
+  return apiFetch<CourseItem[]>('/schedule', signal);
 }
 
 // ─── Course Details ────────────────────────────────────────────────────────────
 
 /** Fetches detailed info for a single course. */
-export async function getCourseDetails(courseId: string): Promise<CourseItem> {
-  return apiFetch<CourseItem>(`/course-details/${courseId}`);
+export async function getCourseDetails(courseId: string, signal?: AbortSignal): Promise<CourseItem> {
+  return apiFetch<CourseItem>(`/course-details/${courseId}`, signal);
 }
 
 // ─── Available Courses (for onboarding) ────────────────────────────────────────
@@ -112,8 +137,9 @@ export async function fetchAvailableCourses(
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}/course`, { headers });
-  } catch (networkErr: any) {
-    throw new Error(`Network error: ${networkErr?.message ?? 'failed to reach server'}`);
+  } catch (networkErr: unknown) {
+    const msg = networkErr instanceof Error ? networkErr.message : 'failed to reach server';
+    throw new Error(`Network error: ${msg}`);
   }
 
   if (!res.ok) {
@@ -122,7 +148,7 @@ export async function fetchAvailableCourses(
     throw new Error(`HTTP ${res.status} — ${body || res.statusText}`);
   }
 
-  return res.json() as Promise<CourseItem[]>;
+  return (await res.json()) as CourseItem[];
 }
 
 // ─── Enroll Courses ────────────────────────────────────────────────────────────
@@ -144,6 +170,32 @@ export async function enrollCourses(courseIds: string[]): Promise<void> {
     body: JSON.stringify({ courseIds }),
   });
   if (!res.ok) throw new Error(`enrollCourses → ${res.status}`);
+}
+
+// ─── Update Profile ────────────────────────────────────────────────────────────
+
+export interface UpdateProfileRequest {
+  /** Course codes e.g. ["TTK085", "TTT032"] — convert from local IDs before calling */
+  selectedCourseIds?: string[];
+  cumulativeGpa?: number;
+  lastSemGpa?: number;
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  profile?: Record<string, unknown>;
+}
+
+/**
+ * Updates the authenticated student's profile in DynamoDB.
+ * selectedCourseIds must be course codes (e.g. "TTK085"), not local IDs (e.g. "mon-1-2").
+ * Use allItems to convert: allItems.find(i => i.id === localId)?.code ?? localId
+ */
+export async function updateProfile(
+  updates: UpdateProfileRequest,
+  signal?: AbortSignal,
+): Promise<UpdateProfileResponse> {
+  return apiFetch<UpdateProfileResponse>('/profile', { method: 'PUT', body: updates, signal });
 }
 
 // ─── Legacy helpers (kept for compatibility) ───────────────────────────────────
@@ -187,6 +239,3 @@ export async function getUserProfile(_userId: string): Promise<UserProfileAPI | 
   return null;
 }
 
-export async function updateUserProfile(_profile: UserProfileAPI): Promise<void> {
-  console.warn('updateUserProfile: no backend connected — changes are local session only');
-}

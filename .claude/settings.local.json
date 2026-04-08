@@ -15,7 +15,12 @@
       "mcp__claude_ai_Notion__notion-update-page",
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(mkdir -p /Users/mfuad16/Documents/TokaiHub/public/fonts)",
+      "Bash(cp /Users/mfuad16/Documents/TokaiHub/gilroy/Gilroy-Regular.woff /Users/mfuad16/Documents/TokaiHub/public/fonts/)",
+      "Bash(cp /Users/mfuad16/Documents/TokaiHub/gilroy/Gilroy-Regular.ttf /Users/mfuad16/Documents/TokaiHub/public/fonts/)",
+      "Bash(cp /Users/mfuad16/Documents/TokaiHub/gilroy/Gilroy-Medium.woff /Users/mfuad16/Documents/TokaiHub/public/fonts/)",
+      "Bash(cp /Users/mfuad16/Documents/TokaiHub/gilroy/Gilroy-Medium.ttf /Users/mfuad16/Documents/TokaiHub/public/fonts/)"
     ]
   }
 }

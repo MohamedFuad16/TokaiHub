@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, GraduationCap, Star, Save } from 'lucide-react';
+import { ChevronLeft, Check, GraduationCap, Star, Save, AlertCircle, Loader } from 'lucide-react';
 import { Language, AppSettings, UserProfile } from '../App';
 import { allItems } from '../data';
+import { updateProfile } from '../lib/api';
 
 interface EditProfileProps {
   lang: Language;
@@ -20,6 +21,9 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
   const [cumulativeGpa, setCumulativeGpa] = useState(userProfile?.cumulativeGpa?.toString() ?? '');
   const [lastSemGpa, setLastSemGpa] = useState(userProfile?.lastSemGpa?.toString() ?? '');
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
 
   const isDark = settings.isDarkMode;
@@ -42,27 +46,60 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       setSelectedCourseIds(p => [...p, id]);
     }
     setSaved(false);
+    setSaveError(null);
   }, [selectedCourseIds, selectedCredits]);
 
-  const handleSave = useCallback(() => {
-    if (!userProfile) return;
-    const gpaRe = /^([0-3](\.\d{0,2})?|4(\.0{0,2})?)$/;
-    const cumValid = gpaRe.test(cumulativeGpa);
-    const semValid = gpaRe.test(lastSemGpa);
-    if (!cumValid || !semValid) return;
+  const handleSave = useCallback(async () => {
+    if (!userProfile || isSaving) return;
 
-    onSave({
-      ...userProfile,
-      selectedCourseIds,
-      cumulativeGpa: parseFloat(cumulativeGpa),
-      lastSemGpa: parseFloat(lastSemGpa),
+    const gpaRe = /^([0-3](\.\d{0,2})?|4(\.0{0,2})?)$/;
+    if (!gpaRe.test(cumulativeGpa) || !gpaRe.test(lastSemGpa)) return;
+
+    // Convert local IDs (e.g. "mon-1-2") → course codes (e.g. "TTK085")
+    const courseCodes = selectedCourseIds.map(localId => {
+      const item = allItems.find(i => i.id === localId);
+      return item?.code ?? localId;
     });
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      navigate('/');
-    }, 1200);
-  }, [userProfile, cumulativeGpa, lastSemGpa, selectedCourseIds, onSave, navigate]);
+
+    // Cancel any in-flight request from a previous save attempt
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      await updateProfile(
+        {
+          selectedCourseIds: courseCodes,
+          cumulativeGpa: parseFloat(cumulativeGpa),
+          lastSemGpa: parseFloat(lastSemGpa),
+        },
+        abortRef.current.signal,
+      );
+
+      // Update local app state after confirmed backend save
+      onSave({
+        ...userProfile,
+        selectedCourseIds,
+        cumulativeGpa: parseFloat(cumulativeGpa),
+        lastSemGpa: parseFloat(lastSemGpa),
+      });
+
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        navigate('/');
+      }, 1200);
+
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      const msg = err instanceof Error ? err.message : 'Failed to save — please try again';
+      setSaveError(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userProfile, isSaving, cumulativeGpa, lastSemGpa, selectedCourseIds, onSave, navigate]);
 
   const t = {
     en: {
@@ -75,6 +112,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       semGpa: 'Last Semester GPA',
       gpaPlaceholder: '0.00 – 4.00',
       save: 'Save Changes',
+      saving: 'Saving…',
       saved: 'Saved!',
       back: 'Back',
     },
@@ -88,6 +126,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       semGpa: '前学期 GPA',
       gpaPlaceholder: '0.00 – 4.00',
       save: '変更を保存',
+      saving: '保存中…',
       saved: '保存しました！',
       back: '戻る',
     },
@@ -131,7 +170,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
                   <input
                     type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
                     value={cumulativeGpa}
-                    onChange={e => { setCumulativeGpa(e.target.value); setSaved(false); }}
+                    onChange={e => { setCumulativeGpa(e.target.value); setSaved(false); setSaveError(null); }}
                     className={`${inputCls} pl-12`}
                   />
                 </div>
@@ -153,7 +192,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
                   <input
                     type="number" step="0.01" min="0" max="4" placeholder={tx.gpaPlaceholder}
                     value={lastSemGpa}
-                    onChange={e => { setLastSemGpa(e.target.value); setSaved(false); }}
+                    onChange={e => { setLastSemGpa(e.target.value); setSaved(false); setSaveError(null); }}
                     className={`${inputCls} pl-12`}
                   />
                 </div>
@@ -258,22 +297,39 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       </div>
 
       {/* Floating Save Button */}
-      <div 
+      <div
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
         className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none"
       >
-        <div className="max-w-3xl mx-auto pointer-events-auto">
+        <div className="max-w-3xl mx-auto pointer-events-auto space-y-3">
+          {saveError && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20"
+            >
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-sm font-medium text-red-500 leading-snug">{saveError}</p>
+            </motion.div>
+          )}
           <motion.button
             onClick={handleSave}
-            whileTap={{ scale: 0.97 }}
-            className={`w-full rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg ${
+            whileTap={{ scale: isSaving ? 1 : 0.97 }}
+            disabled={isSaving || saved}
+            className={`w-full rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg disabled:cursor-not-allowed ${
               saved
                 ? 'bg-green-500 text-white shadow-green-500/30'
-                : 'bg-brand-black text-white hover:bg-gray-800 shadow-black/20'
+                : isSaving
+                  ? 'bg-gray-400 text-white shadow-none'
+                  : 'bg-brand-black text-white hover:bg-gray-800 shadow-black/20'
             }`}
           >
-            {saved ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-            {saved ? tx.saved : tx.save}
+            {saved
+              ? <><Check className="w-5 h-5" />{tx.saved}</>
+              : isSaving
+                ? <><Loader className="w-5 h-5 animate-spin" />{tx.saving}</>
+                : <><Save className="w-5 h-5" />{tx.save}</>
+            }
           </motion.button>
         </div>
       </div>

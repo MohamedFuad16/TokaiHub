@@ -134,7 +134,7 @@ export default function TokaiCredits({ lang, settings, userProfile }: ScreenProp
                     key={course.id}
                     variants={itemVariants}
                     onClick={() => navigate(`/course/${course.id}`)}
-                    className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}
+                    className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
                   >
                     {/* Color dot */}
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${course.color ?? 'bg-brand-gray'}`}>

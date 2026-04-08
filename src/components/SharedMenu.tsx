@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { X, Home, Calendar, ClipboardList, Settings, ChevronRight } from 'lucide-react';
 import { Language, AppSettings } from '../App';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,10 +24,10 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
   const location = useLocation();
   const isDark = settings.isDarkMode;
 
-  const isActive = (path: string) => {
+  const isActive = useCallback((path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
-  };
+  }, [location.pathname]);
 
   return (
     <AnimatePresence>

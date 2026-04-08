@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronLeft, Menu } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -46,6 +46,8 @@ const PERIODS = [
 
 const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
 const WEEK_DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_DAYS_JP = ['日', '月', '火', '水', '木', '金', '土'];
 // dayOfWeek values: 1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
 const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
 
@@ -67,9 +69,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   // Fetch schedule from API; fall back to local data on error
   const [scheduleItems, setScheduleItems] = useState<CourseItem[]>(allItems as CourseItem[]);
   useEffect(() => {
-    getSchedule()
+    const controller = new AbortController();
+    getSchedule(controller.signal)
       .then(data => { if (data?.length) setScheduleItems(data); })
-      .catch(() => { /* keep local fallback */ });
+      .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
+    return () => controller.abort();
   }, []);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -129,8 +133,6 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     return map;
   }, [selectedCourseIds, scheduleItems]);
 
-  const shortDaysOfWeekEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const shortDaysOfWeekJp = ['日', '月', '火', '水', '木', '金', '土'];
 
   // Selected day classes for monthly view
   const monthlySelectedClasses = useMemo(() => {
@@ -432,20 +434,20 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               {/* Calendar */}
               <div className="bg-white/5 rounded-[32px] p-4 sm:p-6 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
                 <div className="flex justify-between items-center mb-6">
-                  <button onClick={handlePrevMonth} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
+                  <button onClick={handlePrevMonth} aria-label={lang === 'en' ? 'Previous month' : '前の月'} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <div className="font-bold text-xl">
                     {lang === 'en' ? `${monthName} ${year}` : `${year}年 ${monthYear.getMonth() + 1}月`}
                   </div>
-                  <button onClick={handleNextMonth} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
-                    <ChevronLeft className="w-5 h-5 rotate-180" />
+                  <button onClick={handleNextMonth} aria-label={lang === 'en' ? 'Next month' : '次の月'} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
+                    <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Day labels */}
                 <div className="grid grid-cols-7 gap-1 text-center mb-3">
-                  {(lang === 'en' ? shortDaysOfWeekEn : shortDaysOfWeekJp).map((d, i) => (
+                  {(lang === 'en' ? SHORT_DAYS_EN : SHORT_DAYS_JP).map((d, i) => (
                     <div key={i} className="text-xs font-bold text-white/40">{d}</div>
                   ))}
                 </div>
@@ -530,7 +532,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* Empty state for weekly/monthly when no courses selected */}
           {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
+              <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-white'} scale-[1.05]`}>
                 <img
                   src={mascotIdle}
                   alt="No courses"

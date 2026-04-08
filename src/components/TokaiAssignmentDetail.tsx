@@ -81,7 +81,7 @@ const TokaiAssignmentDetail = React.memo(function TokaiAssignmentDetail({ lang, 
         </div>
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 p-4 border-t ${isDark ? 'border-gray-800 bg-gray-900/80' : 'border-gray-200 bg-white/80'} backdrop-blur-xl lg:max-w-md xl:max-w-lg lg:left-[18rem] xl:left-[20rem]`}>
+      <div className={`shrink-0 p-4 border-t ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
         <button className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'} hover:scale-[1.02] transition-transform`}>
           <UploadCloud className="w-5 h-5" />
           {lang === 'en' ? 'Submit File' : 'ファイルを提出'}

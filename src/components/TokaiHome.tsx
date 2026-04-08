@@ -73,7 +73,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
 
   useEffect(() => {
-    getDashboard()
+    const controller = new AbortController();
+    getDashboard(controller.signal)
       .then(data => {
         // Safely merge API courses with local localized strings
         if (data.courses?.length) {
@@ -111,7 +112,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
           }
         }
       })
-      .catch(() => { /* keep local fallback */ });
+      .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,14 +133,15 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
   const [isCalendarSheetOpen, setIsCalendarSheetOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [selectedNews, setSelectedNews] = useState<{ title: string; detail: string; icon: any; color: string } | null>(null);
 
-  const handleImageLoad = (id: string) => {
+  const handleImageLoad = useCallback((id: string) => {
     setLoadedImages(prev => new Set(prev).add(id));
-  };
+  }, []);
+  const handleMenuClose = useCallback(() => setIsMenuOpen(false), []);
 
   const handlePrevMonth = useCallback(() => {
     setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
@@ -170,6 +173,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
 
   const isDark = settings.isDarkMode;
+  const todayLabel = useMemo(() => new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }), [lang]);
   const cardBg = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
@@ -186,7 +190,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
           TOKAI<br /><span className="text-brand-yellow">HUB</span>
         </div>
         <div className="hidden lg:block">
-          <h2 className={`text-sm font-semibold ${textMuted}`}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
+          <h2 className={`text-sm font-semibold ${textMuted}`}>{todayLabel}</h2>
         </div>
         <button
           onClick={() => setIsMenuOpen(true)}
@@ -380,7 +384,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     >
                       {/* Image / Neon Content */}
                       {!loadedImages.has(item.id) && (
-                        <div className={`absolute inset-0 z-0 ${isDark ? 'shimmer' : 'shimmer-light'}`} />
+                        <div className="absolute inset-0 z-0 shimmer-light" />
                       )}
                       <img
                         src={item.image}
@@ -608,6 +612,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <h2 className="text-2xl font-bold">{t[lang].classesToday}</h2>
                 <button
                   onClick={() => setIsScheduleSheetOpen(false)}
+                  aria-label={lang === 'en' ? 'Close schedule' : 'スケジュールを閉じる'}
                   className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center`}
                 >
                   <X className="w-5 h-5" />
@@ -835,7 +840,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       </AnimatePresence>
       <SharedMenu
         isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
+        onClose={handleMenuClose}
         lang={lang}
         setLang={setLang}
         settings={settings}
