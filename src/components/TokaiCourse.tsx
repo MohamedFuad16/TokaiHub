@@ -38,7 +38,14 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
     getCourseDetails(apiCourseId)
       .then(data => {
         // Merge API data with local data so rich fields (teacher, location, etc.) are preserved
-        setCourse(prev => ({ ...prev, ...data }));
+        // Preserve local overview/evaluation if API returns them in a non-localized format
+        const { overview, evaluation, ...rest } = data;
+        setCourse(prev => ({
+          ...prev,
+          ...rest,
+          overview: overview?.en ? overview : prev.overview,
+          evaluation: evaluation?.en ? evaluation : prev.evaluation,
+        }));
       })
       .catch(() => { /* keep local fallback */ });
   }, [courseId, localCourse.code]);
