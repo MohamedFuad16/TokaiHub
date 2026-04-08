@@ -399,7 +399,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
                   {/* ── Class cards — placed with gridColumn + gridRow span ── */}
                   {scheduleItems
-                    .filter(item => item.type === 'Classes' && selectedCourseIds.includes(item.id))
+                    .filter(item =>
+                      item.type === 'Classes' &&
+                      (selectedCourseIds.includes(item.id) ||
+                        selectedCourseIds.includes(item.code ?? ''))
+                    )
                     .map(item => {
                       const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
                       if (colIdx === -1) return null;
