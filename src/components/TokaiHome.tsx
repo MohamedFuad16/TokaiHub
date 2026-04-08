@@ -178,9 +178,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   return (
     <div className={`h-full relative flex flex-col ${pageBg}`}>
       {/* Header */}
-      <header 
+      <header
         style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
-        className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}
+        className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b z-30 relative ${borderClass}`}
       >
         <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
           TOKAI<br /><span className="text-brand-yellow">HUB</span>
