@@ -393,6 +393,7 @@ export default function App() {
   }, []);
 
   const handleOnboardingComplete = useCallback((profile: UserProfile) => {
+    window.history.replaceState(null, '', '/');
     setUserProfile(profile);
     setIsAuthenticated(true);
     preloadRoutes();

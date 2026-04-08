@@ -101,17 +101,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         if (data.assignments?.length) setAssignments(data.assignments);
 
-        // If selectedCourseIds is empty (e.g. fresh login, localStorage cleared),
-        // restore from enrolledCourseIds returned by the dashboard Lambda.
-        // Translate API course codes → local data IDs so filtering works correctly.
+        // Restore enrolledCourseIds only when the profile truly has no courses
+        // (e.g. after localStorage clear). Never overwrite an existing selection.
         if (data.enrolledCourseIds?.length && userProfile && setUserProfile) {
-          const current = userProfile.selectedCourseIds ?? [];
-          if (current.length === 0) {
-            const localIds = data.enrolledCourseIds.map(apiId => {
-              const localItem = (allItems as CourseItem[]).find(item => item.code === apiId);
-              return localItem ? localItem.id : apiId;
-            });
-            setUserProfile({ ...userProfile, selectedCourseIds: localIds });
+          if ((userProfile.selectedCourseIds ?? []).length === 0) {
+            setUserProfile({ ...userProfile, selectedCourseIds: data.enrolledCourseIds });
           }
         }
       })

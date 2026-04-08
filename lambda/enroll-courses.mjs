@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, UpdateCommand, GetCommand, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const ddb = DynamoDBDocumentClient.from(client);
@@ -112,7 +112,25 @@ export const handler = async (event) => {
     const userClass = userRes.Item?.class ?? "A";
     console.log("User class:", userClass);
 
-    // 3️⃣ Create tokaihub-classes entries for each enrolled course
+    // 3️⃣ Delete ALL existing class entries for this user so stale data never accumulates
+    const existingClasses = await ddb.send(new QueryCommand({
+      TableName: TABLES.CLASSES,
+      KeyConditionExpression: "userId = :uid",
+      ExpressionAttributeValues: { ":uid": userId },
+      ProjectionExpression: "userId, classId",
+    }));
+
+    if (existingClasses.Items?.length > 0) {
+      await Promise.all(existingClasses.Items.map(item =>
+        ddb.send(new DeleteCommand({
+          TableName: TABLES.CLASSES,
+          Key: { userId: item.userId, classId: item.classId },
+        }))
+      ));
+      console.log(`🗑️ Deleted ${existingClasses.Items.length} old class entries`);
+    }
+
+    // 4️⃣ Create tokaihub-classes entries for each enrolled course
     const classWritePromises = cleanCourses.map(async (courseId) => {
       const schedule = COURSE_SCHEDULE[courseId];
       if (!schedule) {
