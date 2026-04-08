@@ -541,7 +541,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         </motion.div>
       </div>
 
-      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom, 0px))] left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden text-brand-black">
+      <div className="absolute left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden text-brand-black" style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
