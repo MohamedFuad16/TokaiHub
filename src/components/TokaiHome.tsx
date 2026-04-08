@@ -437,7 +437,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             /* Empty state */
             <motion.div
               variants={itemVariants}
-              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
+              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-white'}`}
             >
               <div className="w-20 h-20 rounded-full overflow-hidden">
                 <img
