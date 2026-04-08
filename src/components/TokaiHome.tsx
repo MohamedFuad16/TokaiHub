@@ -296,8 +296,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`relative px-4 sm:px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
-                      ? 'bg-[#0B1F3A] text-white shadow-md'
-                      : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
+                    ? 'bg-[#0B1F3A] text-white shadow-md'
+                    : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
                     }`}
                 >
                   {isActive && (
@@ -703,8 +703,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                           aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
                           aria-pressed={isSelected}
                           className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${isSelected
-                              ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
-                              : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900')
+                            ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
+                            : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900')
                             }`}
                         >
                           {dateNum}
@@ -749,7 +749,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
                           <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
                           </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
