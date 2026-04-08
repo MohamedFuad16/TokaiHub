@@ -102,7 +102,10 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
   return (
     <div className="h-full relative flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-3xl w-full mx-auto">
+      <header 
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className="flex items-center gap-4 p-4 sm:p-6 shrink-0 max-w-3xl w-full mx-auto"
+      >
         <button
           onClick={() => navigate(-1)}
           aria-label="Go back to settings"
@@ -255,7 +258,10 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       </div>
 
       {/* Floating Save Button */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none">
+      <div 
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
+        className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 pointer-events-none"
+      >
         <div className="max-w-3xl mx-auto pointer-events-auto">
           <motion.button
             onClick={handleSave}

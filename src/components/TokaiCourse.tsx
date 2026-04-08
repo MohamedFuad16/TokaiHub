@@ -239,7 +239,10 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
     <div className="h-full relative flex flex-col">
 
       {/* Header */}
-      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-4xl w-full mx-auto">
+      <header 
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className="flex justify-between items-center p-4 sm:p-6 shrink-0 max-w-4xl w-full mx-auto"
+      >
         <div className="font-bold text-2xl tracking-tighter">
           {course.code}
         </div>

@@ -163,7 +163,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   return (
     <div className="h-full relative flex flex-col">
       {/* Header */}
-      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0">
+      <header
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className="flex justify-between items-center p-4 sm:p-6 shrink-0"
+      >
         <div className="flex items-center gap-4">
           <button
             onClick={() => setIsMenuOpen(true)}
@@ -300,7 +303,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       <img
                         src={mascotIdle}
                         alt="No classes"
-                        className="w-full h-full object-contain mix-blend-multiply opacity-100"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <p className="text-white/50 text-sm font-medium">

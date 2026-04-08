@@ -28,7 +28,10 @@ const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }
 
   return (
     <div className={`h-full flex flex-col ${bgClass}`}>
-      <header className={`flex items-center gap-4 p-4 sm:p-6 pt-8 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
+      <header 
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className={`flex items-center gap-4 p-4 sm:p-6 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
+      >
         <button onClick={() => navigate(-1)} aria-label={lang === 'en' ? 'Go back' : '戻る'} className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors`}>
           <ChevronLeft className="w-5 h-5"/>
         </button>

@@ -98,7 +98,10 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
   return (
     <div className="h-full relative flex flex-col">
       {/* Header */}
-      <header className="flex justify-between items-center p-4 sm:p-6 pt-8 sm:pt-12 lg:pt-8 shrink-0 max-w-3xl w-full mx-auto">
+      <header 
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className="flex justify-between items-center p-4 sm:p-6 shrink-0 max-w-3xl w-full mx-auto"
+      >
         <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight">{tx.settings}</h1>
         <button
           onClick={() => navigate('/')}

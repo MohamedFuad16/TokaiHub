@@ -178,7 +178,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   return (
     <div className={`h-full relative flex flex-col ${pageBg}`}>
       {/* Header */}
-      <header className={`flex justify-between items-center px-4 sm:px-6 pt-8 sm:pt-12 lg:pt-8 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}>
+      <header 
+        style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
+        className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}
+      >
         <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
           TOKAI<br /><span className="text-brand-yellow">HUB</span>
         </div>
@@ -538,7 +541,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         </motion.div>
       </div>
 
-      <div className="absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
+      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom, 0px))] left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden text-brand-black">
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
