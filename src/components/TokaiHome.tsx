@@ -121,10 +121,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const lastSemGpa = userProfile?.lastSemGpa ?? 0;
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
   const selectedCredits = useMemo(() =>
-    courseItems
+    (allItems as CourseItem[])
       .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
       .reduce((acc, item) => acc + (item.credits || 0), 0),
-    [courseItems, selectedCourseIds]);
+    [selectedCourseIds]);
 
   const [activeCategory, setActiveCategory] = useState('Classes');
   const [isMenuOpen, setIsMenuOpen] = useState(false);

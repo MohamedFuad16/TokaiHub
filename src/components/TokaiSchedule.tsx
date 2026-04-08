@@ -259,7 +259,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           : 'bg-white/10 text-white hover:bg-white/20'
                           }`}
                       >
-                        <span className="text-sm font-medium mb-1">{lang === 'en' ? shortDaysOfWeekEn[d.getDay()] : shortDaysOfWeekJp[d.getDay()]}</span>
+                        <span className="text-sm font-medium mb-1">{lang === 'en' ? SHORT_DAYS_EN[d.getDay()] : SHORT_DAYS_JP[d.getDay()]}</span>
                         <span className="text-xl font-bold">{d.getDate()}</span>
                       </div>
                     );
