@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Clock, BookOpen, Award, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Clock, BookOpen, Award, CheckCircle, FileText } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -199,6 +199,27 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
               </div>
             </div>
           </motion.div>
+          {/* Syllabus Button (Coming Soon) */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6">
+            <div className={`p-4 rounded-[28px] ${isDark ? 'bg-gray-800' : 'bg-gray-50'} border-2 border-dashed ${isDark ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between group cursor-not-allowed opacity-80 shadow-sm`}>
+              <div className="flex items-center gap-4">
+                 <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white'} flex items-center justify-center`}>
+                   <FileText className="w-5 h-5 text-gray-400" />
+                 </div>
+                 <div>
+                   <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-brand-black'}`}>
+                     {lang === 'en' ? 'Syllabus PDF' : 'シラバス PDF'}
+                   </div>
+                   <div className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-0.5">
+                      {lang === 'en' ? 'Available Soon' : '近日公開予定'}
+                   </div>
+                 </div>
+              </div>
+              <div className={`px-2.5 py-1 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg text-[9px] font-black text-gray-400 uppercase tracking-tighter`}>
+                 Pending
+              </div>
+            </div>
+          </motion.div>
 
           {/* Overview + Evaluation */}
           <motion.div
@@ -251,10 +272,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                         </div>
                       </div>
                     ))}
-                    {/* Additional text note if available */}
-                    <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} text-xs ${textNormal} leading-relaxed italic`}>
-                      {finalEvaluation}
-                    </div>
+                    {/* Bars ONLY — redundant text removed */}
                   </div>
                 ) : (
                   <div className={`${textNormal} text-base leading-relaxed font-medium`}>
