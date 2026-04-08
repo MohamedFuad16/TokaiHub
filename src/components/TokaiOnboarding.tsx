@@ -325,6 +325,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
             src={mascotVerify}
             alt="Loading"
             className="w-28 h-28 object-contain drop-shadow-lg"
+            style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
             animate={{ y: [0, -8, 0] }}
             transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
           />
@@ -742,7 +743,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     </h2>
                     <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.verifySub}</p>
                   </div>
-                  <img src={mascotVerify} alt="Mascot" className="w-20 h-20 object-contain drop-shadow-md -mt-2 -mr-2" />
+                  <img src={mascotVerify} alt="Mascot" className="w-20 h-20 object-contain drop-shadow-md -mt-2 -mr-2" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
                 </div>
 
                 <div className={`${cardBg} rounded-[28px] p-5 space-y-5 shadow-sm`}>

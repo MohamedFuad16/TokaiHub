@@ -38,7 +38,12 @@ const TokaiAssignments = React.memo(function TokaiAssignments({ lang, settings }
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
         {deadlines.length === 0 ? (
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-            <img src={mascotIdle} alt="No assignments" className="w-24 h-24 object-contain drop-shadow-md opacity-80" />
+            <img 
+              src={mascotIdle} 
+              alt="No assignments" 
+              className="w-24 h-24 object-contain drop-shadow-md opacity-80" 
+              style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
+            />
             <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {lang === 'en' ? 'No assignments yet' : 'まだ課題はありません'}
             </p>

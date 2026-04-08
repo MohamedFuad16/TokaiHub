@@ -31,6 +31,7 @@ function AppMascot({ covering }: { covering: boolean }) {
           exit={{ opacity: 0, filter: 'blur(4px)', position: 'absolute' }}
           transition={{ duration: 0.3 }}
           className="absolute inset-0 w-full h-full object-contain"
+          style={{ mixBlendMode: 'multiply' }}
         />
       </AnimatePresence>
     </div>
@@ -85,7 +86,12 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
       >
         {/* Mascot in loading screen */}
         <div className="w-40 h-40 mb-2 mt-4 relative">
-          <img src={mascotLoading} alt="Loading Mascot" className="w-full h-full object-contain drop-shadow-xl" />
+          <img 
+            src={mascotLoading} 
+            alt="Loading Mascot" 
+            className="w-full h-full object-contain drop-shadow-xl" 
+            style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
+          />
         </div>
         <h1 className={`text-2xl font-bold tracking-tight mb-2 ${isDark ? 'text-white' : 'text-brand-black'}`}>
           TOKAI HUB

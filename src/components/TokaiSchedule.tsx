@@ -202,7 +202,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <img src={mascotIdle} alt="No courses selected" className="w-24 h-24 object-contain drop-shadow-md opacity-80" />
+            <img src={mascotIdle} alt="No courses selected" className="w-24 h-24 object-contain drop-shadow-md opacity-80" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
               <button
                 onClick={() => navigate('/editProfile')}
@@ -292,7 +292,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
-                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
                     <p className="text-white/50 text-sm font-medium">
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noClasses}
                     </p>
@@ -518,7 +518,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* Empty state for weekly/monthly when no courses selected */}
           {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <img src={mascotIdle} alt="No courses" className="w-20 h-20 object-contain drop-shadow-md opacity-70" />
+              <img src={mascotIdle} alt="No courses" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
               <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
               <button
                 onClick={() => navigate('/editProfile')}
