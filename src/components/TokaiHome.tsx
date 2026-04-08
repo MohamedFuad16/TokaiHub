@@ -437,13 +437,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             /* Empty state */
             <motion.div
               variants={itemVariants}
-              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-white shadow-inner">
                 <img
                   src={mascotIdle}
-                  alt="Mascot"
-                  className="w-full h-full object-contain"
+                  alt="Mascot — nothing here"
+                  className="w-full h-full object-contain mix-blend-multiply opacity-100"
                 />
               </div>
               <div>
@@ -612,8 +612,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
+                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
@@ -749,7 +749,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
                           <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
+                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
                           </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
