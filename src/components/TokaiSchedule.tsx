@@ -300,7 +300,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       <img
                         src={mascotIdle}
                         alt="No classes"
-                        className="w-full h-full object-contain mix-blend-multiply opacity-100"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <p className="text-white/50 text-sm font-medium">
