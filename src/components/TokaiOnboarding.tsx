@@ -733,12 +733,12 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                           <div className="flex-1 min-w-0">
                             <div className={`font-bold text-sm leading-tight truncate ${isSelected ? 'text-brand-black' : (isDark ? 'text-white' : 'text-brand-black')
                               }`}>
-                              {course.title[lang]}
+                              {course.title?.[lang]}
                             </div>
                             {/* Teacher row */}
                             {course.teacher && (
                               <div className={`text-xs mt-0.5 truncate ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>
-                                {course.teacher[lang]}
+                                {course.teacher?.[lang]}
                               </div>
                             )}
                             <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')

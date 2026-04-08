@@ -285,8 +285,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                               {item.time.split(' ')[0]}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-bold text-base leading-tight truncate">{item.title[lang]}</div>
-                              <div className="text-sm font-medium opacity-60 truncate mt-0.5">{item.location[lang]}</div>
+                              <div className="font-bold text-base leading-tight truncate">{item.title?.[lang]}</div>
+                              <div className="text-sm font-medium opacity-60 truncate mt-0.5">{item.location?.[lang]}</div>
                             </div>
                             {(settings as any).enableEnhancedUI && (
                               <span className="text-[9px] font-bold text-brand-black/40 bg-black/10 rounded-full px-2 py-1 shrink-0">
@@ -396,11 +396,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           className={`${item.color} rounded-xl p-1.5 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between overflow-hidden`}
                         >
                           <div className="font-bold text-brand-black text-[10px] sm:text-[11px] leading-tight line-clamp-3 overflow-hidden text-ellipsis">
-                            {item.title[lang]}
+                            {item.title?.[lang]}
                           </div>
                           <div className="mt-1 pt-1 overflow-hidden shrink-0">
                             <span className="text-[8px] font-semibold text-brand-black/60 bg-black/10 rounded-full px-1.5 py-0.5 block text-center truncate">
-                              {item.location[lang].replace('品川キャンパス ', '').replace('Shinagawa ', '')}
+                              {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
                             </span>
                           </div>
                         </div>
@@ -513,8 +513,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                             {cls.time.split(' ')[0]}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-base leading-tight truncate">{cls.title[lang]}</div>
-                            <div className="text-sm font-medium opacity-60 truncate mt-0.5">{cls.location[lang]}</div>
+                            <div className="font-bold text-base leading-tight truncate">{cls.title?.[lang]}</div>
+                            <div className="text-sm font-medium opacity-60 truncate mt-0.5">{cls.location?.[lang]}</div>
                           </div>
                         </motion.div>
                       ))
