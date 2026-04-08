@@ -71,7 +71,27 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   useEffect(() => {
     const controller = new AbortController();
     getSchedule(controller.signal)
-      .then(data => { if (data?.length) setScheduleItems(data); })
+      .then(data => {
+        if (data?.length) {
+          const merged = data.map(apiItem => {
+            const local = (allItems as CourseItem[]).find(item => item.id === apiItem.id || item.code === apiItem.code);
+            if (!local) return apiItem;
+            return {
+              ...apiItem,
+              title: typeof apiItem.title === 'string'
+                ? { en: apiItem.title, jp: local.title.jp }
+                : (apiItem.title ? { ...local.title, ...apiItem.title } : local.title),
+              location: typeof apiItem.location === 'string'
+                ? { en: apiItem.location, jp: local.location?.jp || '' }
+                : (apiItem.location ? { ...local.location, ...apiItem.location } : local.location),
+              teacher: typeof apiItem.teacher === 'string'
+                ? { en: apiItem.teacher, jp: local.teacher?.jp || '' }
+                : (apiItem.teacher ? { ...local.teacher, ...apiItem.teacher } : local.teacher),
+            };
+          });
+          setScheduleItems(merged);
+        }
+      })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
     return () => controller.abort();
   }, []);

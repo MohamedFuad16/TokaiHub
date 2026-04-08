@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Check, BookOpen, MapPin, GraduationCap, Star
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
 import { enrollCourses, fetchAvailableCourses } from '../lib/api';
+import { allItems } from '../data';
 import type { CourseItem } from '../lib/types';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
@@ -94,7 +95,25 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
         } else {
           courses = await fetchAvailableCourses(studentId.toUpperCase(), classFilter);
         }
-        if (!cancelled) setAvailableCourses(courses);
+        if (!cancelled) {
+          const merged = courses.map(apiCourse => {
+            const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
+            if (!local) return apiCourse;
+            return {
+              ...apiCourse,
+              title: typeof apiCourse.title === 'string'
+                ? { en: apiCourse.title, jp: local.title.jp }
+                : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
+              location: typeof apiCourse.location === 'string'
+                ? { en: apiCourse.location, jp: local.location?.jp || '' }
+                : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
+              teacher: typeof apiCourse.teacher === 'string'
+                ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
+                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
+            };
+          });
+          setAvailableCourses(merged);
+        }
       } catch (err: unknown) {
         if (!cancelled) setCoursesError(err instanceof Error ? err.message : 'Failed to load courses');
       } finally {

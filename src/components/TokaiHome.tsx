@@ -82,15 +82,18 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
             if (!local) return apiCourse;
 
-            // If API title is a string, wrap it but keep local JP
+            // Normalize localized string fields — API may return plain strings
             return {
               ...apiCourse,
               title: typeof apiCourse.title === 'string'
                 ? { en: apiCourse.title, jp: local.title.jp }
-                : { ...local.title, ...apiCourse.title },
+                : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
+              location: typeof apiCourse.location === 'string'
+                ? { en: apiCourse.location, jp: local.location?.jp || '' }
+                : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
               teacher: typeof apiCourse.teacher === 'string'
                 ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
-                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher)
+                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
             };
           });
           setCourseItems(mergedCourses as CourseItem[]);
