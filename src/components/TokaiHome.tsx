@@ -439,10 +439,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               variants={itemVariants}
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
             >
-              <div className="w-24 h-24 rounded-full overflow-hidden  shadow-inner">
+              <div className="w-20 h-20 rounded-full overflow-hidden">
                 <img
                   src={mascotIdle}
-                  alt="Mascot — nothing here"
+                  alt="Mascot"
                   className="w-full h-full object-contain"
                 />
               </div>
