@@ -67,32 +67,31 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Fetch all courses from Lambda; merge with local data for localized strings
+  // Start prefetching on step 1 so courses are ready when user reaches step 2
   useEffect(() => {
-    if (step !== 2) return;
+    if (step < 1 || step > 2 || availableCourses.length > 0) return;
     let cancelled = false;
     fetchAvailableCourses()
       .then(data => {
         if (cancelled || !data?.length) return;
         const merged = data.map((apiCourse: any) => {
-          // DynamoDB returns courseId (e.g. "TTK031"), not id/code
+          // DynamoDB returns courseId (e.g. "TTK031") — use it as the id so
+          // selectedCourseIds stores codes that the backend understands
           const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
           const local = (allItems as CourseItem[]).find(item =>
-            item.code === courseCode || item.id === courseCode || item.id === apiCourse.id
+            item.code === courseCode || item.id === courseCode
           );
-          // courseName is the plain English string from DynamoDB
           const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
           return {
             ...(local ?? {}),
             ...apiCourse,
-            id: local?.id ?? courseCode,
+            id: courseCode,          // store code as id so enrollCourses sends the right value
             code: courseCode,
             credits: apiCourse.credits ?? local?.credits,
             title: local
               ? { en: enTitle, jp: local.title.jp }
               : { en: enTitle, jp: enTitle },
             location: local?.location,
-            teacher: local?.teacher,
             color: local?.color,
             time: local?.time,
             dayOfWeek: local?.dayOfWeek,
@@ -102,10 +101,15 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
         if (!cancelled) setAvailableCourses(merged);
       })
       .catch(() => {
-        if (!cancelled) setAvailableCourses((allItems as CourseItem[]).filter(item => item.type === 'Classes'));
+        if (!cancelled) {
+          const fallback = (allItems as CourseItem[])
+            .filter(item => item.type === 'Classes')
+            .map(item => ({ ...item, id: item.code ?? item.id }));
+          setAvailableCourses(fallback as CourseItem[]);
+        }
       });
     return () => { cancelled = true; };
-  }, [step]);
+  }, [step, availableCourses.length]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
@@ -691,12 +695,6 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                               }`}>
                               {course.title?.[lang]}
                             </div>
-                            {/* Teacher row */}
-                            {course.teacher && (
-                              <div className={`text-xs mt-0.5 truncate ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>
-                                {course.teacher?.[lang]}
-                              </div>
-                            )}
                             <div className={`text-xs mt-0.5 flex items-center gap-2 ${isSelected ? 'text-brand-black/70' : (isDark ? 'text-gray-500' : 'text-gray-500')
                               }`}>
                               {course.code && <span>{course.code}</span>}
