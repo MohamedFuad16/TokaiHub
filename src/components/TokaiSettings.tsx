@@ -228,7 +228,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 <div className="grid grid-cols-1 gap-3">
                   {[
                     { id: 'modern', name: lang === 'en' ? 'Modern Sans' : 'モダンサンス', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Outfit", sans-serif' },
-                    { id: 'elegant', name: lang === 'en' ? 'Elegant Serif' : 'エレガントセリフ', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Playfair Display", serif' },
+                    { id: 'elegant', name: lang === 'en' ? 'Gilroy Style' : 'ギロイ・スタイル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Poppins", sans-serif' },
                     { id: 'minimal', name: lang === 'en' ? 'Tech Minimal' : 'テックミニマル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"JetBrains Mono", monospace' }
                   ].map((font) => (
                     <button

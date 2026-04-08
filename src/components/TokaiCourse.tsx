@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Clock, BookOpen, Award, CheckCircle, FileText } from 'lucide-react';
+import { ChevronLeft, Clock, BookOpen, Award, CheckCircle, FileText, Calendar } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -25,6 +25,123 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
+};
+
+const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: string; courseDay: string; isDark: boolean; lang: string }) => {
+  const daysMap: Record<string, number> = { 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 0 };
+  const targetDay = daysMap[courseDay?.toLowerCase()] ?? 1;
+  const semesterStart = new Date(2026, 3, 8); // April 8, 2026
+  const semesterEnd = new Date(2026, 6, 21); // July 21, 2026
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [attendance, setAttendance] = useState<Record<string, boolean>>(() => {
+    const stored = localStorage.getItem(`attendance_${courseId}`);
+    return stored ? JSON.parse(stored) : {};
+  });
+
+  const classDates = React.useMemo(() => {
+    const dates: Date[] = [];
+    let current = new Date(semesterStart);
+    while (current.getDay() !== targetDay && current <= semesterEnd) {
+      current.setDate(current.getDate() + 1);
+    }
+    while (current <= semesterEnd) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 7);
+    }
+    return dates;
+  }, [targetDay]);
+
+  const attendedCount = classDates.filter(d => attendance[d.toISOString().split('T')[0]]).length;
+  const totalCount = classDates.length;
+  const percentage = Math.round((attendedCount / totalCount) * 100);
+
+  const toggleAttendance = (dateStr: string) => {
+    const newAttendance = { ...attendance, [dateStr]: !attendance[dateStr] };
+    setAttendance(newAttendance);
+    localStorage.setItem(`attendance_${courseId}`, JSON.stringify(newAttendance));
+  };
+
+  return (
+    <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-[32px] shadow-sm`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h3 className="font-black text-xl flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-brand-green"></span>
+            {lang === 'en' ? 'Attendance Tracker' : '出席トラッカー'}
+          </h3>
+          <p className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+            {lang === 'en' ? 'Track your semester progress' : '今学期の出席状況を管理しましょう'}
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-black tracking-tight text-brand-black dark:text-brand-yellow">
+            {attendedCount} / {totalCount}
+          </div>
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            {lang === 'en' ? 'Classes Attended' : '出席済み'}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2 px-1">
+           <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{lang === 'en' ? 'Completion' : '達成率'}</span>
+           <span className={`text-[11px] font-black ${percentage === 100 ? 'text-green-500' : 'text-brand-black dark:text-brand-yellow'}`}>{percentage}%</span>
+        </div>
+        <div className={`h-2.5 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+           <motion.div 
+             initial={{ width: 0 }}
+             animate={{ width: `${percentage}%` }}
+             className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-brand-green'} rounded-full`}
+             transition={{ type: 'spring', stiffness: 50, damping: 15 }}
+           />
+        </div>
+      </div>
+
+      {/* Scrollable Date Section */}
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide snap-x">
+        {classDates.map((date) => {
+          const dateStr = date.toISOString().split('T')[0];
+          const isAttended = attendance[dateStr];
+          const isToday = date.getTime() === today.getTime();
+          const isPast = date < today;
+
+          return (
+            <button
+              key={dateStr}
+              onClick={() => toggleAttendance(dateStr)}
+              className={`flex-shrink-0 w-16 h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all snap-start shadow-sm
+                ${isAttended 
+                  ? 'border-brand-green bg-brand-green/10' 
+                  : isToday 
+                    ? 'border-brand-yellow bg-brand-yellow/5' 
+                    : isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-100 bg-white'}
+                ${!isPast && !isToday ? 'opacity-50' : 'opacity-100'}
+              `}
+            >
+              <span className={`text-[10px] uppercase font-black tracking-tighter ${isToday ? 'text-brand-black dark:text-brand-yellow' : 'text-gray-400'}`}>
+                {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
+              </span>
+              <span className="text-xl font-black tracking-tighter">
+                {date.getDate()}
+              </span>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
+                ${isAttended 
+                  ? 'bg-brand-green border-brand-green' 
+                  : isDark ? 'border-gray-700' : 'border-gray-200'}
+              `}>
+                {isAttended && <CheckCircle className="w-4 h-4 text-white" />}
+              </div>
+              {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-brand-yellow text-brand-black text-[8px] font-black rounded-full shadow-sm">{lang === 'en' ? 'TODAY' : '今日'}</div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenProps) {
@@ -185,6 +302,20 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
               </div>
             </div>
 
+            <div className={`${bgClass} p-5 rounded-3xl flex items-center gap-4`}>
+              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
+                <Calendar className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
+              </div>
+              <div>
+                <div className={`text-xs ${textMuted} font-bold mb-1`}>
+                  {lang === 'en' ? 'Weekly' : '毎週'}
+                </div>
+                <div className="font-bold text-base uppercase">
+                   {lang === 'en' ? course.day?.toUpperCase() : (course.day === 'mon' ? '月曜日' : course.day === 'tue' ? '火曜日' : course.day === 'wed' ? '水曜日' : course.day === 'thu' ? '木曜日' : course.day === 'fri' ? '金曜日' : course.day === 'sat' ? '土曜日' : '日曜日')}
+                </div>
+              </div>
+            </div>
+
             <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
               <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
                 <BookOpen className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
@@ -281,6 +412,11 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                 )}
               </div>
             </div>
+          </motion.div>
+
+          {/* Attendance Tracker */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8">
+            <AttendanceTracker courseId={courseId} courseDay={course.day} isDark={isDark} lang={lang} />
           </motion.div>
 
         </motion.div>
