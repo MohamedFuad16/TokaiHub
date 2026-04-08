@@ -612,7 +612,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                    <div className={`w-20 h-20 rounded-full overflow-hidden`}>
                       <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
