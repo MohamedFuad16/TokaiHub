@@ -217,36 +217,62 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </div>
           </motion.div>
 
-          {/* Academic Overview (GPA & Credits) — label → value → sublabel hierarchy */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Academic Overview (GPA & Credits) */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Cumulative GPA */}
             <motion.div
-              whileHover={{ y: -2, scale: 1.005 }}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`p-5 rounded-2xl ${cardBg} shadow-sm`}
+              className={`relative overflow-hidden p-5 rounded-3xl shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}
             >
-              <div className={`flex items-center gap-1.5 mb-3`}>
-                <Target className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-xs font-medium ${textMuted}`}>{t[lang].gpa}</span>
+              {/* Background glow */}
+              <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-brand-yellow/10 pointer-events-none" />
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-brand-yellow/20`}>
+                  <Target className="w-4 h-4 text-brand-yellow" />
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t[lang].gpa}</span>
               </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{cumGpa.toFixed(2)}</div>
-              <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-green-500/10 text-green-500 text-xs font-semibold">
-                {lang === 'en' ? `Last Sem: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
+              <div className="text-4xl font-bold tracking-tight text-white">{cumGpa.toFixed(2)}</div>
+              {/* GPA bar */}
+              <div className={`mt-3 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white/10'}`}>
+                <div className="h-full rounded-full bg-brand-yellow transition-all duration-700" style={{ width: `${Math.min((cumGpa / 4) * 100, 100)}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-gray-400">
+                  {lang === 'en' ? `Last: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
+                </span>
+                <span className="text-[10px] text-gray-500">/ 4.00</span>
               </div>
             </motion.div>
+
             {/* Selected Credits */}
             <motion.div
-              whileHover={{ y: -2, scale: 1.005 }}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/credits')}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`p-5 rounded-2xl ${cardBg} shadow-sm`}
+              className={`relative overflow-hidden p-5 rounded-3xl shadow-sm cursor-pointer ${isDark ? 'bg-gray-800' : 'bg-brand-gray'}`}
             >
-              <div className="flex items-center gap-1.5 mb-3">
-                <GraduationCap className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-xs font-medium ${textMuted}`}>{t[lang].credits}</span>
+              <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full bg-blue-400/10 pointer-events-none" />
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                  <GraduationCap className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
+                </div>
+                <ChevronRight className={`w-4 h-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
               </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedCredits}</div>
-              <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-100'}`}>
-                {lang === 'en' ? 'Selected' : '履修中'}
+              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>{selectedCredits}</div>
+              <div className={`mt-3 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <div className={`h-full rounded-full transition-all duration-700 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min((selectedCredits / 20) * 100, 100)}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className={`text-[11px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {t[lang].credits}
+                </span>
+                <span className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {lang === 'en' ? 'tap →' : 'タップ →'}
+                </span>
               </div>
             </motion.div>
             {/* Classes Today (desktop only) */}

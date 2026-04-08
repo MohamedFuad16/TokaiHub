@@ -18,6 +18,7 @@ const lazySettings = () => import('./components/TokaiSettings');
 const lazyAssignments = () => import('./components/TokaiAssignments');
 const lazyAssignmentDetail = () => import('./components/TokaiAssignmentDetail');
 const lazyEditProfile = () => import('./components/TokaiEditProfile');
+const lazyCredits = () => import('./components/TokaiCredits');
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
@@ -26,6 +27,7 @@ const TokaiSettings = React.lazy(lazySettings);
 const TokaiAssignments = React.lazy(lazyAssignments);
 const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
 const TokaiEditProfile = React.lazy(lazyEditProfile);
+const TokaiCredits = React.lazy(lazyCredits);
 
 // Preload all route components after initial paint
 export function preloadRoutes() {
@@ -36,6 +38,7 @@ export function preloadRoutes() {
   lazyAssignments().catch(() => {});
   lazyAssignmentDetail().catch(() => {});
   lazyEditProfile().catch(() => {});
+  lazyCredits().catch(() => {});
 }
 
 // Start preloading immediately to hide chunk fetch times
@@ -210,6 +213,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
                 <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
                 <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
+                <Route path="/credits" element={<TokaiCredits {...screenProps} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
