@@ -74,7 +74,7 @@ export interface ScreenProps {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   userProfile?: UserProfile;
-  setUserProfile?: (p: UserProfile) => void;
+  setUserProfile?: React.Dispatch<React.SetStateAction<UserProfile | undefined>>;
   onSignOut?: () => void;
 }
 
@@ -392,7 +392,7 @@ export default function App() {
     }
   }, [handleSignOut]);
 
-  const handleUpdateProfile = useCallback((updated: UserProfile) => {
+  const handleUpdateProfile = useCallback((updated: UserProfile | ((prev: UserProfile | undefined) => UserProfile | undefined)) => {
     setUserProfile(updated);
   }, []);
 

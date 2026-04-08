@@ -103,16 +103,21 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         // Restore enrolledCourseIds only when the profile has no courses
         // (e.g. after localStorage clear). Never overwrite a live selection.
-        if (
-          data.enrolledCourseIds?.length &&
-          userProfile &&
-          setUserProfile &&
-          !userProfile.selectedCourseIds?.length
-        ) {
-          if ((userProfile.selectedCourseIds ?? []).length === 0) {
-            setUserProfile({ ...userProfile, selectedCourseIds: data.enrolledCourseIds });
-          }
+        if (userProfile && setUserProfile) {
+          setUserProfile(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              selectedCourseIds: prev.selectedCourseIds?.length
+                ? prev.selectedCourseIds
+                : (data.enrolledCourseIds ?? prev.selectedCourseIds),
+              cumulativeGpa: prev.cumulativeGpa || (data.userProfile?.cumulativeGpa ?? prev.cumulativeGpa),
+              lastSemGpa: prev.lastSemGpa || (data.userProfile?.lastSemGpa ?? prev.lastSemGpa),
+            };
+          });
         }
+
+
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
     return () => controller.abort();
