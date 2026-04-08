@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, Check } from 'lucide-react';
-import { ScreenProps } from '../App';
+import { ScreenProps, preloadRoutes } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import { motion, AnimatePresence } from 'motion/react';
@@ -75,7 +75,26 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   useEffect(() => {
     getDashboard()
       .then(data => {
-        if (data.courses?.length) setCourseItems(data.courses);
+        // Safely merge API courses with local localized strings
+        if (data.courses?.length) {
+          const mergedCourses = data.courses.map(apiCourse => {
+            const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
+            if (!local) return apiCourse;
+            
+            // If API title is a string, wrap it but keep local JP
+            return {
+              ...apiCourse,
+              title: typeof apiCourse.title === 'string' 
+                ? { en: apiCourse.title, jp: local.title.jp } 
+                : { ...local.title, ...apiCourse.title },
+              teacher: typeof apiCourse.teacher === 'string'
+                ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
+                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher)
+            };
+          });
+          setCourseItems(mergedCourses as CourseItem[]);
+        }
+
         if (data.assignments?.length) setAssignments(data.assignments);
 
         // If selectedCourseIds is empty (e.g. fresh login, localStorage cleared),
@@ -239,8 +258,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
               </div>
               <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{todayClasses.length}</div>
-              <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}>
-                {lang === 'en' ? 'Quick View' : 'クイック表示'}
+              <div 
+                onClick={(e) => { e.stopPropagation(); navigate('/schedule'); }}
+                className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold hover:brightness-110 active:scale-95 transition-all ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}
+              >
+                {lang === 'en' ? "Today's Classes →" : "今日の授業 →"}
               </div>
             </motion.div>
             {/* Due Soon (desktop only) */}
@@ -254,8 +276,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
               </div>
               <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignments.length}</div>
-              <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold">
-                {lang === 'en' ? 'This Week' : '今週'}
+              <div 
+                onClick={(e) => { e.stopPropagation(); navigate('/assignments'); }}
+                className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold hover:bg-orange-500/20 cursor-pointer active:scale-95 transition-all"
+              >
+                {lang === 'en' ? 'This Week →' : '今週の締切 →'}
               </div>
             </motion.div>
           </motion.div>
@@ -311,9 +336,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 const Icon = item.icon;
                 const enrolled = isEnrolled(item);
                 return (
-                  <motion.div
-                    key={item.id}
-                    onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
+                    <motion.div
+                      key={item.id}
+                      onMouseEnter={() => preloadRoutes()}
+                      onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                     role="button"
                     tabIndex={0}
                     aria-label={`View details for ${item.title[lang]}${item.teacher ? ` by ${item.teacher[lang]}` : ''}. Time: ${item.time}. Location: ${item.location?.[lang] ?? ''}.`}
@@ -350,7 +376,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                         <div className="flex justify-between items-start">
                           <div className="flex flex-col gap-1">
                             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
-                              {item.type}
+                              {lang === 'en' ? item.type : item.type === 'Classes' ? '授業' : item.type === 'Events' ? 'イベント' : 'クラブ'}
                             </span>
                             {enrolled && (
                               <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 w-fit shadow-sm">
@@ -380,10 +406,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                         </div>
                       </div>
                       {/* Teacher */}
-                      <div className="flex-[1.5] min-w-0 bg-[#1e1e20] rounded-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-1">
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
+                        }}
+                        className="flex-[1.5] min-w-0 bg-[#1e1e20] rounded-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#2a2a2c] active:bg-brand-yellow/20 transition-all duration-75 group px-1 cursor-pointer"
+                      >
                         <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
-                          <User className="w-4 h-4 text-gray-400 shrink-0" />
-                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.teacher[lang]}</span>
+                          <User className="w-4 h-4 text-gray-400 shrink-0 group-hover:text-white" />
+                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full group-hover:text-white">{item.teacher[lang]}</span>
                         </div>
                       </div>
                       {/* Open */}

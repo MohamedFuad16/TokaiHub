@@ -47,18 +47,35 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
 
     getCourseDetails(apiCourseId)
       .then(data => {
-        const { overview, evaluation, ...rest } = data;
+        const { overview, evaluation, title, teacher, location, ...rest } = data;
 
-        setCourse(prev => ({
-          ...prev,
-          ...rest,
-          overview: typeof overview === "string"
-            ? { ...prev.overview, en: overview }
-            : (overview ? { ...prev.overview, ...overview } : prev.overview),
-          evaluation: typeof evaluation === "string"
-            ? { ...prev.evaluation, en: evaluation }
-            : (evaluation ? { ...prev.evaluation, ...evaluation } : prev.evaluation),
-        }));
+        setCourse(prev => {
+          const safeTitle = typeof title === 'string' 
+            ? { en: title, jp: prev.title.jp } 
+            : { ...prev.title, ...title };
+            
+          const safeTeacher = typeof teacher === 'string'
+            ? { en: teacher, jp: prev.teacher?.jp || '' }
+            : (teacher ? { ...prev.teacher, ...teacher } : prev.teacher);
+
+          const safeLocation = typeof location === 'string'
+            ? { en: location, jp: prev.location?.jp || '' }
+            : (location ? { ...prev.location, ...location } : prev.location);
+
+          return {
+            ...prev,
+            ...rest,
+            title: safeTitle,
+            teacher: safeTeacher,
+            location: safeLocation,
+            overview: typeof overview === "string"
+              ? { ...prev.overview, en: overview }
+              : (overview ? { ...prev.overview, ...overview } : prev.overview),
+            evaluation: typeof evaluation === "string"
+              ? { ...prev.evaluation, en: evaluation }
+              : (evaluation ? { ...prev.evaluation, ...evaluation } : prev.evaluation),
+          };
+        });
       })
       .catch(() => { });
   }, [courseId, localCourse.code]);

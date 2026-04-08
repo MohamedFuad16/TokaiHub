@@ -28,7 +28,7 @@ const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
 const TokaiEditProfile = React.lazy(lazyEditProfile);
 
 // Preload all route components after initial paint
-function preloadRoutes() {
+export function preloadRoutes() {
   lazyHome().catch(() => {});
   lazyCourse().catch(() => {});
   lazySchedule().catch(() => {});
