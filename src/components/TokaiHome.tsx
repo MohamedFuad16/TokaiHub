@@ -80,12 +80,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
           const mergedCourses = data.courses.map(apiCourse => {
             const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
             if (!local) return apiCourse;
-            
+
             // If API title is a string, wrap it but keep local JP
             return {
               ...apiCourse,
-              title: typeof apiCourse.title === 'string' 
-                ? { en: apiCourse.title, jp: local.title.jp } 
+              title: typeof apiCourse.title === 'string'
+                ? { en: apiCourse.title, jp: local.title.jp }
                 : { ...local.title, ...apiCourse.title },
               teacher: typeof apiCourse.teacher === 'string'
                 ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
@@ -112,7 +112,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         }
       })
       .catch(() => { /* keep local fallback */ });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Derive live values from userProfile
@@ -125,7 +125,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
     courseItems
       .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
       .reduce((acc, item) => acc + (item.credits || 0), 0),
-  [courseItems, selectedCourseIds]);
+    [courseItems, selectedCourseIds]);
 
   const [activeCategory, setActiveCategory] = useState('Classes');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -153,7 +153,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
   const isEnrolled = useCallback((item: CourseItem) =>
     selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''),
-  [selectedCourseIds]);
+    [selectedCourseIds]);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'All') {
@@ -180,7 +180,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       {/* Header */}
       <header className={`flex justify-between items-center px-4 sm:px-6 pt-8 sm:pt-12 lg:pt-8 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}>
         <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          TOKAI<br/><span className="text-brand-yellow">HUB</span>
+          TOKAI<br /><span className="text-brand-yellow">HUB</span>
         </div>
         <div className="hidden lg:block">
           <h2 className={`text-sm font-semibold ${textMuted}`}>{new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
@@ -259,7 +259,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
               </div>
               <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{todayClasses.length}</div>
-              <div 
+              <div
                 onClick={(e) => { e.stopPropagation(); navigate('/schedule'); }}
                 className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold hover:brightness-110 active:scale-95 transition-all ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}
               >
@@ -277,7 +277,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
               </div>
               <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignments.length}</div>
-              <div 
+              <div
                 onClick={(e) => { e.stopPropagation(); navigate('/assignments'); }}
                 className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold hover:bg-orange-500/20 cursor-pointer active:scale-95 transition-all"
               >
@@ -295,11 +295,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`relative px-4 sm:px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${
-                    isActive
+                  className={`relative px-4 sm:px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
                       ? 'bg-[#0B1F3A] text-white shadow-md'
                       : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
-                  }`}
+                    }`}
                 >
                   {isActive && (
                     <motion.div
@@ -337,10 +336,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 const Icon = item.icon;
                 const enrolled = isEnrolled(item);
                 return (
-                    <motion.div
-                      key={item.id}
-                      onMouseEnter={() => preloadRoutes()}
-                      onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
+                  <motion.div
+                    key={item.id}
+                    onMouseEnter={() => preloadRoutes()}
+                    onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
                     role="button"
                     tabIndex={0}
                     aria-label={`View details for ${item.title[lang]}${item.teacher ? ` by ${item.teacher[lang]}` : ''}. Time: ${item.time}. Location: ${item.location?.[lang] ?? ''}.`}
@@ -351,7 +350,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     className={`w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] ${enrolled ? 'border border-green-500/40' : 'border border-white/5'}`}
                   >
                     {/* Screen Layer (Top ~60%) */}
-                    <div 
+                    <div
                       onClick={(e) => {
                         e.stopPropagation();
                         setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
@@ -404,7 +403,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                         </div>
                       </div>
                       {/* Teacher */}
-                      <div 
+                      <div
                         onClick={(e) => {
                           e.stopPropagation();
                           setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
@@ -440,13 +439,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               variants={itemVariants}
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
             >
-                <div className="w-24 h-24 rounded-full overflow-hidden bg-white shadow-inner">
-                  <img
-                    src={mascotIdle}
-                    alt="Mascot — nothing here"
-                    className="w-full h-full object-contain mix-blend-multiply opacity-100"
-                  />
-                </div>
+              <div className="w-24 h-24 rounded-full overflow-hidden  shadow-inner">
+                <img
+                  src={mascotIdle}
+                  alt="Mascot — nothing here"
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <div>
                 <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {lang === 'en' ? 'Nothing here yet' : 'まだ何もありません'}
@@ -493,7 +492,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <motion.div
                   whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  onClick={() => setSelectedNews({ 
+                  onClick={() => setSelectedNews({
                     title: lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について',
                     detail: lang === 'en' ? 'The deadline for the first semester tuition fees is April 15th. Please ensure payment is processed through the university portal or designated bank branches.' : '第1セメスターの授業料納入期限は4月15日です。大学ポータルまたは指定の銀行窓口にてお手続きをお願いいたします。',
                     icon: Bell,
@@ -514,7 +513,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <motion.div
                   whileHover={{ y: -2, scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  onClick={() => setSelectedNews({ 
+                  onClick={() => setSelectedNews({
                     title: lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス',
                     detail: lang === 'en' ? 'The main campus library will be closed this weekend for system upgrades and shelf maintenance. Online resources remain accessible 24/7.' : '今週末、システムアップデートと書架メンテナンスのため、本館は休館いたします。オンラインリソースは通常通りご利用いただけます。',
                     icon: Calendar,
@@ -540,7 +539,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       </div>
 
       {/* Floating Schedule Bar — mobile only */}
-          <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
+      <div className="absolute bottom-8 left-4 right-4 sm:left-6 sm:right-6 z-20 lg:hidden">
         <motion.div
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -613,9 +612,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                      <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                        <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
-                      </div>
+                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
+                    </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                     </p>
@@ -703,11 +702,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                           onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
                           aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
                           aria-pressed={isSelected}
-                          className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${
-                            isSelected
+                          className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${isSelected
                               ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
                               : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900')
-                          }`}
+                            }`}
                         >
                           {dateNum}
                         </button>
@@ -750,9 +748,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       ))}
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
-                            <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
-                        <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
-                      </div>
+                          <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                            <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                          </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                           </p>
