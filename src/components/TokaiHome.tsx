@@ -391,12 +391,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               variants={itemVariants}
               className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
             >
-              <img
-                src={mascotIdle}
-                alt="Mascot — nothing here"
-                className="w-24 h-24 object-contain drop-shadow-md opacity-80"
-                style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
-              />
+                <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <img
+                    src={mascotIdle}
+                    alt="Mascot — nothing here"
+                    className="w-full h-full object-contain opacity-80 mix-blend-multiply"
+                  />
+                </div>
               <div>
                 <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {lang === 'en' ? 'Nothing here yet' : 'まだ何もありません'}
@@ -551,7 +552,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+                      <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                        <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                      </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                     </p>
@@ -686,7 +689,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       ))}
                       {calendarClasses.length === 0 && (
                         <div className="flex flex-col items-center gap-4 py-8 text-center">
-                          <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+                            <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-901' : 'bg-gray-100'}`}>
+                        <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                      </div>
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                           </p>

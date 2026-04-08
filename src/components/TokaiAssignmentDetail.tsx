@@ -29,12 +29,13 @@ const TokaiAssignmentDetail = React.memo(function TokaiAssignmentDetail({ lang, 
   if (!assignment) {
     return (
       <div className={`h-full flex flex-col items-center justify-center gap-4 p-8 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-        <img 
-          src={mascotIdle} 
-          alt="Not found" 
-          className="w-24 h-24 object-contain drop-shadow-md opacity-80" 
-          style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
-        />
+        <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+          <img 
+            src={mascotIdle} 
+            alt="Not found" 
+            className="w-full h-full object-contain opacity-80 mix-blend-multiply" 
+          />
+        </div>
         <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-brand-black'}`}>
           {lang === 'en' ? 'Assignment not found' : '課題が見つかりません'}
         </p>

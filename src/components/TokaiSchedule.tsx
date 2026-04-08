@@ -202,7 +202,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-            <img src={mascotIdle} alt="No courses selected" className="w-24 h-24 object-contain drop-shadow-md opacity-80" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+            <div className={`w-24 h-24 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
+              <img src={mascotIdle} alt="No courses selected" className="w-full h-full object-contain opacity-80 mix-blend-multiply" />
+            </div>
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
               <button
                 onClick={() => navigate('/editProfile')}
@@ -236,7 +238,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                     );
                   })}
                 </motion.div>
-                {settings.enableEnhancedUI && (
+                {(settings as any).enableEnhancedUI && (
                   <button
                     onClick={() => setBaseDate(new Date())}
                     className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold hover:bg-white/20 active:scale-95 transition-all shrink-0"
@@ -279,7 +281,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                               <div className="font-bold text-base leading-tight truncate">{item.title[lang]}</div>
                               <div className="text-sm font-medium opacity-60 truncate mt-0.5">{item.location[lang]}</div>
                             </div>
-                            {settings.enableEnhancedUI && (
+                            {(settings as any).enableEnhancedUI && (
                               <span className="text-[9px] font-bold text-brand-black/40 bg-black/10 rounded-full px-2 py-1 shrink-0">
                                 P{(item.periods ?? [1]).join('-')}
                               </span>
@@ -292,7 +294,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 </AnimatePresence>
                 {dailyClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
-                    <img src={mascotIdle} alt="No classes" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
+                      <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+                    </div>
                     <p className="text-white/50 text-sm font-medium">
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noClasses}
                     </p>
@@ -337,7 +341,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   {/* ── Day header cells (Row 1) ── */}
                   <div style={{ gridRow: 1, gridColumn: 1 }} />
                   {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, i) => {
-                    const isToday = settings.enableEnhancedUI && WEEK_DAY_NUMS[i] === new Date().getDay();
+                    const isToday = (settings as any).enableEnhancedUI && WEEK_DAY_NUMS[i] === new Date().getDay();
                     return (
                       <div
                         key={day}
@@ -518,7 +522,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* Empty state for weekly/monthly when no courses selected */}
           {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <img src={mascotIdle} alt="No courses" className="w-20 h-20 object-contain drop-shadow-md opacity-70" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+              <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-brand-black'}`}>
+                <img src={mascotIdle} alt="No courses" className="w-full h-full object-contain opacity-70 mix-blend-multiply" />
+              </div>
               <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
               <button
                 onClick={() => navigate('/editProfile')}

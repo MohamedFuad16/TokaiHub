@@ -20,7 +20,7 @@ interface AuthProps {
    ═══════════════════════════════════════════════════════════════ */
 function AppMascot({ covering }: { covering: boolean }) {
   return (
-    <div className="relative w-full h-full filter drop-shadow-lg drop-shadow-yellow-500">
+    <div className="relative w-full h-full">
       <AnimatePresence>
         <motion.img
           key={covering ? 'cover' : 'idle'}
@@ -30,8 +30,7 @@ function AppMascot({ covering }: { covering: boolean }) {
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
           exit={{ opacity: 0, filter: 'blur(4px)', position: 'absolute' }}
           transition={{ duration: 0.3 }}
-          className="absolute inset-0 w-full h-full object-contain"
-          style={{ mixBlendMode: 'multiply' }}
+          className="absolute inset-0 w-full h-full object-contain mix-blend-multiply"
         />
       </AnimatePresence>
     </div>
@@ -255,7 +254,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
           <div
             role="img"
             aria-label="Student mascot illustration"
-            className="absolute -top-24 left-1/2 -translate-x-1/2 z-30 w-[140px] h-[140px] pointer-events-none"
+            className={`absolute -top-24 left-1/2 -translate-x-1/2 z-30 w-[140px] h-[140px] pointer-events-none rounded-full overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}
           >
             <motion.div
               animate={{

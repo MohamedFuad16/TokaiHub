@@ -321,14 +321,15 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col items-center gap-6"
         >
-          <motion.img
-            src={mascotVerify}
-            alt="Loading"
-            className="w-28 h-28 object-contain drop-shadow-lg"
-            style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          />
+          <div className={`w-28 h-28 rounded-full overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+            <motion.img
+              src={mascotVerify}
+              alt="Loading"
+              className="w-full h-full object-contain mix-blend-multiply"
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </div>
           <div className="flex flex-col items-center gap-3">
             <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
             <p className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
@@ -743,7 +744,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     </h2>
                     <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.verifySub}</p>
                   </div>
-                  <img src={mascotVerify} alt="Mascot" className="w-20 h-20 object-contain drop-shadow-md -mt-2 -mr-2" style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }} />
+                  <div className={`w-20 h-20 rounded-full overflow-hidden shrink-0 ${isDark ? 'bg-gray-900' : 'bg-[#EBF2D9]'}`}>
+                    <img src={mascotVerify} alt="Mascot" className="w-full h-full object-contain mix-blend-multiply" />
+                  </div>
                 </div>
 
                 <div className={`${cardBg} rounded-[28px] p-5 space-y-5 shadow-sm`}>
