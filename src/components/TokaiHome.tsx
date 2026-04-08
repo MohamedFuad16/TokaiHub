@@ -612,7 +612,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 ))}
                 {todayClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden `}>
+                    <div className={`w-20 h-20 rounded-full overflow-hidden ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
                       <img src={mascotIdle} alt="No classes" className="w-full h-full object-contain" />
                     </div>
                     <p className={`text-sm font-medium ${textMuted}`}>
@@ -650,7 +650,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
-              className={`absolute bottom-0 left-0 right-0  rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
+              className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-2xl font-bold">{lang === 'en' ? 'Calendar' : 'カレンダー'}</h2>
