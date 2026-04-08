@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
 import { configureAmplify } from './lib/awsConfig';
+import { clearCoursesCache } from './lib/api';
 
 configureAmplify();
 
@@ -305,6 +306,8 @@ export default function App() {
         }));
         setIsAuthenticated(true);
       } catch (e) {
+        // Stale session pointing to a deleted Cognito user — clear it so sign-up works fresh
+        try { await signOut(); } catch { /* ignore */ }
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -368,6 +371,7 @@ export default function App() {
       console.error('Error signing out:', error);
     }
     // Clear persisted data so next login starts fresh
+    clearCoursesCache();
     localStorage.removeItem('tokaihub_user_profile');
     localStorage.removeItem('tokaihub_settings');
     // Reset URL to root so next login lands on home

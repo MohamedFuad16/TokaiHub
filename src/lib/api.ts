@@ -112,18 +112,26 @@ export async function getCourseDetails(courseId: string, signal?: AbortSignal): 
   return apiFetch<CourseItem>(`/course-details/${courseId}`, signal);
 }
 
-// ─── Available Courses (for onboarding) ────────────────────────────────────────
+// ─── Available Courses (for onboarding / edit-profile) ────────────────────────
+
+/** In-memory cache — avoids redundant network round-trips within a session. */
+let _coursesCache: CourseItem[] | null = null;
 
 /**
- * Fetches available courses filtered by the student's class (A, B, etc.).
- * During sign-up (no JWT yet), pass the studentId so the Lambda can derive the class.
- * After login, the JWT is used automatically and studentId is optional.
- *
- * Lambda reads x-student-id header → looks up class in tokai-classes table →
- * joins with tokai-courses → returns only the correct class sections for the student.
+ * Fetches all available courses from the course catalog Lambda.
+ * Result is cached in memory for the lifetime of the page — subsequent calls
+ * (Edit Profile, Credits page, Onboarding step transitions) return instantly.
  */
 export async function fetchAvailableCourses(): Promise<CourseItem[]> {
-  return apiFetch<CourseItem[]>('/course');
+  if (_coursesCache) return _coursesCache;
+  const result = await apiFetch<CourseItem[]>('/course');
+  _coursesCache = result;
+  return result;
+}
+
+/** Clear the courses cache (e.g. after sign-out). */
+export function clearCoursesCache(): void {
+  _coursesCache = null;
 }
 
 // ─── Enroll Courses ────────────────────────────────────────────────────────────

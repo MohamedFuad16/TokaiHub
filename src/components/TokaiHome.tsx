@@ -101,10 +101,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         if (data.assignments?.length) setAssignments(data.assignments);
 
-        // Restore enrolledCourseIds only when the profile truly has no courses
-        // (e.g. after localStorage clear). Never overwrite an existing selection.
+        // Sync selectedCourseIds from DynamoDB — backend is the source of truth.
+        // Only update if the enrolled list differs to avoid unnecessary re-renders.
         if (data.enrolledCourseIds?.length && userProfile && setUserProfile) {
-          if ((userProfile.selectedCourseIds ?? []).length === 0) {
+          const current = userProfile.selectedCourseIds ?? [];
+          const same = current.length === data.enrolledCourseIds.length &&
+            data.enrolledCourseIds.every(id => current.includes(id));
+          if (!same) {
             setUserProfile({ ...userProfile, selectedCourseIds: data.enrolledCourseIds });
           }
         }

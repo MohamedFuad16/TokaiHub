@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, GraduationCap, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
 import { allItems } from '../data';
+import { fetchAvailableCourses } from '../lib/api';
 import type { CourseItem } from '../lib/types';
 
 const DAY_LABELS: Record<number, { en: string; jp: string }> = {
@@ -27,13 +28,46 @@ export default function TokaiCredits({ lang, settings, userProfile }: ScreenProp
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
 
+  // Use cached API courses (populated by onboarding/edit-profile); falls back to allItems instantly
+  const [catalogCourses, setCatalogCourses] = useState<CourseItem[]>(
+    (allItems as CourseItem[]).filter(i => i.type === 'Classes')
+  );
+
+  useEffect(() => {
+    fetchAvailableCourses()
+      .then(data => {
+        if (!data?.length) return;
+        const merged = data.map((apiCourse: any) => {
+          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const local = (allItems as CourseItem[]).find(item =>
+            item.code === courseCode || item.id === courseCode
+          );
+          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          return {
+            ...(local ?? {}),
+            ...apiCourse,
+            id: courseCode,
+            code: courseCode,
+            credits: apiCourse.credits ?? local?.credits,
+            title: local ? { en: enTitle, jp: local.title.jp } : { en: enTitle, jp: enTitle },
+            location: local?.location,
+            color: local?.color,
+            time: local?.time,
+            dayOfWeek: local?.dayOfWeek,
+            periods: local?.periods,
+          } as CourseItem;
+        });
+        setCatalogCourses(merged);
+      })
+      .catch(() => { /* keep allItems fallback */ });
+  }, []);
+
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
   const selectedCourses = useMemo(() =>
-    (allItems as CourseItem[]).filter(item =>
-      item.type === 'Classes' &&
-      (selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
+    catalogCourses.filter(item =>
+      selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? '')
     ).sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0)),
-    [selectedCourseIds]
+    [catalogCourses, selectedCourseIds]
   );
 
   const totalCredits = selectedCourses.reduce((acc, c) => acc + (c.credits ?? 0), 0);

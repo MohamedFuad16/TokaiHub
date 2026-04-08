@@ -67,9 +67,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Start prefetching on step 1 so courses are ready when user reaches step 2
+  // Prefetch courses immediately on mount so they're ready by the time the user reaches step 2
   useEffect(() => {
-    if (step < 1 || step > 2 || availableCourses.length > 0) return;
+    if (availableCourses.length > 0) return;
     let cancelled = false;
     fetchAvailableCourses()
       .then(data => {
@@ -109,7 +109,8 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
         }
       });
     return () => { cancelled = true; };
-  }, [step, availableCourses.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
