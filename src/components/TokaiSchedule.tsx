@@ -183,11 +183,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`flex-1 py-2 rounded-full text-xs font-bold transition-all duration-75 active:scale-95 ${
-                view === v
-                  ? (isDark ? 'bg-gray-700 text-white shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4)]' : 'bg-white text-brand-black shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)]')
-                  : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-brand-black')
-              }`}
+              className={`flex-1 py-2 rounded-full text-xs font-bold transition-all duration-75 active:scale-95 ${view === v
+                ? (isDark ? 'bg-gray-700 text-white shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4)]' : 'bg-white text-brand-black shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)]')
+                : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-brand-black')
+                }`}
             >
               {t[lang][v]}
             </button>
@@ -202,13 +201,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className="w-24 h-24 rounded-full overflow-hidden relative bg-white scale-[1.05] shadow-inner">
-              <img 
-                src={mascotIdle} 
-                alt="No courses selected" 
-                className="w-full h-full object-contain mix-blend-multiply opacity-100" 
-              />
-            </div>
+              <div className="w-20 h-20 rounded-full overflow-hidden relative scale-[1.05]">
+                <img
+                  src={mascotIdle}
+                  alt="No classes"
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
               <button
                 onClick={() => navigate('/editProfile')}
@@ -230,11 +229,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       <div
                         key={i}
                         onClick={() => setBaseDate(new Date(d))}
-                        className={`flex flex-col items-center justify-center min-w-[60px] lg:min-w-[80px] h-[80px] lg:h-[90px] rounded-[24px] cursor-pointer transition-all duration-75 active:scale-95 ${
-                          isSelected
-                            ? 'bg-brand-yellow text-brand-black shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.5)]'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        className={`flex flex-col items-center justify-center min-w-[60px] lg:min-w-[80px] h-[80px] lg:h-[90px] rounded-[24px] cursor-pointer transition-all duration-75 active:scale-95 ${isSelected
+                          ? 'bg-brand-yellow text-brand-black shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.5)]'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                          }`}
                       >
                         <span className="text-sm font-medium mb-1">{lang === 'en' ? shortDaysOfWeekEn[d.getDay()] : shortDaysOfWeekJp[d.getDay()]}</span>
                         <span className="text-xl font-bold">{d.getDate()}</span>
@@ -299,10 +297,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 {dailyClasses.length === 0 && (
                   <div className="flex flex-col items-center gap-4 py-8 text-center absolute inset-0 justify-center">
                     <div className="w-20 h-20 rounded-full overflow-hidden relative bg-white scale-[1.05] shadow-inner">
-                      <img 
-                        src={mascotIdle} 
-                        alt="No classes" 
-                        className="w-full h-full object-contain mix-blend-multiply opacity-100" 
+                      <img
+                        src={mascotIdle}
+                        alt="No classes"
+                        className="w-full h-full object-contain mix-blend-multiply opacity-100"
                       />
                     </div>
                     <p className="text-white/50 text-sm font-medium">
@@ -465,11 +463,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       <div key={i} className="flex flex-col items-center justify-center h-10 sm:h-12">
                         <button
                           onClick={() => handleCalendarDayClick(thisDate)}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-75 active:scale-90 ${
-                            isSelected
-                              ? 'bg-brand-yellow text-brand-black'
-                              : 'hover:bg-white/20'
-                          }`}
+                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-75 active:scale-90 ${isSelected
+                            ? 'bg-brand-yellow text-brand-black'
+                            : 'hover:bg-white/20'
+                            }`}
                         >
                           {dateNum}
                         </button>
@@ -531,10 +528,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
               <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
-                <img 
-                  src={mascotIdle} 
-                  alt="No courses" 
-                  className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`} 
+                <img
+                  src={mascotIdle}
+                  alt="No courses"
+                  className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`}
                 />
               </div>
               <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
@@ -553,7 +550,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       <SharedMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        
+
         lang={lang}
         setLang={setLang}
         settings={settings}
