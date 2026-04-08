@@ -50,6 +50,7 @@ export interface AppSettings {
   privacy: boolean;
   devSkipAuth: boolean;
   enableEnhancedUI: boolean;
+  fontFamily: 'modern' | 'elegant' | 'minimal';
 }
 
 export interface UserProfile {
@@ -97,6 +98,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   privacy: true,
   devSkipAuth: false,
   enableEnhancedUI: false,
+  fontFamily: 'modern',
 };
 
 
@@ -241,6 +243,40 @@ export default function App() {
     } catch { return undefined; }
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isSignOutLoading, setIsSignOutLoading] = useState(false);
+
+  // Dynamic Font Loading & Styling
+  useEffect(() => {
+    const fontConfigs = {
+      modern: {
+        link: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap',
+        family: '"Outfit", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      },
+      elegant: {
+        link: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Shippori+Mincho:wght@400;500;600;700;800&display=swap',
+        family: '"Playfair Display", "Shippori Mincho", serif'
+      },
+      minimal: {
+        link: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Zen+Maru+Gothic:wght@300;400;500;700;900&display=swap',
+        family: '"JetBrains Mono", "Zen Maru Gothic", monospace'
+      }
+    };
+
+    const config = fontConfigs[settings.fontFamily || 'modern'];
+
+    // 1. Inject/Update Font Link
+    let linkElement = document.getElementById('app-font-link') as HTMLLinkElement;
+    if (!linkElement) {
+      linkElement = document.createElement('link');
+      linkElement.id = 'app-font-link';
+      linkElement.rel = 'stylesheet';
+      document.head.appendChild(linkElement);
+    }
+    linkElement.href = config.link;
+
+    // 2. Apply Font to Root
+    document.documentElement.style.setProperty('--app-font-family', config.family);
+  }, [settings.fontFamily]);
 
   useEffect(() => {
     async function checkAuthStatus() {

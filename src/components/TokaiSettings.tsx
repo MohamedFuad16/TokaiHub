@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, BadgeCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, BadgeCheck, CheckCircle } from 'lucide-react';
 import { ScreenProps, UserProfile } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -211,6 +211,50 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 </div>
                 <Toggle on={settings.privacy} onToggle={togglePrivacy} ariaLabel={tx.privacy} isDark={isDark} />
               </div>
+            </div>
+          </motion.div>
+
+          {/* Appearance / Font Selection */}
+          <motion.div variants={itemVariants} className="space-y-3">
+            <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{lang === 'en' ? 'Appearance' : '外観'}</h3>
+            <div className={`${itemBg} border ${borderClass} rounded-3xl p-4 shadow-sm space-y-4`}>
+                <div className="flex items-center gap-3 mb-2 px-1">
+                  <div className={`w-8 h-8 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-100'} flex items-center justify-center`}>
+                    <span className="font-bold text-sm">Aa</span>
+                  </div>
+                  <span className="font-bold text-sm">{lang === 'en' ? 'App Font Style' : 'アプリのフォント'}</span>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    { id: 'modern', name: lang === 'en' ? 'Modern Sans' : 'モダンサンス', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Outfit", sans-serif' },
+                    { id: 'elegant', name: lang === 'en' ? 'Elegant Serif' : 'エレガントセリフ', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Playfair Display", serif' },
+                    { id: 'minimal', name: lang === 'en' ? 'Tech Minimal' : 'テックミニマル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"JetBrains Mono", monospace' }
+                  ].map((font) => (
+                    <button
+                      key={font.id}
+                      onClick={() => setSettings(s => ({ ...s, fontFamily: font.id as any }))}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${settings.fontFamily === font.id ? 'border-brand-yellow bg-brand-yellow/5' : `${borderClass} ${hoverClass}`}`}
+                    >
+                      <div className="text-left overflow-hidden">
+                        <div className="font-bold text-[10px] mb-1 opacity-60 uppercase tracking-widest">{font.name}</div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                           <span style={{ fontFamily: font.family }} className="text-lg font-medium whitespace-nowrap">{font.previewEn}</span>
+                           <span style={{ fontFamily: font.family }} className="text-base font-medium whitespace-nowrap">{font.previewJp}</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex items-center justify-center ml-2">
+                        {settings.fontFamily === font.id ? (
+                          <div className="w-6 h-6 bg-brand-yellow rounded-full flex items-center justify-center shadow-sm">
+                            <CheckCircle className="w-4 h-4 text-brand-black" />
+                          </div>
+                        ) : (
+                          <div className={`w-6 h-6 rounded-full border-2 ${borderClass}`} />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
             </div>
           </motion.div>
 

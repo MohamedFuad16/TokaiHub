@@ -160,10 +160,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       return courseItems;
     }
     if (activeCategory === 'Classes') {
-      return courseItems.filter(item => item.type === 'Classes');
+      // Show only ENROLLED classes when "Classes" is selected
+      return courseItems.filter(item => item.type === 'Classes' && isEnrolled(item));
     }
     return courseItems.filter(item => item.type === activeCategory);
-  }, [activeCategory, courseItems]);
+  }, [activeCategory, courseItems, isEnrolled]);
 
   const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds, courseItems), [selectedCourseIds, courseItems]);
   const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
