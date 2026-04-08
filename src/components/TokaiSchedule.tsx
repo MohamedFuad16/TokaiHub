@@ -167,6 +167,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
         <div className="flex items-center gap-4">
           <button
             onClick={() => setIsMenuOpen(true)}
+            aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'}
             className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors lg:hidden`}
           >
             <Menu className="w-5 h-5" />

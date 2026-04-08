@@ -48,7 +48,7 @@ const TokaiAssignmentDetail = React.memo(function TokaiAssignmentDetail({ lang, 
   return (
     <div className={`h-full flex flex-col ${bgClass}`}>
       <header className="flex items-center gap-4 p-4 sm:p-6 pt-8 shrink-0">
-        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors`}>
+        <button onClick={() => navigate(-1)} aria-label={lang === 'en' ? 'Go back' : '戻る'} className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors`}>
           <ChevronLeft className="w-5 h-5"/>
         </button>
         <h1 className="text-xl font-bold tracking-tight truncate">{assignment.title[lang]}</h1>

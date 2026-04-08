@@ -107,7 +107,7 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className={`text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
+          className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
         >
           {quotes[quoteIdx]}
         </motion.p>
@@ -310,6 +310,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
                   <button
                     type="button"
                     onClick={() => setShowPw(p => !p)}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
                     className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -353,7 +354,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
         </div>
 
         {/* Sign up link */}
-        <p className={`text-center mt-6 text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+        <p className={`text-center mt-6 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {tx.noAccount}{' '}
           <button
             onClick={onGoToSignUp}

@@ -377,7 +377,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       >
                         <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75">
                           <Icon className="w-4 h-4 text-white" />
-                          <span className="text-[9px] font-bold text-white uppercase tracking-wider">Open</span>
+                          <span className="text-[9px] font-bold text-white uppercase tracking-wider">{lang === 'en' ? 'Open' : '開く'}</span>
                         </div>
                       </div>
                     </div>

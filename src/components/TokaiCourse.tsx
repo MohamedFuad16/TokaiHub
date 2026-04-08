@@ -106,12 +106,12 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4 shrink-0">
             <div className={`${bgClass} p-5 rounded-3xl`}>
               <Clock className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
-              <div className={`text-xs ${textMuted} font-bold mb-1`}>Time</div>
+              <div className={`text-xs ${textMuted} font-bold mb-1`}>{lang === 'en' ? 'Time' : '時間'}</div>
               <div className="font-bold text-sm">{t[lang].time}</div>
             </div>
             <div className={`${bgClass} p-5 rounded-3xl`}>
               <Award className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
-              <div className={`text-xs ${textMuted} font-bold mb-1`}>Credits</div>
+              <div className={`text-xs ${textMuted} font-bold mb-1`}>{lang === 'en' ? 'Credits' : '単位'}</div>
               <div className="font-bold text-sm">{t[lang].credits}</div>
             </div>
             <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
@@ -119,7 +119,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                 <BookOpen className={`w-6 h-6 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
               </div>
               <div>
-                <div className={`text-xs ${textMuted} font-bold mb-1`}>Field</div>
+                <div className={`text-xs ${textMuted} font-bold mb-1`}>{lang === 'en' ? 'Field' : '分野'}</div>
                 <div className="font-bold text-base">{t[lang].field}</div>
               </div>
             </div>
@@ -147,7 +147,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                   <div key={idx}>
                     <div className="flex justify-between text-sm font-bold mb-2">
                       <span className={textNormal}>{item.label[lang]}</span>
-                      <span className="text-brand-black dark:text-white">{item.percentage}%</span>
+                      <span className={isDark ? 'text-white' : 'text-brand-black'}>{item.percentage}%</span>
                     </div>
                     <div className={`w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-3 overflow-hidden shadow-inner`}>
                       <motion.div 

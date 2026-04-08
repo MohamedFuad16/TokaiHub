@@ -193,7 +193,11 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
             className="absolute inset-0"
             style={{ willChange: 'opacity' }}
           >
-            <Suspense fallback={<div className="h-full w-full" />}>
+            <Suspense fallback={
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-[3px] border-brand-yellow border-t-transparent animate-spin" />
+              </div>
+            }>
               <Routes location={location}>
                 <Route path="/" element={<TokaiHome {...screenProps} />} />
                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />

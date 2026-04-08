@@ -333,7 +333,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
             <p className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
               {lang === 'en' ? 'Setting up your account…' : 'アカウントを設定中…'}
             </p>
-            <p className={`text-sm font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               {lang === 'en' ? 'This only takes a moment' : 'しばらくお待ちください'}
             </p>
           </div>
@@ -528,7 +528,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
                     {tx.gpaTitle}
                   </h2>
-                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.gpaSub}</p>
+                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.gpaSub}</p>
                 </div>
 
                 <div className={`${cardBg} rounded-[28px] p-5 space-y-5 shadow-sm`}>
@@ -605,7 +605,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
                     {tx.courseTitle}
                   </h2>
-                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{tx.courseSub(maxCredits)}</p>
+                  <p className={`text-sm font-medium mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.courseSub(maxCredits)}</p>
                 </div>
 
                 {/* Credits bar */}
@@ -655,18 +655,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                     <button
                       type="button"
                       onClick={() => {
-                        setLoadingCourses(true);
                         setCoursesError('');
-                        fetchAvailableCourses(studentId.toUpperCase(), studentClass)
-                          .then(data => {
-                            console.log("🔥 COURSES FROM API:", data);
-                            setAvailableCourses(data);
-                          })
-                          .catch((err: Error) => {
-                            console.error("❌ COURSE FETCH ERROR:", err);
-                            setCoursesError(err.message);
-                          })
-                          .finally(() => setLoadingCourses(false));
+                        const courses = allItems.filter(item => item.type === 'Classes') as CourseItem[];
+                        setAvailableCourses(courses);
                       }}
                       className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
                     >

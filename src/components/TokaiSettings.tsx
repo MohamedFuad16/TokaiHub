@@ -59,7 +59,7 @@ interface SettingsProps extends ScreenProps {
   onDevSkipChange?: (val: boolean) => void;
 }
 
-const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void; ariaLabel: string }) {
+const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel, isDark }: { on: boolean; onToggle: () => void; ariaLabel: string; isDark?: boolean }) {
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -68,7 +68,7 @@ const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel }: { on: boo
       aria-label={ariaLabel}
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onToggle()}
-      className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-brand-yellow' : 'bg-gray-300 dark:bg-gray-600'}`}
+      className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-brand-yellow' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
     >
       <motion.div
         className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm"
@@ -181,7 +181,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                     <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider ${isDark ? 'text-pink-400 bg-pink-500/20' : 'text-pink-600 bg-pink-100'}`}>Coming Soon</div>
                   </div>
                 </div>
-                <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} />
+                <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} isDark={isDark} />
               </div>
 
               {/* Dark Mode — fixed: single handler, stopPropagation in Toggle */}
@@ -195,7 +195,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <span className="font-bold text-sm">{tx.darkMode}</span>
                 </div>
-                <Toggle on={settings.isDarkMode} onToggle={toggleDarkMode} ariaLabel={tx.darkMode} />
+                <Toggle on={settings.isDarkMode} onToggle={toggleDarkMode} ariaLabel={tx.darkMode} isDark={isDark} />
               </div>
 
               {/* Privacy */}
@@ -209,7 +209,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <span className="font-bold text-sm">{tx.privacy}</span>
                 </div>
-                <Toggle on={settings.privacy} onToggle={togglePrivacy} ariaLabel={tx.privacy} />
+                <Toggle on={settings.privacy} onToggle={togglePrivacy} ariaLabel={tx.privacy} isDark={isDark} />
               </div>
             </div>
           </motion.div>
@@ -229,7 +229,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <div className="font-bold text-sm">{tx.devVerify}</div>
                 </div>
-                <Toggle on={!!userProfile?.isVerified} onToggle={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })} ariaLabel={tx.devVerify} />
+                <Toggle on={!!userProfile?.isVerified} onToggle={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })} ariaLabel={tx.devVerify} isDark={isDark} />
               </div>
 
               {/* Skip login (dev mode) */}
@@ -246,7 +246,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                     <div className={`text-xs font-medium ${textMuted}`}>{tx.devSkipAuthSub}</div>
                   </div>
                 </div>
-                <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} ariaLabel={tx.devSkipAuth} />
+                <Toggle on={settings.devSkipAuth} onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)} ariaLabel={tx.devSkipAuth} isDark={isDark} />
               </div>
 
               {/* Enhanced UI toggle */}
@@ -263,7 +263,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                     <div className={`text-xs font-medium ${textMuted}`}>{tx.enhancedUISub}</div>
                   </div>
                 </div>
-                <Toggle on={settings.enableEnhancedUI} onToggle={() => setSettings(s => ({ ...s, enableEnhancedUI: !s.enableEnhancedUI }))} ariaLabel={tx.enhancedUI} />
+                <Toggle on={settings.enableEnhancedUI} onToggle={() => setSettings(s => ({ ...s, enableEnhancedUI: !s.enableEnhancedUI }))} ariaLabel={tx.enhancedUI} isDark={isDark} />
               </div>
             </div>
           </motion.div>
