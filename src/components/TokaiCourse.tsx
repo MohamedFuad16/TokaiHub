@@ -112,11 +112,10 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 key={dateStr}
                 onClick={() => toggleAttendance(dateStr)}
                 className={`flex-shrink-0 w-16 h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all snap-start relative
-                  ${isAttended 
-                    ? isDark ? 'border-white bg-white/5 shadow-sm' : 'border-black bg-black/5 shadow-sm'
-                    : isToday 
+                  ${isToday 
                       ? 'border-amber-500 bg-amber-500/5 shadow-md scale-[1.02]' 
                       : isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-white shadow-sm'}
+                  ${isAttended && !isToday ? (isDark ? 'border-transparent bg-white/5' : 'border-transparent bg-black/5') : ''}
                 `}
               >
                 <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
@@ -329,7 +328,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                 <div className={`text-xs ${textMuted} font-bold mb-1`}>
                   {lang === 'en' ? 'Teacher' : '担当教員'}
                 </div>
-                <div className="font-bold text-sm truncate max-w-[120px]">
+                <div className="font-bold text-sm truncate max-w-[140px] sm:max-w-none">
                    {course.teacher?.[lang] || (lang === 'en' ? 'Staff' : '担当者')}
                 </div>
               </div>
