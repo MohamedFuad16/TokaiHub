@@ -1,6 +1,16 @@
 import { BookOpen } from 'lucide-react';
 import type { CourseItem } from './lib/types';
 
+// Courses
+import courseVR from './assets/courses/course_vr.png';
+import courseEnglish from './assets/courses/course_english.png';
+import courseSoftware from './assets/courses/course_software.png';
+import courseCloud from './assets/courses/course_cloud.png';
+import courseInterface from './assets/courses/course_interface.png';
+import courseMobile from './assets/courses/course_mobile.png';
+import courseProject from './assets/courses/course_project.png';
+import coursePlatform from './assets/courses/course_platform.png';
+
 export const allItems: CourseItem[] = [
   { 
     id: 'mon-1-2', 
@@ -12,7 +22,7 @@ export const allItems: CourseItem[] = [
     periods: [1, 2],
     time: '09:00 - 12:10', 
     color: 'bg-brand-pink', 
-    image: 'https://picsum.photos/seed/vr/400/300', 
+    image: courseVR, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK085',
@@ -34,7 +44,7 @@ export const allItems: CourseItem[] = [
     periods: [1],
     time: '09:00 - 10:30', 
     color: 'bg-brand-green', 
-    image: 'https://picsum.photos/seed/english/400/300', 
+    image: courseEnglish, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK000',
@@ -55,7 +65,7 @@ export const allItems: CourseItem[] = [
     periods: [2],
     time: '10:40 - 12:10', 
     color: 'bg-brand-yellow', 
-    image: 'https://picsum.photos/seed/software/400/300', 
+    image: courseSoftware, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK031',
@@ -80,7 +90,7 @@ export const allItems: CourseItem[] = [
     periods: [3],
     time: '13:00 - 14:30', 
     color: 'bg-blue-200', 
-    image: 'https://picsum.photos/seed/cloud/400/300', 
+    image: courseCloud, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK060',
@@ -101,7 +111,7 @@ export const allItems: CourseItem[] = [
     periods: [1, 2],
     time: '09:00 - 12:10', 
     color: 'bg-orange-200', 
-    image: 'https://picsum.photos/seed/interface/400/300', 
+    image: courseInterface, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK035',
@@ -123,7 +133,7 @@ export const allItems: CourseItem[] = [
     periods: [3, 4],
     time: '13:00 - 16:10', 
     color: 'bg-brand-pink', 
-    image: 'https://picsum.photos/seed/mobile/400/300', 
+    image: courseMobile, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK090',
@@ -146,7 +156,7 @@ export const allItems: CourseItem[] = [
     periods: [1],
     time: '09:00 - 10:30', 
     color: 'bg-brand-green', 
-    image: 'https://picsum.photos/seed/project/400/300', 
+    image: courseProject, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK010',
@@ -167,7 +177,7 @@ export const allItems: CourseItem[] = [
     periods: [3],
     time: '13:00 - 14:30', 
     color: 'bg-brand-yellow', 
-    image: 'https://picsum.photos/seed/platform/400/300', 
+    image: coursePlatform, 
     icon: BookOpen, 
     action: 'course',
     code: 'TTK065',
