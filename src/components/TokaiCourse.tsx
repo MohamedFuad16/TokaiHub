@@ -71,32 +71,29 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
             <span className="w-2 h-2 rounded-full bg-brand-green"></span>
             {lang === 'en' ? 'Attendance Tracker' : '出席トラッカー'}
           </h3>
-          <p className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
-            {lang === 'en' ? 'Track your semester progress' : '学期の進捗を管理'}
-          </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-black tracking-tight text-brand-black dark:text-brand-yellow leading-none">
-            {attendedCount} <span className="text-xs text-gray-400">/ {totalCount}</span>
+          <div className="text-xl font-bold tracking-tight text-brand-black dark:text-brand-yellow leading-none">
+            {attendedCount} <span className="text-sm font-medium text-gray-400">/ {totalCount}</span>
           </div>
-          <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">
-            {lang === 'en' ? 'Attended' : '出席済'}
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+            {lang === 'en' ? 'Classes Attended' : '出席済み'}
           </div>
         </div>
       </div>
 
-      <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50/50'} p-6 rounded-[32px] border ${isDark ? 'border-gray-700' : 'border-gray-100'} shadow-sm`}>
+      <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-3xl border ${isDark ? 'border-gray-700' : 'border-transparent'} shadow-sm`}>
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-2 px-1">
-             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{lang === 'en' ? 'Semester Progress' : '学期進捗'}</span>
-             <span className={`text-[11px] font-black ${percentage === 100 ? 'text-green-500' : 'text-brand-black dark:text-brand-yellow'}`}>{percentage}%</span>
+          <div className="flex justify-between items-end mb-2 px-1">
+             <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
+             <span className={`text-xs font-bold ${isDark ? 'text-brand-yellow' : 'text-brand-black'} opacity-80`}>{percentage}%</span>
           </div>
-          <div className={`h-2.5 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+          <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: `${percentage}%` }}
-               className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-brand-yellow'} rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]`}
+               className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-brand-green'} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
                transition={{ type: 'spring', stiffness: 50, damping: 15 }}
              />
           </div>
@@ -116,27 +113,26 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 onClick={() => toggleAttendance(dateStr)}
                 className={`flex-shrink-0 w-16 h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all snap-start relative
                   ${isAttended 
-                    ? 'border-brand-yellow bg-brand-yellow/5' 
+                    ? 'border-brand-green bg-brand-green/10 shadow-sm' 
                     : isToday 
-                      ? 'border-brand-yellow/50 bg-white dark:bg-gray-900 shadow-md' 
-                      : isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-100 bg-white'}
-                  ${!isPast && !isToday ? 'opacity-40' : 'opacity-100'}
+                      ? 'border-brand-yellow bg-white dark:bg-gray-900 shadow-md' 
+                      : isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-white shadow-sm'}
                 `}
               >
-                <span className={`text-[9px] uppercase font-black tracking-widest ${isToday ? 'text-brand-yellow' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-brand-yellow' : 'text-gray-400'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className="text-xl font-black tracking-tighter">
+                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-brand-black dark:text-brand-yellow' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
                   {date.getDate()}
                 </span>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
                   ${isAttended 
-                    ? 'bg-brand-yellow border-brand-yellow' 
-                    : isDark ? 'border-gray-700' : 'border-gray-200'}
+                    ? 'bg-brand-green border-brand-green' 
+                    : isDark ? 'border-gray-700' : 'border-gray-300'}
                 `}>
-                  {isAttended && <CheckCircle className="w-4 h-4 text-brand-black" />}
+                  {isAttended && <CheckCircle className="w-4 h-4 text-white" />}
                 </div>
-                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-brand-yellow text-brand-black text-[7px] font-black rounded-full shadow-md">TODAY</div>}
+                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-brand-yellow text-brand-black text-[7px] font-bold rounded-full shadow-md">TODAY</div>}
               </button>
             );
           })}
