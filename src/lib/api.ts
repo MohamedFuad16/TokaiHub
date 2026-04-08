@@ -122,33 +122,8 @@ export async function getCourseDetails(courseId: string, signal?: AbortSignal): 
  * Lambda reads x-student-id header → looks up class in tokai-classes table →
  * joins with tokai-courses → returns only the correct class sections for the student.
  */
-export async function fetchAvailableCourses(
-  studentId: string,
-  studentClass: 'A' | 'B',
-): Promise<CourseItem[]> {
-  const token = await getAuthToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-student-id': studentId,
-    'x-student-class': studentClass,
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE_URL}/course`, { headers });
-  } catch (networkErr: unknown) {
-    const msg = networkErr instanceof Error ? networkErr.message : 'failed to reach server';
-    throw new Error(`Network error: ${msg}`);
-  }
-
-  if (!res.ok) {
-    let body = '';
-    try { body = await res.text(); } catch { /* ignore */ }
-    throw new Error(`HTTP ${res.status} — ${body || res.statusText}`);
-  }
-
-  return (await res.json()) as CourseItem[];
+export async function fetchAvailableCourses(): Promise<CourseItem[]> {
+  return apiFetch<CourseItem[]>('/course');
 }
 
 // ─── Enroll Courses ────────────────────────────────────────────────────────────

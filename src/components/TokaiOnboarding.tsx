@@ -52,10 +52,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // Step 2 — Courses
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
-  const [coursesError, setCoursesError] = useState('');
   const [classFilter, setClassFilter] = useState<'A' | 'B' | 'all'>('all');
-  const [courseLoadAttempt, setCourseLoadAttempt] = useState(0);
 
   // Step 3 — OTP
   const [otpCode, setOtpCode] = useState('');
@@ -71,58 +68,36 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Fetch available courses from the API when entering step 2 or when classFilter changes.
+  // Fetch all courses from Lambda; fall back to local data on error
   useEffect(() => {
     if (step !== 2) return;
     let cancelled = false;
-    const load = async () => {
-      setLoadingCourses(true);
-      setCoursesError('');
-      try {
-        let courses: CourseItem[];
-        if (classFilter === 'all') {
-          const [a, b] = await Promise.all([
-            fetchAvailableCourses(studentId.toUpperCase(), 'A'),
-            fetchAvailableCourses(studentId.toUpperCase(), 'B'),
-          ]);
-          // Merge and deduplicate by id
-          const seen = new Set<string>();
-          courses = [...a, ...b].filter(c => {
-            if (seen.has(c.id)) return false;
-            seen.add(c.id);
-            return true;
-          });
-        } else {
-          courses = await fetchAvailableCourses(studentId.toUpperCase(), classFilter);
-        }
-        if (!cancelled) {
-          const merged = courses.map(apiCourse => {
-            const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
-            if (!local) return apiCourse;
-            return {
-              ...apiCourse,
-              title: typeof apiCourse.title === 'string'
-                ? { en: apiCourse.title, jp: local.title.jp }
-                : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
-              location: typeof apiCourse.location === 'string'
-                ? { en: apiCourse.location, jp: local.location?.jp || '' }
-                : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
-              teacher: typeof apiCourse.teacher === 'string'
-                ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
-                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
-            };
-          });
-          setAvailableCourses(merged);
-        }
-      } catch (err: unknown) {
-        if (!cancelled) setCoursesError(err instanceof Error ? err.message : 'Failed to load courses');
-      } finally {
-        if (!cancelled) setLoadingCourses(false);
-      }
-    };
-    load();
+    fetchAvailableCourses()
+      .then(data => {
+        if (cancelled || !data?.length) return;
+        const merged = data.map(apiCourse => {
+          const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
+          if (!local) return apiCourse;
+          return {
+            ...apiCourse,
+            title: typeof apiCourse.title === 'string'
+              ? { en: apiCourse.title, jp: local.title.jp }
+              : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
+            location: typeof apiCourse.location === 'string'
+              ? { en: apiCourse.location, jp: local.location?.jp || '' }
+              : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
+            teacher: typeof apiCourse.teacher === 'string'
+              ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
+              : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
+          };
+        });
+        if (!cancelled) setAvailableCourses(merged as CourseItem[]);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableCourses((allItems as CourseItem[]).filter(item => item.type === 'Classes'));
+      });
     return () => { cancelled = true; };
-  }, [step, classFilter, studentId, courseLoadAttempt]);
+  }, [step]);
 
   const selectedCredits = selectedCourseIds.reduce((acc, id) => {
     const c = availableCourses.find(c => c.id === id);
@@ -705,28 +680,9 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   </div>
                 )}
 
-                {/* Error state — shows the raw error for debugging */}
-                {!loadingCourses && coursesError && (
-                  <div className={`rounded-2xl p-4 space-y-3 ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
-                    <p className="text-xs font-bold uppercase tracking-wide opacity-70">Course load error</p>
-                    <pre className="text-xs font-mono whitespace-pre-wrap break-all leading-relaxed">{coursesError}</pre>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCoursesError('');
-                        setCourseLoadAttempt(n => n + 1);
-                      }}
-                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${isDark ? 'bg-red-800 hover:bg-red-700 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}
-                    >
-                      {lang === 'en' ? 'Retry' : '再試行'}
-                    </button>
-                  </div>
-                )}
-
                 {/* Course list */}
-                {!loadingCourses && !coursesError && (
-                  <div className="space-y-3">
-                    {availableCourses.map(course => {
+                <div className="space-y-3">
+                  {availableCourses.map(course => {
                       const isSelected = selectedCourseIds.includes(course.id);
                       const wouldExceed = !isSelected && selectedCredits + (course.credits ?? 0) > maxCredits;
                       return (
@@ -784,8 +740,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                         </button>
                       );
                     })}
-                  </div>
-                )}
+                </div>
               </div>
             )}
 
