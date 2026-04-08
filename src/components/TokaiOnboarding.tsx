@@ -52,7 +52,6 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // Step 2 — Courses
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
-  const [classFilter, setClassFilter] = useState<'A' | 'B' | 'all'>('all');
 
   // Step 3 — OTP
   const [otpCode, setOtpCode] = useState('');
@@ -68,30 +67,39 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
   // A valid student ID is exactly 8 chars and starts with "4C"
   const studentIdValid = studentId.length === 8 && studentId.toUpperCase().startsWith('4C');
 
-  // Fetch all courses from Lambda; fall back to local data on error
+  // Fetch all courses from Lambda; merge with local data for localized strings
   useEffect(() => {
     if (step !== 2) return;
     let cancelled = false;
     fetchAvailableCourses()
       .then(data => {
         if (cancelled || !data?.length) return;
-        const merged = data.map(apiCourse => {
-          const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
-          if (!local) return apiCourse;
+        const merged = data.map((apiCourse: any) => {
+          // DynamoDB returns courseId (e.g. "TTK031"), not id/code
+          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const local = (allItems as CourseItem[]).find(item =>
+            item.code === courseCode || item.id === courseCode || item.id === apiCourse.id
+          );
+          // courseName is the plain English string from DynamoDB
+          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
           return {
+            ...(local ?? {}),
             ...apiCourse,
-            title: typeof apiCourse.title === 'string'
-              ? { en: apiCourse.title, jp: local.title.jp }
-              : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
-            location: typeof apiCourse.location === 'string'
-              ? { en: apiCourse.location, jp: local.location?.jp || '' }
-              : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
-            teacher: typeof apiCourse.teacher === 'string'
-              ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
-              : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
-          };
+            id: local?.id ?? courseCode,
+            code: courseCode,
+            credits: apiCourse.credits ?? local?.credits,
+            title: local
+              ? { en: enTitle, jp: local.title.jp }
+              : { en: enTitle, jp: enTitle },
+            location: local?.location,
+            teacher: local?.teacher,
+            color: local?.color,
+            time: local?.time,
+            dayOfWeek: local?.dayOfWeek,
+            periods: local?.periods,
+          } as CourseItem;
         });
-        if (!cancelled) setAvailableCourses(merged as CourseItem[]);
+        if (!cancelled) setAvailableCourses(merged);
       })
       .catch(() => {
         if (!cancelled) setAvailableCourses((allItems as CourseItem[]).filter(item => item.type === 'Classes'));
@@ -651,34 +659,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                   </div>
                 </div>
 
-                {/* Class filter tabs */}
-                <div className="flex gap-2 mb-4">
-                  {(['all', 'A', 'B'] as const).map(f => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setClassFilter(f)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${classFilter === f
-                        ? (isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white')
-                        : (isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-white text-gray-500 hover:bg-gray-100 shadow-sm')
-                      }`}
-                    >
-                      {f === 'all' ? (lang === 'en' ? 'All' : 'すべて') : `Class ${f}`}
-                    </button>
-                  ))}
-                </div>
-
                 {errors.courses && <p className="text-red-500 text-xs font-bold px-1 mb-3">{errors.courses}</p>}
-
-                {/* Loading state */}
-                {loadingCourses && (
-                  <div className="flex items-center justify-center gap-3 py-12">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                    <span className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {lang === 'en' ? 'Loading your courses…' : '授業を読み込み中…'}
-                    </span>
-                  </div>
-                )}
 
                 {/* Course list */}
                 <div className="space-y-3">
