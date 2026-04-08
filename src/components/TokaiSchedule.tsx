@@ -363,11 +363,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             </>
           )}
 
-          {view === 'weekly' && (
-            <div style={{ color: 'red' }}>
-              {JSON.stringify(scheduleItems.filter(i => selectedCourseIds.includes(i.id) || selectedCourseIds.includes(i.code ?? '')).map(i => ({ id: i.id, type: i.type, day: i.dayOfWeek })))}
-            </div>
-          )}
+
 
 
           {/* ─── WEEKLY TIMETABLE VIEW ─── */}
