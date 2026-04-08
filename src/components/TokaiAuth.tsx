@@ -84,12 +84,11 @@ function LoadingScreen({ lang, isDark }: { lang: Language; isDark: boolean }) {
         className="flex flex-col items-center"
       >
         {/* Mascot in loading screen */}
-        <div className="w-40 h-40 mb-2 mt-4 relative">
+        <div className={`w-40 h-40 mb-2 mt-4 relative rounded-full overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
           <img 
             src={mascotLoading} 
             alt="Loading Mascot" 
-            className="w-full h-full object-contain drop-shadow-xl" 
-            style={{ mixBlendMode: isDark ? 'normal' : 'multiply' }}
+            className="w-full h-full object-contain mix-blend-multiply" 
           />
         </div>
         <h1 className={`text-2xl font-bold tracking-tight mb-2 ${isDark ? 'text-white' : 'text-brand-black'}`}>
