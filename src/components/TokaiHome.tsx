@@ -376,9 +376,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                       <div className="relative z-10 p-4 h-full flex flex-col justify-between">
                         <div className="flex justify-between items-start">
                           <div className="flex flex-col gap-1">
-                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${item.color} text-brand-black shadow-sm`}>
-                              {lang === 'en' ? item.type : item.type === 'Classes' ? '授業' : item.type === 'Events' ? 'イベント' : 'クラブ'}
-                            </span>
                             {enrolled && (
                               <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 w-fit shadow-sm">
                                 <Check className="w-2.5 h-2.5" />Enrolled
@@ -447,7 +444,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                   <img
                     src={mascotIdle}
                     alt="Mascot — nothing here"
-                    className="w-full h-full object-contain opacity-80 mix-blend-multiply"
+                    className="w-full h-full object-contain opacity-90"
                   />
                 </div>
               <div>

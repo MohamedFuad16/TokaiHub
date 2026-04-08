@@ -202,11 +202,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className={`w-24 h-24 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-[#1A1A1A]'} scale-[1.05]`}>
+            <div className={`w-24 h-24 rounded-full overflow-hidden relative ${isDark ? 'bg-gray-800' : 'bg-gray-50'} scale-[1.05]`}>
               <img 
                 src={mascotIdle} 
                 alt="No courses selected" 
-                className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-80'}`} 
+                className={`w-full h-full object-contain ${isDark ? 'brightness-110' : 'opacity-90'}`} 
               />
             </div>
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>

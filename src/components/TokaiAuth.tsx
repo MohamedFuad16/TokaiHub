@@ -201,7 +201,10 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
     setIsSigningIn(true);
     try {
       await signIn({ username: email, password });
-      onSignIn(email);
+      // Artificial delay to let the loading quotes/animation be seen
+      setTimeout(() => {
+        onSignIn(email);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || 'Error signing in');
       setIsSigningIn(false);
@@ -274,7 +277,6 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
             ref={cardRef}
             className={`w-full rounded-[32px] p-6 pt-14 shadow-xl relative z-20 ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white'}`}
           >
-            <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>TOKAI HUB</p>
             <h2 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-brand-black'}`}>
               {tx.welcome}
             </h2>
