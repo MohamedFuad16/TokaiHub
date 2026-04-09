@@ -54,7 +54,7 @@ export interface AppSettings {
   privacy: boolean;
   devSkipAuth: boolean;
   enableEnhancedUI: boolean;
-  fontFamily: 'merry_varsity' | 'moshi_moshi' | 'one_more' | 'pramukh_rounded';
+  fontFamily: 'default' | 'merry_varsity' | 'moshi_moshi' | 'one_more' | 'pramukh_rounded';
 }
 
 export interface UserProfile {
@@ -102,7 +102,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   privacy: true,
   devSkipAuth: false,
   enableEnhancedUI: false,
-  fontFamily: 'pramukh_rounded',
+  fontFamily: 'default',
 };
 
 
@@ -258,6 +258,9 @@ export default function App() {
     }
 
     const fontConfigs = {
+      default: {
+        family: '"Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, sans-serif'
+      },
       merry_varsity: {
         family: '"Merry Varsity", "Gilroy", sans-serif'
       },
@@ -272,8 +275,9 @@ export default function App() {
       }
     };
 
-    const config = fontConfigs[settings.fontFamily] || fontConfigs.pramukh_rounded;
+    const config = fontConfigs[settings.fontFamily] || fontConfigs.default;
     document.documentElement.style.setProperty('--app-font-family', config.family);
+    document.documentElement.setAttribute('data-font', settings.fontFamily);
   }, [settings.fontFamily, lang]);
 
   useEffect(() => {
