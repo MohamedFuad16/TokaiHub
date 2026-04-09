@@ -106,8 +106,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             };
           }).filter(Boolean);
           setScheduleItems(merged);
-          console.log('selectedCourseIds:', selectedCourseIds);
-          console.log('scheduleItems:', scheduleItems);
+
         }
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
