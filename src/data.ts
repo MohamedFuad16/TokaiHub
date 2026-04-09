@@ -153,8 +153,8 @@ export const allItems: CourseItem[] = [
     teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' }, 
     location: { en: 'Shinagawa 1B202', jp: '品川キャンパス 1B202 通信ネットワーク特殊実験室' },
     dayOfWeek: 5, // Friday
-    periods: [1],
-    time: '09:00 - 10:30', 
+    periods: [1, 2],
+    time: '09:00 - 12:10', 
     color: 'bg-brand-green', 
     image: courseProject, 
     icon: BookOpen, 

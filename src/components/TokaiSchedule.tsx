@@ -92,6 +92,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             if (!local) return { ...apiItem, dayOfWeek: normalizedDay };
 
             return {
+              ...local,
               ...apiItem,
               dayOfWeek: normalizedDay, // ✅ FIX HERE
               title: typeof apiItem.title === 'string'
