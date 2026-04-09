@@ -3,6 +3,7 @@ import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, Chevro
 import { ScreenProps, preloadRoutes } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
+import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
 import { getDashboard } from '../lib/api';
@@ -174,7 +175,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       .reduce((acc, item) => acc + (item.credits || 0), 0),
     [selectedCourseIds, courseItems]);
 
-  const [activeCategory, setActiveCategory] = useState('Classes');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
   const [isCalendarSheetOpen, setIsCalendarSheetOpen] = useState(false);
@@ -203,16 +204,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
     selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''),
     [selectedCourseIds]);
 
-  const filteredItems = useMemo(() => {
-    if (activeCategory === 'All') {
-      return courseItems;
-    }
-    if (activeCategory === 'Classes') {
-      // Show only ENROLLED classes when "Classes" is selected
-      return courseItems.filter(item => item.type === 'Classes' && isEnrolled(item));
-    }
-    return courseItems.filter(item => item.type === activeCategory);
-  }, [activeCategory, courseItems, isEnrolled]);
 
   const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds, courseItems), [selectedCourseIds, courseItems]);
   const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
@@ -266,264 +257,40 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </div>
           </motion.div>
 
-          {/* Academic Overview (GPA & Credits) */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Cumulative GPA */}
-            <motion.div
-              whileHover={{ y: -3, scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`p-5 rounded-3xl shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="w-4 h-4 text-brand-yellow" />
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{t[lang].gpa}</span>
-              </div>
-              <div className="text-4xl font-bold tracking-tight text-white">{cumGpa.toFixed(2)}</div>
-              <div className="mt-3 h-1.5 rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-brand-yellow transition-all duration-700" style={{ width: `${Math.min((cumGpa / 4) * 100, 100)}%` }} />
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-gray-500">
-                  {lang === 'en' ? `Last: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
-                </span>
-                <span className="text-[10px] text-gray-600">/ 4.00</span>
-              </div>
-            </motion.div>
-
-            {/* Selected Credits */}
-            <motion.div
-              whileHover={{ y: -3, scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/credits')}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`p-5 rounded-3xl shadow-sm cursor-pointer ${isDark ? 'bg-gray-800' : 'bg-brand-gray'}`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <GraduationCap className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
-                  <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t[lang].credits}</span>
-                </div>
-                <ChevronRight className={`w-4 h-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-              </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>{selectedCredits}</div>
-              <div className={`mt-3 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <div className={`h-full rounded-full transition-all duration-700 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min((selectedCredits / 20) * 100, 100)}%` }} />
-              </div>
-              <div className="mt-2">
-                <span className={`text-[10px] font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {selectedCredits} / 20 {lang === 'en' ? 'credits' : '単位'}
-                </span>
-              </div>
-            </motion.div>
-            {/* Classes Today (desktop only) */}
-            <motion.div
-              whileHover={{ y: -2, scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setIsScheduleSheetOpen(true)}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm cursor-pointer border border-transparent hover:border-brand-yellow/30`}
-            >
-              <div className="flex items-center gap-1.5 mb-3">
-                <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Classes Today' : '今日の授業'}</span>
-              </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{todayClasses.length}</div>
-              <div
-                onClick={(e) => { e.stopPropagation(); navigate('/schedule'); }}
-                className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold hover:brightness-110 active:scale-95 transition-all ${isDark ? 'text-purple-400 bg-purple-500/20' : 'text-purple-600 bg-purple-100'}`}
+          {/* Weekly Schedule Section */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-10">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <Calendar className="w-5 h-5 text-brand-yellow" />
+                {lang === 'en' ? "Weekly Schedule" : "週間スケジュール"}
+              </h2>
+              <button 
+                onClick={() => navigate('/schedule')}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
               >
-                {lang === 'en' ? "Today's Classes →" : "今日の授業 →"}
-              </div>
-            </motion.div>
-            {/* Due Soon (desktop only) */}
-            <motion.div
-              whileHover={{ y: -2, scale: 1.005 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`hidden lg:block p-5 rounded-2xl ${cardBg} shadow-sm`}
-            >
-              <div className="flex items-center gap-1.5 mb-3">
-                <AlertCircle className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-xs font-medium ${textMuted}`}>{lang === 'en' ? 'Due Soon' : '締切間近'}</span>
-              </div>
-              <div className={`text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignments.length}</div>
-              <div
-                onClick={(e) => { e.stopPropagation(); navigate('/assignments'); }}
-                className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-xs font-semibold hover:bg-orange-500/20 cursor-pointer active:scale-95 transition-all"
+                {lang === 'en' ? "Full View →" : "詳細を表示 →"}
+              </button>
+            </div>
+            
+            <div className={`p-4 sm:p-6 rounded-[32px] border ${borderClass} ${isDark ? 'bg-gray-800/50' : 'bg-white shadow-sm'}`}>
+              <WeeklyTimetable 
+                lang={lang}
+                settings={settings}
+                selectedCourseIds={selectedCourseIds}
+                scheduleItems={courseItems}
+              />
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <button 
+                onClick={() => navigate('/class')}
+                className={`flex items-center gap-2 font-bold text-sm px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black hover:brightness-95 active:scale-95 transition-all shadow-lg shadow-yellow-500/10`}
               >
-                {lang === 'en' ? 'This Week →' : '今週の締切 →'}
-              </div>
-            </motion.div>
+                <Target className="w-4 h-4" />
+                {lang === 'en' ? 'Explore More Classes' : '他の授業を探す'}
+              </button>
+            </div>
           </motion.div>
-
-          {/* Category Filter Pills */}
-          <motion.div variants={itemVariants} className="flex gap-2 sm:gap-3 px-4 sm:px-6 mt-10 overflow-x-auto no-scrollbar pb-1">
-            {(['All', 'Classes', 'Events', 'Clubs'] as const).map(cat => {
-              const catLabel = cat === 'All' ? t[lang].all : cat === 'Classes' ? t[lang].classes : cat === 'Events' ? t[lang].events : t[lang].clubs;
-              const isActive = activeCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`relative px-4 sm:px-5 py-2.5 rounded-full font-semibold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
-                    ? 'bg-[#0B1F3A] text-white shadow-md'
-                    : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
-                    }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-[#0B1F3A] rounded-full"
-                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                    />
-                  )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
-                    )}
-                    {catLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </motion.div>
-
-          {/* Collections Title */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6 flex items-center gap-2">
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {activeCategory === 'All' ? t[lang].allActivities : `${t[lang].todays} ${activeCategory === 'Classes' ? t[lang].classes : activeCategory === 'Events' ? t[lang].events : t[lang].clubs}`}
-            </h2>
-            <ArrowRight className={`w-4 h-4 ${textMuted}`} />
-          </motion.div>
-
-          {/* Cards — horizontal scroll on mobile with snap, wrapping grid on desktop */}
-          {filteredItems.length > 0 ? (
-            <motion.div
-              variants={itemVariants}
-              className="flex lg:grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 px-4 sm:px-6 mt-4 overflow-x-auto lg:overflow-x-visible overflow-y-visible no-scrollbar py-4 snap-x snap-mandatory lg:snap-none scroll-pl-4"
-            >
-              {filteredItems.map((item) => {
-                const Icon = item.icon;
-                const enrolled = isEnrolled(item);
-                return (
-                  <motion.div
-                    key={item.id}
-                    onMouseEnter={() => preloadRoutes()}
-                    onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`View details for ${item.title?.[lang] ?? ''}${item.teacher ? ` by ${item.teacher?.[lang] ?? ''}` : ''}. Time: ${item.time}. Location: ${item.location?.[lang] ?? ''}.`}
-                    onKeyDown={(e) => e.key === 'Enter' && setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                    whileHover={{ y: -2, scale: 1.005 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`w-[272px] lg:w-full h-[320px] shrink-0 lg:shrink snap-start bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer active:scale-[0.98] shadow-[0_10px_25px_rgba(0,0,0,0.15),inset_0_0_2px_rgba(0,0,0,0.8)] ${enrolled ? 'border border-green-500/40' : 'border border-white/5'}`}
-                  >
-                    {/* Screen Layer (Top ~60%) */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
-                      }}
-                      className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c] shadow-[0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)] cursor-pointer group/image"
-                    >
-                      {/* Image / Neon Content */}
-                      {!loadedImages.has(item.id) && (
-                        <div className="absolute inset-0 z-0 shimmer-light" />
-                      )}
-                      <img
-                        src={item.image}
-                        alt="Course visual"
-                        onLoad={() => handleImageLoad(item.id)}
-                        loading="lazy"
-                        className={`absolute inset-0 w-full h-full object-cover saturate-150 contrast-125 transition-all duration-500 group-hover/image:scale-105 group-hover/image:opacity-80 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
-                      />
-                      {/* Glossy overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-
-                      {/* Content inside screen */}
-                      <div className="relative z-10 p-4 h-full flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col gap-1">
-                            {enrolled && (
-                              <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 w-fit shadow-sm">
-                                <Check className="w-2.5 h-2.5" />Enrolled
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] font-bold text-white/70 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm">
-                            {item.time}
-                          </span>
-                        </div>
-                        <div>
-                          <h3 className="text-sm sm:text-base font-semibold text-white leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-2">
-                            {item.title?.[lang]}
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Hardware Buttons (Bottom) */}
-                    <div className="flex gap-[1px] h-[76px] shrink-0 bg-[#0a0a0c] rounded-[18px] p-[1px] shadow-[0_1px_1px_rgba(255,255,255,0.05)]">
-                      {/* Location — widest */}
-                      <div className="flex-[2] min-w-0 bg-[#1e1e20] rounded-l-[17px] rounded-r-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#222224] active:bg-[#18181a] transition-all duration-75 group px-2">
-                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
-                          <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full">{item.location?.[lang]}</span>
-                        </div>
-                      </div>
-                      {/* Teacher */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
-                        }}
-                        className="flex-[1.5] min-w-0 bg-[#1e1e20] rounded-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#2a2a2c] active:bg-brand-yellow/20 transition-all duration-75 group px-1 cursor-pointer"
-                      >
-                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[1px] group-active:opacity-60 transition-all duration-75 w-full">
-                          <User className="w-4 h-4 text-gray-400 shrink-0 group-hover:text-white" />
-                          <span className="text-[8px] font-medium text-gray-400 leading-tight text-center line-clamp-2 w-full group-hover:text-white">{item.teacher?.[lang]}</span>
-                        </div>
-                      </div>
-                      {/* Open */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTimeout(() => navigate(`/${item.action}/${item.id}`), 100);
-                        }}
-                        className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_3px_rgba(255,255,255,0.05)] flex flex-col items-center justify-center hover:bg-[#2a2a2c] active:bg-brand-yellow/20 transition-all duration-75 group cursor-pointer"
-                      >
-                        <div className="flex flex-col items-center gap-1 group-active:translate-y-[2px] transition-all duration-75">
-                          <Icon className={`w-4 h-4 text-white group-active:text-brand-yellow`} />
-                          <span className={`text-[9px] font-bold text-white uppercase tracking-wider group-active:text-brand-yellow`}>{lang === 'en' ? 'Open' : '開く'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          ) : (
-            /* Empty state */
-            <motion.div
-              variants={itemVariants}
-              className={`mx-4 sm:mx-6 mt-4 rounded-2xl p-8 flex flex-col items-center gap-4 text-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}
-            >
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-white shadow-inner">
-                <img
-                  src={mascotIdle}
-                  alt="Mascot — nothing here"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div>
-                <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === 'en' ? 'Nothing here yet' : 'まだ何もありません'}
-                </p>
-                <p className={`text-xs mt-1 ${textMuted}`}>{t[lang].noItems}</p>
-              </div>
-            </motion.div>
-          )}
 
           {/* Two-column layout for Deadlines + News on desktop */}
           <div className="lg:grid lg:grid-cols-2 lg:gap-6 px-4 sm:px-6 mt-8">

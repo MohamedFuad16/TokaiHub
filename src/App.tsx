@@ -20,6 +20,7 @@ const lazyAssignments = () => import('./components/TokaiAssignments');
 const lazyAssignmentDetail = () => import('./components/TokaiAssignmentDetail');
 const lazyEditProfile = () => import('./components/TokaiEditProfile');
 const lazyCredits = () => import('./components/TokaiCredits');
+const lazyClass = () => import('./components/TokaiClass');
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
@@ -29,6 +30,7 @@ const TokaiAssignments = React.lazy(lazyAssignments);
 const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
 const TokaiEditProfile = React.lazy(lazyEditProfile);
 const TokaiCredits = React.lazy(lazyCredits);
+const TokaiClass = React.lazy(lazyClass);
 
 // Preload all route components after initial paint
 export function preloadRoutes() {
@@ -40,6 +42,7 @@ export function preloadRoutes() {
   lazyAssignmentDetail().catch(() => {});
   lazyEditProfile().catch(() => {});
   lazyCredits().catch(() => {});
+  lazyClass().catch(() => {});
 }
 
 // Start preloading immediately to hide chunk fetch times
@@ -81,6 +84,7 @@ export interface ScreenProps {
 const sidebarNav = [
   { path: '/', icon: Home, labelEn: 'Home', labelJp: 'ホーム' },
   { path: '/schedule', icon: Calendar, labelEn: 'Schedule', labelJp: 'スケジュール' },
+  { path: '/class', icon: ClipboardList, labelEn: 'Classes', labelJp: '授業' },
   { path: '/assignments', icon: ClipboardList, labelEn: 'Assignments', labelJp: '課題' },
   { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定' },
 ];
@@ -215,6 +219,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
                 <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
                 <Route path="/credits" element={<TokaiCredits {...screenProps} />} />
+                <Route path="/class" element={<TokaiClass {...screenProps} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

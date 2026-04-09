@@ -14,9 +14,10 @@ interface SharedMenuProps {
 
 const navItems = [
   { path: '/', icon: Home, labelEn: 'Home', labelJp: 'ホーム', descEn: 'Dashboard', descJp: 'ダッシュボード' },
-  { path: '/schedule', icon: Calendar, labelEn: 'Schedule', labelJp: 'スケジュール', descEn: 'My Classes', descJp: '授業一覧' },
+  { path: '/schedule', icon: Calendar, labelEn: 'Schedule', labelJp: 'スケジュール', descEn: 'Weekly View', descJp: '週別表示' },
+  { path: '/class', icon: ClipboardList, labelEn: 'Classes', labelJp: '授業', descEn: 'Course Explorer', descJp: '授業一覧' },
   { path: '/assignments', icon: ClipboardList, labelEn: 'Assignments', labelJp: '課題', descEn: 'Tasks & Deadlines', descJp: '提出物・締め切り' },
-  { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定', descEn: 'Preferences', descJp: '設定・環境' },
+  { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定', descEn: 'Preferences & Academic', descJp: '設定・成績' },
 ];
 
 export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }: SharedMenuProps) {
