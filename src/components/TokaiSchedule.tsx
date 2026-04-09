@@ -220,7 +220,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       </header>
 
       {/* Toggle Daily/Weekly/Monthly */}
-      <div className="px-4 sm:px-6 mb-4 max-w-2xl">
+      <div className="px-4 sm:px-6 mb-4 max-w-6xl">
         <div className={`flex ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1 shadow-inner`}>
           {(['daily', 'weekly', 'monthly'] as const).map((v) => (
             <button
@@ -239,7 +239,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
       {/* Dark Container */}
       <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
-        <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-6xl w-full mx-auto min-h-0">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-4xl w-full mx-auto min-h-0">
 
           {/* ─── NO COURSES SELECTED ─── */}
           {selectedCourseIds.length === 0 && (
