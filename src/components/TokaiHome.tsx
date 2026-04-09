@@ -176,7 +176,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
     [selectedCourseIds, courseItems]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
   const [isCalendarSheetOpen, setIsCalendarSheetOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
