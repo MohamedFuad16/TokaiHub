@@ -54,7 +54,7 @@ export interface AppSettings {
   privacy: boolean;
   devSkipAuth: boolean;
   enableEnhancedUI: boolean;
-  fontFamily: 'modern' | 'elegant' | 'minimal';
+  fontFamily: 'merry_varsity' | 'moshi_moshi' | 'one_more' | 'pramukh_rounded';
 }
 
 export interface UserProfile {
@@ -102,7 +102,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   privacy: true,
   devSkipAuth: false,
   enableEnhancedUI: false,
-  fontFamily: 'modern',
+  fontFamily: 'pramukh_rounded',
 };
 
 
@@ -251,37 +251,30 @@ export default function App() {
 
   // Dynamic Font Loading & Styling
   useEffect(() => {
-    // Gilroy is served locally — only the JP fallback font is loaded from Google Fonts
+    // If language is Japanese, don't change anything (use default Gilroy + M PLUS 2)
+    if (lang === 'jp') {
+      document.documentElement.style.setProperty('--app-font-family', '"Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, sans-serif');
+      return;
+    }
+
     const fontConfigs = {
-      modern: {
-        link: 'https://fonts.googleapis.com/css2?family=M+PLUS+2:wght@300;400;500;600;700;800;900&display=swap',
-        family: '"Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, sans-serif'
+      merry_varsity: {
+        family: '"Merry Varsity", "Gilroy", sans-serif'
       },
-      elegant: {
-        link: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=M+PLUS+2:wght@300;400;500;600;700;800;900&display=swap',
-        family: '"Poppins", "M PLUS 2", sans-serif'
+      moshi_moshi: {
+        family: '"MoshiMoshi Small", "Gilroy", sans-serif'
       },
-      minimal: {
-        link: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=M+PLUS+2:wght@300;400;500;700;900&display=swap',
-        family: '"JetBrains Mono", "M PLUS 2", monospace'
+      one_more: {
+        family: '"One More", "Gilroy", sans-serif'
+      },
+      pramukh_rounded: {
+        family: '"Pramukh Rounded", "Gilroy", sans-serif'
       }
     };
 
-    const config = fontConfigs[settings.fontFamily || 'modern'];
-
-    // 1. Inject/Update Font Link
-    let linkElement = document.getElementById('app-font-link') as HTMLLinkElement;
-    if (!linkElement) {
-      linkElement = document.createElement('link');
-      linkElement.id = 'app-font-link';
-      linkElement.rel = 'stylesheet';
-      document.head.appendChild(linkElement);
-    }
-    linkElement.href = config.link;
-
-    // 2. Apply Font to Root
+    const config = fontConfigs[settings.fontFamily] || fontConfigs.pramukh_rounded;
     document.documentElement.style.setProperty('--app-font-family', config.family);
-  }, [settings.fontFamily]);
+  }, [settings.fontFamily, lang]);
 
   useEffect(() => {
     async function checkAuthStatus() {

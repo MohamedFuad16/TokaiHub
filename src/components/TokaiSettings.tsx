@@ -230,9 +230,10 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { id: 'modern', name: lang === 'en' ? 'Modern Sans' : 'モダンサンス', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Outfit", sans-serif' },
-                    { id: 'elegant', name: lang === 'en' ? 'Gilroy Style' : 'ギロイ・スタイル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"Poppins", sans-serif' },
-                    { id: 'minimal', name: lang === 'en' ? 'Tech Minimal' : 'テックミニマル', previewEn: 'Hello Tokai', previewJp: 'こんにちは東海大学', family: '"JetBrains Mono", monospace' }
+                    { id: 'merry_varsity', name: lang === 'en' ? 'Merry Varsity' : 'メリー・バーシティ', preview: 'Hello Tokai', family: '"Merry Varsity", sans-serif' },
+                    { id: 'moshi_moshi', name: lang === 'en' ? 'MoshiMoshi' : 'もしもし', preview: 'Hello Tokai', family: '"MoshiMoshi Small", sans-serif' },
+                    { id: 'one_more', name: lang === 'en' ? 'One More' : 'ワン・モア', preview: 'Hello Tokai', family: '"One More", sans-serif' },
+                    { id: 'pramukh_rounded', name: lang === 'en' ? 'Pramukh Rounded' : 'プラムク・ラウンド', preview: 'Hello Tokai', family: '"Pramukh Rounded", sans-serif' }
                   ].map((font) => (
                     <button
                       key={font.id}
@@ -242,11 +243,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                       <div className="text-left overflow-hidden">
                         <div className="font-bold text-[10px] mb-1 opacity-60 uppercase tracking-widest">{font.name}</div>
                         <div className="flex items-center overflow-hidden">
-                           {lang === 'en' ? (
-                             <span style={{ fontFamily: font.family }} className="text-xl font-medium whitespace-nowrap">{font.previewEn}</span>
-                           ) : (
-                             <span style={{ fontFamily: font.family }} className="text-lg font-medium whitespace-nowrap tracking-tight">{font.previewJp}</span>
-                           )}
+                           <span style={{ fontFamily: font.family }} className="text-xl font-medium whitespace-nowrap">{font.preview}</span>
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center justify-center ml-2">
