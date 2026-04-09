@@ -111,8 +111,12 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               selectedCourseIds: prev.selectedCourseIds?.length
                 ? prev.selectedCourseIds
                 : (data.enrolledCourseIds ?? prev.selectedCourseIds),
-              cumulativeGpa: prev.cumulativeGpa || (data.userProfile?.cumulativeGpa ?? prev.cumulativeGpa),
-              lastSemGpa: prev.lastSemGpa || (data.userProfile?.lastSemGpa ?? prev.lastSemGpa),
+              cumulativeGpa: (typeof data.profile?.cumulativeGpa === 'number')
+                ? data.profile.cumulativeGpa
+                : prev.cumulativeGpa,
+              lastSemGpa: (typeof data.profile?.lastSemGpa === 'number')
+                ? data.profile.lastSemGpa
+                : prev.lastSemGpa,
             };
           });
         }

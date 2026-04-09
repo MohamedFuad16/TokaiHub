@@ -168,6 +168,28 @@ export const allItems: CourseItem[] = [
     overview: { en: 'Group exercises practicing project management, team building, requirements definition, system design, and presentation.', jp: 'プロジェクト管理・チームビルディング・要件定義からシステム設計・発表までを実践するグループ演習。' }
   },
   { 
+    id: 'fri-4-5', 
+    type: 'Classes', 
+    title: { en: 'Information and Telecommunication Industry', jp: '情報通信産業論' }, 
+    teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' }, 
+    location: { en: 'Shinagawa 4202', jp: '品川キャンパス 4202' },
+    dayOfWeek: 5,
+    periods: [4, 5],
+    time: '14:40 - 17:50', 
+    color: 'bg-brand-gray', 
+    image: coursePlatform, // falling back to platform image for now
+    icon: BookOpen, 
+    action: 'course',
+    code: 'TTK015',
+    credits: 2,
+    evaluation: { en: 'Attendance 30% + Assignments 70%', jp: '出席 30% / 課題 70%' },
+    evaluationBreakdown: [
+      { label: { en: 'Attendance', jp: '出席' }, percentage: 30, color: 'bg-brand-yellow' },
+      { label: { en: 'Assignments', jp: '課題' }, percentage: 70, color: 'bg-brand-pink' }
+    ],
+    overview: { en: 'Learn about the social impact and business logic of the IT and communication industry through actual case studies.', jp: 'IT・通信業界の社会的インパクトやビジネスロジックを実際のケーススタディを通じて学ぶ。' }
+  },
+  { 
     id: 'fri-3', 
     type: 'Classes', 
     title: { en: 'Platform Architecture', jp: 'プラットフォームアーキテクチャ' }, 
@@ -189,6 +211,7 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Basic concepts of platforms, IoT architecture, communication networks, and security technologies.', jp: 'プラットフォームの基本概念とIoTアーキテクチャ、通信ネットワーク・セキュリティ技術。事前にスライドPDF配布、印刷または持参必須。連絡はメール優先。' }
   },
+
 ];
 
 export const getClassesForDate = (
