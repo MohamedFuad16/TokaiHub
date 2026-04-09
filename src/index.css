@@ -59,14 +59,6 @@
 }
 
 /* ── New Custom Fonts ─────────────────────────────────────────────────────── */
-@font-face {
-  font-family: 'Merry Varsity';
-  src: url('/fonts/merry-varsity-font/Merry-Varsity.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-  size-adjust: 90%; /* Slightly smaller to look less overwhelming */
-}
 
 @font-face {
   font-family: 'MoshiMoshi Small';
@@ -85,28 +77,9 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Pramukh Rounded';
-  src: url('/fonts/pramukh-rounded-font-family/PramukhRounded-Variable.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  size-adjust: 120%; /* Fix "too small" issue */
-}
 
 /* ── Global Font Weight Overrides ────────────────────────────────────────── */
 
-/* 1. Merry Varsity Fixes (mitigate extreme thickness) */
-[data-font="merry_varsity"] .font-bold,
-[data-font="merry_varsity"] h1,
-[data-font="merry_varsity"] h2,
-[data-font="merry_varsity"] h3 {
-  font-weight: 500 !important;
-  letter-spacing: 0.02em;
-}
-[data-font="merry_varsity"] .font-semibold {
-  font-weight: 400 !important;
-}
 
 /* 2. MoshiMoshi Fixes (prevent distorted bold synthesis) */
 [data-font="moshi_moshi"] .font-bold,

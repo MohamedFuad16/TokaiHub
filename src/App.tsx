@@ -266,17 +266,11 @@ export default function App() {
       default: {
         family: '"Gilroy", "M PLUS 2", -apple-system, BlinkMacSystemFont, sans-serif'
       },
-      merry_varsity: {
-        family: '"Merry Varsity", "Gilroy", sans-serif'
-      },
       moshi_moshi: {
         family: '"MoshiMoshi Small", "Gilroy", sans-serif'
       },
       one_more: {
         family: '"One More", "Gilroy", sans-serif'
-      },
-      pramukh_rounded: {
-        family: '"Pramukh Rounded", "Gilroy", sans-serif'
       }
     };
 

@@ -287,10 +287,8 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 <div className="grid grid-cols-1 gap-3">
                   {[
                     { id: 'default', name: lang === 'en' ? 'Default (Gilroy)' : 'デフォルト（ギロイ）', preview: 'Hello Tokai', family: '"Gilroy", sans-serif' },
-                    { id: 'merry_varsity', name: lang === 'en' ? 'Merry Varsity' : 'メリー・バーシティ', preview: 'Hello Tokai', family: '"Merry Varsity", sans-serif' },
                     { id: 'moshi_moshi', name: lang === 'en' ? 'MoshiMoshi' : 'もしもし', preview: 'Hello Tokai', family: '"MoshiMoshi Small", sans-serif' },
                     { id: 'one_more', name: lang === 'en' ? 'One More' : 'ワン・モア', preview: 'Hello Tokai', family: '"One More", sans-serif' },
-                    { id: 'pramukh_rounded', name: lang === 'en' ? 'Pramukh Rounded' : 'プラムク・ラウンド', preview: 'Hello Tokai', family: '"Pramukh Rounded", sans-serif' }
                   ].map((font) => (
                     <button
                       key={font.id}

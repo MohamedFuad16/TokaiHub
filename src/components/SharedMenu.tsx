@@ -58,7 +58,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
             {/* Header */}
             <div
               style={{ paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))' }}
-              className={`px-6 pb-6 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
+              className={`px-6 pb-4 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
             >
               <div className="flex justify-between items-start">
                 <div>
@@ -80,7 +80,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
             </div>
 
             {/* Nav items */}
-            <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+            <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
               {navItems.map(({ path, icon: Icon, labelEn, labelJp, descEn, descJp }) => {
                 const active = isActive(path);
                 const label = lang === 'en' ? labelEn : labelJp;
@@ -91,7 +91,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                     onClick={() => { onClose(); setTimeout(() => navigate(path), 150); }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-all duration-200 ${
+                    className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl text-left transition-all duration-200 ${
                       active
                         ? isDark
                           ? 'bg-brand-yellow text-brand-black'
@@ -125,7 +125,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
             {/* Language + Footer */}
             <div
               style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
-              className={`px-4 pt-4 border-t shrink-0 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
+              className={`px-4 pt-3 border-t shrink-0 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
             >
               <div className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
                 {lang === 'en' ? 'Language' : '言語'}
@@ -135,7 +135,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                   <button
                     key={l}
                     onClick={() => setLang(l)}
-                    className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+                    className={`flex-1 py-1.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                       lang === l
                         ? isDark ? 'bg-brand-yellow text-brand-black shadow-sm' : 'bg-white text-brand-black shadow-sm'
                         : isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'

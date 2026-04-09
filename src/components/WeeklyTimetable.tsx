@@ -12,12 +12,12 @@ interface WeeklyTimetableProps {
 }
 
 const PERIODS = [
-  { num: 1, time: '09:00\n10:30' },
-  { num: 2, time: '10:40\n12:10' },
-  { num: 3, time: '13:00\n14:30' },
-  { num: 4, time: '14:40\n16:10' },
-  { num: 5, time: '16:20\n17:50' },
-  { num: 6, time: '18:00\n19:30' },
+  { num: 1, time: '09:00\n10:40' },
+  { num: 2, time: '10:55\n12:35' },
+  { num: 3, time: '13:25\n15:05' },
+  { num: 4, time: '15:20\n17:00' },
+  { num: 5, time: '17:15\n18:55' },
+  { num: 6, time: '19:05\n20:45' },
 ];
 
 const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
@@ -54,12 +54,12 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
           style={{
             display: 'grid',
             // Col 1 = period labels, Cols 2-7 = Mon-Sat (6 days)
-            gridTemplateColumns: '38px repeat(6, minmax(62px, 1fr))',
+            gridTemplateColumns: '38px repeat(6, minmax(0, 1fr))',
             // Row 1 = day headers, Rows 2-7 = Periods 1-6
-            gridTemplateRows: 'auto repeat(6, 96px)',
+            gridTemplateRows: 'auto repeat(6, minmax(80px, auto))',
             gap: '3px',
-            minWidth: '430px',
-            padding: '0 16px 8px 16px',
+            minWidth: '100%',
+            padding: '0 12px 8px 12px',
           }}
         >
           {/* ── Day header cells (Row 1) ── */}
