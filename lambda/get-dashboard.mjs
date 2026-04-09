@@ -85,12 +85,13 @@ export const handler = async (event) => {
     // 4️⃣ Return dashboard data — shape matches React DashboardResponse
     return response({
       profile: {
-        fullName: user.fullName,
+        name: user.name || user.fullName || "Student",
+        fullName: user.fullName || user.name || "Student",
         studentId: user.studentId,
         institutionId: user.institutionId,
         class: user.class,
-        cumulativeGpa: Number(user.cumulativeGpa || 0),
-        lastSemGpa: Number(user.lastSemGpa || 0),
+        cumulativeGpa: Number(user.cumulativeGpa ?? 0),
+        lastSemGpa: Number(user.lastSemGpa ?? 0),
       },
       // enrolledCourseIds lets the React app rebuild selectedCourseIds if localStorage is lost
       enrolledCourseIds: enrolledCourses,

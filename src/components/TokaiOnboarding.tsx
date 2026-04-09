@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Check, BookOpen, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
-import { enrollCourses, fetchAvailableCourses } from '../lib/api';
+import { enrollCourses, fetchAvailableCourses, updateProfile } from '../lib/api';
 import { allItems } from '../data';
 import type { CourseItem } from '../lib/types';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
@@ -296,8 +296,13 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
         // selectedCourseIds are API course IDs (e.g. "TTK085") — send directly to backend.
         try {
           await enrollCourses(selectedCourseIds);
+          // Persist GPA values to the user profile table
+          await updateProfile({
+            cumulativeGpa: parseFloat(cumulativeGpa),
+            lastSemGpa: parseFloat(lastSemGpa)
+          });
         } catch (enrollErr) {
-          console.error('enrollCourses failed:', enrollErr);
+          console.error('onboarding backend sync failed:', enrollErr);
           // Non-fatal — user still proceeds; they can re-select later
         }
 

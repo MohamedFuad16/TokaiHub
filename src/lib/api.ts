@@ -90,6 +90,8 @@ export interface DashboardResponse {
     studentId: string;
     institutionId: string;
     class: string;
+    cumulativeGpa?: number;
+    lastSemGpa?: number;
   };
 }
 
