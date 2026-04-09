@@ -95,7 +95,8 @@
 }
 
 /* ── Global Font Weight Overrides ────────────────────────────────────────── */
-/* Merry Varsity is naturally very thick; these overrides mitigate extra thickness */
+
+/* 1. Merry Varsity Fixes (mitigate extreme thickness) */
 [data-font="merry_varsity"] .font-bold,
 [data-font="merry_varsity"] h1,
 [data-font="merry_varsity"] h2,
@@ -103,9 +104,28 @@
   font-weight: 500 !important;
   letter-spacing: 0.02em;
 }
-
 [data-font="merry_varsity"] .font-semibold {
   font-weight: 400 !important;
+}
+
+/* 2. MoshiMoshi Fixes (prevent distorted bold synthesis) */
+[data-font="moshi_moshi"] .font-bold,
+[data-font="moshi_moshi"] .font-semibold,
+[data-font="moshi_moshi"] h1,
+[data-font="moshi_moshi"] h2,
+[data-font="moshi_moshi"] h3,
+[data-font="moshi_moshi"] b,
+[data-font="moshi_moshi"] strong {
+  font-weight: normal !important; /* This font looks best at its natural weight */
+  letter-spacing: 0.01em;
+}
+
+/* 3. One More Fixes (prevent distortion) */
+[data-font="one_more"] .font-bold,
+[data-font="one_more"] h1,
+[data-font="one_more"] h2,
+[data-font="one_more"] h3 {
+  font-weight: normal !important;
 }
 
 @theme {
