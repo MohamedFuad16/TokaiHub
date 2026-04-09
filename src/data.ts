@@ -227,7 +227,7 @@ export const allItems: CourseItem[] = [
     image: courseEnglish, // placeholder image
     icon: BookOpen,
     action: 'course',
-    code: 'TTK001',
+    code: 'AAE102',
     credits: 2,
     evaluation: { en: 'Attendance & Assignments', jp: '出席・課題評価' },
     evaluationBreakdown: [
