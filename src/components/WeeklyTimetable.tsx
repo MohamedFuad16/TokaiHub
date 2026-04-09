@@ -8,6 +8,7 @@ interface WeeklyTimetableProps {
   selectedCourseIds: string[];
   lang: Language;
   settings: AppSettings;
+  forceDark?: boolean;
 }
 
 const PERIODS = [
@@ -23,9 +24,9 @@ const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
 const WEEK_DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
 
-export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang, settings }: WeeklyTimetableProps) {
+export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang, settings, forceDark }: WeeklyTimetableProps) {
   const navigate = useNavigate();
-  const isDark = settings.isDarkMode;
+  const isDark = forceDark || settings.isDarkMode;
 
   const weeklyTimetable = React.useMemo(() => {
     const map = new Map<number, Map<number, CourseItem>>();
@@ -48,7 +49,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
       </div>
 
       {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
-      <div className="overflow-x-auto no-scrollbar -mx-4 sm:mx-0">
+      <div className="overflow-x-auto no-scrollbar w-full">
         <div
           style={{
             display: 'grid',
@@ -58,7 +59,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
             gridTemplateRows: 'auto repeat(6, 96px)',
             gap: '3px',
             minWidth: '430px',
-            padding: '0 16px',
+            padding: '0 16px 8px 16px',
           }}
         >
           {/* ── Day header cells (Row 1) ── */}

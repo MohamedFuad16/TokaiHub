@@ -271,12 +271,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               </button>
             </div>
             
-            <div className={`p-4 sm:p-6 rounded-[32px] border ${borderClass} ${isDark ? 'bg-gray-800/50' : 'bg-white shadow-sm'}`}>
+            <div className={`pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] shadow-[0_8px_30px_rgba(0,0,0,0.1)] border ${isDark ? 'border-gray-800 bg-[#121214]' : 'border-black/5 bg-[#0a0a0c]'} overflow-hidden relative`}>
               <WeeklyTimetable 
                 lang={lang}
                 settings={settings}
                 selectedCourseIds={selectedCourseIds}
                 scheduleItems={courseItems}
+                forceDark={true}
               />
             </div>
             
