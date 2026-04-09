@@ -89,8 +89,8 @@ export const handler = async (event) => {
         studentId: user.studentId,
         institutionId: user.institutionId,
         class: user.class,
-        cumulativeGpa: user.cumulativeGpa,
-        lastSemGpa: user.lastSemGpa,
+        cumulativeGpa: Number(user.cumulativeGpa || 0),
+        lastSemGpa: Number(user.lastSemGpa || 0),
       },
       // enrolledCourseIds lets the React app rebuild selectedCourseIds if localStorage is lost
       enrolledCourseIds: enrolledCourses,

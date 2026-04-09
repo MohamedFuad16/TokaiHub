@@ -101,32 +101,33 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         if (data.assignments?.length) setAssignments(data.assignments);
 
-        // Restore enrolledCourseIds only when the profile has no courses
-        // (e.g. after localStorage clear). Never overwrite a live selection.
-        if (userProfile && setUserProfile) {
+        // Restore enrolledCourseIds and GPA from API
+        if (setUserProfile) {
           setUserProfile(prev => {
-            if (!prev) return prev;
+            const current = prev || { 
+              name: '', email: '', studentId: '', campus: '', 
+              selectedCourseIds: [], cumulativeGpa: 0, lastSemGpa: 0 
+            };
+            
             return {
-              ...prev,
-              selectedCourseIds: prev.selectedCourseIds?.length
-                ? prev.selectedCourseIds
-                : (data.enrolledCourseIds ?? prev.selectedCourseIds),
-              cumulativeGpa: (typeof data.profile?.cumulativeGpa === 'number')
-                ? data.profile.cumulativeGpa
-                : prev.cumulativeGpa,
-              lastSemGpa: (typeof data.profile?.lastSemGpa === 'number')
-                ? data.profile.lastSemGpa
-                : prev.lastSemGpa,
+              ...current,
+              selectedCourseIds: current.selectedCourseIds?.length
+                ? current.selectedCourseIds
+                : (data.enrolledCourseIds ?? current.selectedCourseIds),
+              cumulativeGpa: (data.profile?.cumulativeGpa !== undefined)
+                ? Number(data.profile.cumulativeGpa)
+                : current.cumulativeGpa,
+              lastSemGpa: (data.profile?.lastSemGpa !== undefined)
+                ? Number(data.profile.lastSemGpa)
+                : current.lastSemGpa,
             };
           });
         }
-
-
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setUserProfile]);
 
   // Derive live values from userProfile
   const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';
