@@ -13,49 +13,49 @@ const TABLES = {
 // Key = courseId (DynamoDB), value = schedule info per section (A/B).
 // Add more courses here as needed.
 const COURSE_SCHEDULE = {
-  TTK085: { day: "MON", start: "09:00", end: "12:10", semesterId: "2026-SPRING",
+  TTK085: { day: "MON", start: "09:00", end: "12:35", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 1B303", professorName: "Kyoko Hasegawa" },
       B: { roomNumber: "SHINAGAWA 1B303", professorName: "Kyoko Hasegawa" },
     }
   },
-  TTK000: { day: "TUE", start: "09:00", end: "10:30", semesterId: "2026-SPRING",
+  TTK000: { day: "TUE", start: "09:00", end: "10:40", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 4102", professorName: "Sora Yamamoto" },
       B: { roomNumber: "SHINAGAWA 4102", professorName: "Sora Yamamoto" },
     }
   },
-  TTK031: { day: "TUE", start: "10:40", end: "12:10", semesterId: "2026-SPRING",
+  TTK031: { day: "TUE", start: "10:55", end: "12:35", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 4202", professorName: "Harumi Watanabe" },
       B: { roomNumber: "SHINAGAWA 4202", professorName: "Harumi Watanabe" },
     }
   },
-  TTK060: { day: "TUE", start: "13:00", end: "14:30", semesterId: "2026-SPRING",
+  TTK060: { day: "TUE", start: "13:25", end: "15:05", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 4105", professorName: "Junichi Murayama" },
       B: { roomNumber: "SHINAGAWA 4105", professorName: "Junichi Murayama" },
     }
   },
-  TTK035: { day: "THU", start: "09:00", end: "12:10", semesterId: "2026-SPRING",
+  TTK035: { day: "THU", start: "09:00", end: "12:35", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 1B202", professorName: "Hironori Nakatani" },
       B: { roomNumber: "SHINAGAWA 1B202", professorName: "Hironori Nakatani" },
     }
   },
-  TTK090: { day: "THU", start: "13:00", end: "16:10", semesterId: "2026-SPRING",
+  TTK090: { day: "THU", start: "13:25", end: "17:00", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 1B202", professorName: "Mikako Sato" },
       B: { roomNumber: "SHINAGAWA 1B202", professorName: "Mikako Sato" },
     }
   },
-  TTK010: { day: "FRI", start: "09:00", end: "10:30", semesterId: "2026-SPRING",
+  TTK010: { day: "FRI", start: "09:00", end: "12:35", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 1B202", professorName: "Yoshihisa Takayama" },
       B: { roomNumber: "SHINAGAWA 1B202", professorName: "Yoshihisa Takayama" },
     }
   },
-  TTK065: { day: "FRI", start: "13:00", end: "14:30", semesterId: "2026-SPRING",
+  TTK065: { day: "FRI", start: "13:25", end: "15:05", semesterId: "2026-SPRING",
     sections: {
       A: { roomNumber: "SHINAGAWA 4101", professorName: "Satoshi Yamazaki" },
       B: { roomNumber: "SHINAGAWA 4101", professorName: "Satoshi Yamazaki" },

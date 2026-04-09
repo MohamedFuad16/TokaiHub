@@ -78,7 +78,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               item => item.id === apiItem.id || item.code === apiItem.code
             );
 
-            // 🔥 normalize dayOfWeek (fix)
+            // normalize dayOfWeek (fix)
             let normalizedDay = apiItem.dayOfWeek;
 
             // If API uses 0–6 (Sun–Sat), convert to 1–6 (Mon–Sat)
