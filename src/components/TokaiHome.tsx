@@ -74,15 +74,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
   useEffect(() => {
     const controller = new AbortController();
+
     getDashboard(controller.signal)
       .then(data => {
-        // Safely merge API courses with local localized strings
+        console.log("🔥 DASHBOARD RESPONSE:", data);
+
+        // ✅ Merge courses
         if (data.courses?.length) {
           const mergedCourses = data.courses.map(apiCourse => {
-            const local = (allItems as CourseItem[]).find(item => item.id === apiCourse.id || item.code === apiCourse.code);
+            const local = (allItems as CourseItem[]).find(
+              item => item.id === apiCourse.id || item.code === apiCourse.code
+            );
             if (!local) return apiCourse;
 
-            // Normalize localized string fields — API may return plain strings
             return {
               ...apiCourse,
               title: typeof apiCourse.title === 'string'
@@ -96,37 +100,66 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
             };
           });
+
           setCourseItems(mergedCourses as CourseItem[]);
         }
 
-        if (data.assignments?.length) setAssignments(data.assignments);
+        // ✅ Assignments
+        if (data.assignments?.length) {
+          setAssignments(data.assignments);
+        }
 
-        // Restore enrolledCourseIds and GPA from API
+        // ✅ Normalize ALL possible API shapes
+        const profile =
+          data.profile ??
+          data.user ??
+          data.Item ??   // DynamoDB
+          data;
+
+        console.log("✅ NORMALIZED PROFILE:", profile);
+
+        // ✅ Update user profile safely
         if (setUserProfile) {
           setUserProfile(prev => {
-            const current = prev || { 
-              name: '', email: '', studentId: '', campus: '', 
-              selectedCourseIds: [], cumulativeGpa: 0, lastSemGpa: 0 
+            const current = prev || {
+              name: '',
+              email: '',
+              studentId: '',
+              campus: '',
+              selectedCourseIds: [],
+              cumulativeGpa: 0,
+              lastSemGpa: 0
             };
-            
+
+            const safeCumGpa = Number(profile?.cumulativeGpa);
+            const safeLastSemGpa = Number(profile?.lastSemGpa);
+
             return {
               ...current,
-              selectedCourseIds: current.selectedCourseIds?.length
-                ? current.selectedCourseIds
-                : (data.enrolledCourseIds ?? current.selectedCourseIds),
-              cumulativeGpa: (data.profile?.cumulativeGpa !== undefined)
-                ? Number(data.profile.cumulativeGpa)
+
+              selectedCourseIds:
+                current.selectedCourseIds?.length
+                  ? current.selectedCourseIds
+                  : (data.enrolledCourseIds ?? current.selectedCourseIds),
+
+              cumulativeGpa: !isNaN(safeCumGpa)
+                ? safeCumGpa
                 : current.cumulativeGpa,
-              lastSemGpa: (data.profile?.lastSemGpa !== undefined)
-                ? Number(data.profile.lastSemGpa)
+
+              lastSemGpa: !isNaN(safeLastSemGpa)
+                ? safeLastSemGpa
                 : current.lastSemGpa,
             };
           });
         }
       })
-      .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
+      .catch(err => {
+        if (err?.name !== 'AbortError') {
+          console.error("❌ DASHBOARD ERROR:", err);
+        }
+      });
+
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setUserProfile]);
 
   // Derive live values from userProfile

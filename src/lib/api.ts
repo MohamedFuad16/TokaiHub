@@ -95,7 +95,9 @@ export interface DashboardResponse {
 
 /** Fetches dashboard summary data: courses, assignments, and user profile. */
 export async function getDashboard(signal?: AbortSignal): Promise<DashboardResponse> {
-  return apiFetch<DashboardResponse>('/dashboard', signal);
+  const res = await fetch("/get-dashboard", { signal });
+  const data = await res.json();
+  return data;
 }
 
 // ─── Schedule ──────────────────────────────────────────────────────────────────
