@@ -54,11 +54,11 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
           style={{
             display: 'grid',
             // Col 1 = period labels, Cols 2-7 = Mon-Sat (6 days)
-            gridTemplateColumns: '38px repeat(6, minmax(0, 1fr))',
+            gridTemplateColumns: '38px repeat(6, minmax(60px, 1fr))',
             // Row 1 = day headers, Rows 2-7 = Periods 1-6
             gridTemplateRows: 'auto repeat(6, minmax(80px, auto))',
             gap: '3px',
-            minWidth: '100%',
+            minWidth: 'max-content',
             padding: '0 12px 8px 12px',
           }}
         >
@@ -86,7 +86,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
               className="flex flex-col items-center justify-start pt-2 pr-1"
             >
               <span className="text-brand-yellow font-bold text-sm leading-none">{period.num}</span>
-              <span className={`text-[8px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/20' : 'text-gray-300'}`}>{period.time}</span>
+              <span className={`text-[8px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{period.time}</span>
             </div>
           ))}
 
