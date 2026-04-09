@@ -214,7 +214,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
           {/* ─── WEEKLY TIMETABLE VIEW ─── */}
           {view === 'weekly' && selectedCourseIds.length > 0 && (
-            <motion.div variants={itemVariants} className={`pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] shadow-[0_8px_30px_rgba(0,0,0,0.1)] border ${isDark ? 'border-gray-800 bg-[#121214]' : 'border-black/5 bg-[#0a0a0c]'} overflow-hidden relative`}>
+            <motion.div variants={itemVariants} className="bg-white/5 pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden relative">
               <WeeklyTimetable 
                 lang={lang}
                 settings={settings}

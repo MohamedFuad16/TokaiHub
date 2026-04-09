@@ -49,12 +49,13 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
       </div>
 
       {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
-      <div className="overflow-x-auto no-scrollbar w-full">
+      <div className="overflow-x-auto no-scrollbar w-full" style={{ containerType: 'inline-size' }}>
         <div
           style={{
             display: 'grid',
             // Col 1 = period labels, Cols 2-7 = Mon-Sat (6 days)
-            gridTemplateColumns: '38px repeat(6, minmax(60px, 1fr))',
+            // Match 5 days to 100cqw: (100cqw - 38px(Col1) - 15px(gaps) - 24px(padding)) / 5 = 100cqw - 77px
+            gridTemplateColumns: 'min-content repeat(6, calc((100cqw - 77px) / 5))',
             // Row 1 = day headers, Rows 2-7 = Periods 1-6
             gridTemplateRows: 'auto repeat(6, minmax(80px, auto))',
             gap: '3px',
