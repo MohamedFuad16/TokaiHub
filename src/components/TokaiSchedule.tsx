@@ -106,7 +106,69 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     return () => controller.abort();
   }, []);
 
+  const [monthlySelected, setMonthlySelected] = useState<Date>(new Date());
+  
+  const handlePrevMonth = useCallback(() => {
+    setMonthlySelected(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setMonthlySelected(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  }, []);
+
+  const monthYear = monthlySelected;
+  const daysInMonth = new Date(monthYear.getFullYear(), monthYear.getMonth() + 1, 0).getDate();
+  const firstDay = new Date(monthYear.getFullYear(), monthYear.getMonth(), 1).getDay();
+  const monthName = monthYear.toLocaleString('en-US', { month: 'long' });
+  const year = monthYear.getFullYear();
+
+  const daysWithClasses = useMemo(() => {
+    const year = monthlySelected.getFullYear();
+    const month = monthlySelected.getMonth();
+    const count = new Date(year, month + 1, 0).getDate();
+    const s = new Set<number>();
+    for (let d = 1; d <= count; d++) {
+      const date = new Date(year, month, d);
+      if (getClassesForDate(date, selectedCourseIds, scheduleItems).length > 0) s.add(d);
+    }
+    return s;
+  }, [monthlySelected, selectedCourseIds, scheduleItems]);
+
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date());
+
+  const handleCalendarDayClick = useCallback((date: Date) => {
+    setCalendarSelectedDate(date);
+    setMonthlySelected(date);
+  }, []);
+
+  const monthlySelectedClasses = useMemo(() => {
+    if (!monthlySelected) return [];
+    return getClassesForDate(calendarSelectedDate, selectedCourseIds, scheduleItems);
+  }, [calendarSelectedDate, selectedCourseIds, scheduleItems]);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const isDark = settings.isDarkMode;
+  const bgClass = isDark ? 'bg-gray-900' : 'bg-brand-black';
+
+  return (
+    <div className="h-full relative flex flex-col">
+      {/* Header */}
+      <header
+        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
+        className="flex justify-between items-center p-4 sm:p-6 shrink-0"
+      >
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'}
+            className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors lg:hidden`}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-[24px] sm:text-[28px] lg:text-[32px] font-bold tracking-tight">{t[lang].schedule}</h1>
+        </div>
+      </header>
 
       {/* Toggle Weekly/Monthly */}
       <div className="px-4 sm:px-6 mb-4 max-w-6xl">
