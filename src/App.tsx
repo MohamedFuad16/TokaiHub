@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
 import { configureAmplify } from './lib/awsConfig';
-import { clearCoursesCache } from './lib/api';
+import { clearCoursesCache, getDashboard } from './lib/api';
 
 configureAmplify();
 
@@ -292,19 +292,33 @@ export default function App() {
         if (attrs.locale) {
           setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
         }
-        // Preserve any persisted profile data (e.g. selectedCourseIds edited by the user)
-        // and only fall back to defaults for fields not stored yet.
-        setUserProfile(prev => ({
+        
+        const initialProfile: UserProfile = {
           name: attrs.name || 'Student',
           email: attrs.email || user.username,
           studentId: (attrs['custom:studentId'] as string) || '4CJE1108',
-          campus: prev?.campus ?? 'shinagawa',
-          selectedCourseIds: prev?.selectedCourseIds ?? [],
-          cumulativeGpa: prev?.cumulativeGpa ?? 0,
-          lastSemGpa: prev?.lastSemGpa ?? 0,
+          campus: 'shinagawa',
+          selectedCourseIds: [],
+          cumulativeGpa: 0,
+          lastSemGpa: 0,
           isVerified: true,
-        }));
+        };
+        setUserProfile(initialProfile);
         setIsAuthenticated(true);
+
+        // Fetch fresh academic data (GPA/Courses) from API immediately
+        getDashboard().then(data => {
+          setUserProfile(prev => {
+            if (!prev) return initialProfile;
+            return {
+              ...prev,
+              selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
+              cumulativeGpa: data.profile?.cumulativeGpa ?? prev.cumulativeGpa,
+              lastSemGpa: data.profile?.lastSemGpa ?? prev.lastSemGpa,
+            };
+          });
+        }).catch(err => console.error('Failed to sync profile on boot:', err));
+
       } catch (e) {
         // Stale session pointing to a deleted Cognito user — clear it so sign-up works fresh
         try { await signOut(); } catch { /* ignore */ }
@@ -345,18 +359,33 @@ export default function App() {
         setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
       }
 
-      setUserProfile(prev => ({
+      const initialProfile: UserProfile = {
         name: attrs.name || 'Student',
         email: attrs.email || user.username,
         studentId: attrs['custom:studentId'] as string,
-        campus: prev?.campus ?? 'shinagawa',
-        selectedCourseIds: prev?.selectedCourseIds ?? [],
-        cumulativeGpa: prev?.cumulativeGpa ?? 0,
-        lastSemGpa: prev?.lastSemGpa ?? 0,
+        campus: 'shinagawa',
+        selectedCourseIds: [],
+        cumulativeGpa: 0,
+        lastSemGpa: 0,
         isVerified: true,
-      }));
-
+      };
+      
+      setUserProfile(initialProfile);
       setIsAuthenticated(true);
+
+      // Fetch fresh data from API after login
+      getDashboard().then(data => {
+        setUserProfile(prev => {
+          if (!prev) return initialProfile;
+          return {
+            ...prev,
+            selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
+            cumulativeGpa: data.profile?.cumulativeGpa ?? prev.cumulativeGpa,
+            lastSemGpa: data.profile?.lastSemGpa ?? prev.lastSemGpa,
+          };
+        });
+      }).catch(err => console.error('Failed to sync profile after login:', err));
+
     } catch (err) {
       console.error(err);
     } finally {

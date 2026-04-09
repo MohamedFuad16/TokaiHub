@@ -12,18 +12,18 @@ import courseProject from './assets/courses/course_project.png';
 import coursePlatform from './assets/courses/course_platform.png';
 
 export const allItems: CourseItem[] = [
-  { 
-    id: 'mon-1-2', 
-    type: 'Classes', 
-    title: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' }, 
-    teacher: { en: 'Kyoko Hasegawa', jp: '長谷川 恭子' }, 
+  {
+    id: 'mon-1-2',
+    type: 'Classes',
+    title: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' },
+    teacher: { en: 'Kyoko Hasegawa', jp: '長谷川 恭子' },
     location: { en: 'Shinagawa 1B303', jp: '品川キャンパス 1B303 コンピュータ室' },
     dayOfWeek: 1, // Monday
     periods: [1, 2],
-    time: '09:00 - 12:10', 
-    color: 'bg-brand-pink', 
-    image: courseVR, 
-    icon: BookOpen, 
+    time: '09:00 - 12:10',
+    color: 'bg-brand-pink',
+    image: courseVR,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK085',
     credits: 3,
@@ -34,18 +34,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Learn 3D CG (modeling, coordinate transformation, rendering) using OpenGL, and create original VR works using a game engine.', jp: 'OpenGLによる3次元CG（モデリング・座標変換・レンダリング）の基礎を習得し、ゲームエンジンを用いたVR開発でオリジナル作品を制作する。PC演習中心。フィードバックはTeams経由。' }
   },
-  { 
-    id: 'tue-1', 
-    type: 'Classes', 
-    title: { en: 'Technical English', jp: '技術英語' }, 
-    teacher: { en: 'Sora Yamamoto', jp: '山本 宙' }, 
+  {
+    id: 'tue-1',
+    type: 'Classes',
+    title: { en: 'Technical English', jp: '技術英語' },
+    teacher: { en: 'Sora Yamamoto', jp: '山本 宙' },
     location: { en: 'Shinagawa 4102', jp: '品川キャンパス 4102' },
     dayOfWeek: 2, // Tuesday
     periods: [1],
-    time: '09:00 - 10:30', 
-    color: 'bg-brand-green', 
-    image: courseEnglish, 
-    icon: BookOpen, 
+    time: '09:00 - 10:30',
+    color: 'bg-brand-green',
+    image: courseEnglish,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK000',
     credits: 2,
@@ -55,18 +55,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Reading technical documents, English presentations, engineering/IT specialized English expressions, and practical writing.', jp: '技術文書の読解・英語プレゼンテーション・工学/IT専門英語表現・ライティングの実践。シラバスPDF持参。' }
   },
-  { 
-    id: 'tue-2', 
-    type: 'Classes', 
-    title: { en: 'Software Design Modeling', jp: 'ソフトウェア設計モデリング' }, 
-    teacher: { en: 'Harumi Watanabe', jp: '渡辺 晴美' }, 
+  {
+    id: 'tue-2',
+    type: 'Classes',
+    title: { en: 'Software Design Modeling', jp: 'ソフトウェア設計モデリング' },
+    teacher: { en: 'Harumi Watanabe', jp: '渡辺 晴美' },
     location: { en: 'Shinagawa 4202', jp: '品川キャンパス 4202' },
     dayOfWeek: 2,
     periods: [2],
-    time: '10:40 - 12:10', 
-    color: 'bg-brand-yellow', 
-    image: courseSoftware, 
-    icon: BookOpen, 
+    time: '10:40 - 12:10',
+    color: 'bg-brand-yellow',
+    image: courseSoftware,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK031',
     credits: 2,
@@ -80,18 +80,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Software design and modeling using UML. PBL group exercises based on QCD principles.', jp: 'UMLを用いたソフトウェア設計・モデリング。QCD原則に基づくPBLグループ演習（テーマ選定→モデリング→発表）。企業での実務経験をもとに指導。Teamsコード: atu6xe6' }
   },
-  { 
-    id: 'tue-3', 
-    type: 'Classes', 
-    title: { en: 'Cloud Computing', jp: 'クラウドコンピューティング' }, 
-    teacher: { en: 'Junichi Murayama', jp: '村山 純一' }, 
+  {
+    id: 'tue-3',
+    type: 'Classes',
+    title: { en: 'Cloud Computing', jp: 'クラウドコンピューティング' },
+    teacher: { en: 'Junichi Murayama', jp: '村山 純一' },
     location: { en: 'Shinagawa 4105', jp: '品川キャンパス 4105' },
     dayOfWeek: 2,
     periods: [3],
-    time: '13:00 - 14:30', 
-    color: 'bg-blue-200', 
-    image: courseCloud, 
-    icon: BookOpen, 
+    time: '13:00 - 14:30',
+    color: 'bg-blue-200',
+    image: courseCloud,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK060',
     credits: 2,
@@ -101,18 +101,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Virtualization technology, IaaS/PaaS/SaaS, client-server communication technology.', jp: '仮想化技術・IaaS/PaaS/SaaS・クライアントサーバ型通信技術。毎回ノートPC持参必須。参考書: 西村泰洋「図解まるわかり クラウドの仕組み」(翔泳社)' }
   },
-  { 
-    id: 'thu-1-2', 
-    type: 'Classes', 
-    title: { en: 'Human Interface', jp: 'ヒューマンインタフェース' }, 
-    teacher: { en: 'Hironori Nakatani / Yoshio Kakizaki', jp: '中谷 裕教 / 柿崎 淑郎' }, 
+  {
+    id: 'thu-1-2',
+    type: 'Classes',
+    title: { en: 'Human Interface', jp: 'ヒューマンインタフェース' },
+    teacher: { en: 'Hironori Nakatani / Yoshio Kakizaki', jp: '中谷 裕教 / 柿崎 淑郎' },
     location: { en: 'Shinagawa 1B202', jp: '品川キャンパス 1B202 通信ネットワーク特殊実験室' },
     dayOfWeek: 4, // Thursday
     periods: [1, 2],
-    time: '09:00 - 12:10', 
-    color: 'bg-orange-200', 
-    image: courseInterface, 
-    icon: BookOpen, 
+    time: '09:00 - 12:10',
+    color: 'bg-orange-200',
+    image: courseInterface,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK035',
     credits: 3,
@@ -123,41 +123,44 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Measurement and analysis of human cognitive functions and behavioral characteristics, HCI and cybersecurity, information design.', jp: '人の認知機能・行動特性の計測と分析、HCIとサイバーセキュリティ、情報デザイン。講義＋演習形式。アクティブラーニング科目。' }
   },
-  { 
-    id: 'thu-3-4', 
-    type: 'Classes', 
-    title: { en: 'Mobile App Dev', jp: 'モバイルアプリケーション開発' }, 
-    teacher: { en: 'Mikako Sato', jp: '佐藤 未来子' }, 
+  {
+    id: 'thu-3-4',
+    type: 'Classes',
+    title: { en: 'Mobile App Dev', jp: 'モバイルアプリケーション開発' },
+    teacher: { en: 'Mikako Sato', jp: '佐藤 未来子' },
     location: { en: 'Shinagawa 1B202', jp: '品川キャンパス 1B202 通信ネットワーク特殊実験室' },
     dayOfWeek: 4,
     periods: [3, 4],
-    time: '13:00 - 16:10', 
-    color: 'bg-brand-pink', 
-    image: courseMobile, 
-    icon: BookOpen, 
+    time: '13:00 - 16:10',
+    color: 'bg-brand-pink',
+    image: courseMobile,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK090',
     credits: 3,
-    evaluation: { en: 'Assignments, Development Artifacts, Presentation', jp: '課題・開発成果物・発表' },
+    evaluation: { en: 'Assignments 30% + Artifacts 40% + Presentation 30%', jp: '課題 30% / 開発成果物 40% / 発表 30%' },
     evaluationBreakdown: [
       { label: { en: 'Assignments', jp: '課題' }, percentage: 30, color: 'bg-brand-yellow' },
       { label: { en: 'Artifacts', jp: '開発成果物' }, percentage: 40, color: 'bg-brand-pink' },
       { label: { en: 'Presentation', jp: '発表' }, percentage: 30, color: 'bg-brand-green' }
     ],
-    overview: { en: 'App development environment setup, UI/UX design, API integration, device function utilization, testing and deployment.', jp: 'アプリ開発環境構築、UI/UXデザイン、API連携、デバイス機能活用、テスト・デプロイまで実践。詳細シラバスはTIPSで確認。' }
+    overview: {
+      en: 'Introduces mobile application development including differences from PC applications, native and hybrid apps, and multi-platform approaches. Students learn programming fundamentals using HTML, CSS, and JavaScript through Monaca, including WebView-based mobile programming, sensor and camera integration, and testing on emulators and real devices. In the second half, students apply these skills in a group project to design and develop a mobile application.',
+      jp: 'PC向けアプリとの違い、ネイティブ・ハイブリッド・マルチプラットフォームの手法の違いからモバイルアプリ開発の基礎を学ぶ。Monacaを用い、HTML/CSS/JavaScriptによるWebViewベースのプログラミング、センサー・カメラ連携、実機・エミュレータによるテスト戦術を習得。後半はグループ実習でオリジナルアプリの設計・開発を行う。'
+    }
   },
-  { 
-    id: 'fri-1', 
-    type: 'Classes', 
-    title: { en: 'Project Practicum 1', jp: 'プロジェクト実習１' }, 
-    teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' }, 
+  {
+    id: 'fri-1',
+    type: 'Classes',
+    title: { en: 'Project Practicum 1', jp: 'プロジェクト実習１' },
+    teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' },
     location: { en: 'Shinagawa 1B202', jp: '品川キャンパス 1B202 通信ネットワーク特殊実験室' },
     dayOfWeek: 5, // Friday
     periods: [1, 2],
-    time: '09:00 - 12:10', 
-    color: 'bg-brand-green', 
-    image: courseProject, 
-    icon: BookOpen, 
+    time: '09:00 - 12:10',
+    color: 'bg-brand-green',
+    image: courseProject,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK010',
     credits: 2,
@@ -167,18 +170,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Group exercises practicing project management, team building, requirements definition, system design, and presentation.', jp: 'プロジェクト管理・チームビルディング・要件定義からシステム設計・発表までを実践するグループ演習。' }
   },
-  { 
-    id: 'fri-4-5', 
-    type: 'Classes', 
-    title: { en: 'Information and Telecommunication Industry', jp: '情報通信産業論' }, 
-    teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' }, 
+  {
+    id: 'fri-4-5',
+    type: 'Classes',
+    title: { en: 'Information and Telecommunication Industry', jp: '情報通信産業論' },
+    teacher: { en: 'Yoshihisa Takayama', jp: '高山 佳久' },
     location: { en: 'Shinagawa 4202', jp: '品川キャンパス 4202' },
     dayOfWeek: 5,
     periods: [4, 5],
-    time: '14:40 - 17:50', 
-    color: 'bg-brand-gray', 
+    time: '14:40 - 17:50',
+    color: 'bg-brand-gray',
     image: coursePlatform, // falling back to platform image for now
-    icon: BookOpen, 
+    icon: BookOpen,
     action: 'course',
     code: 'TTK015',
     credits: 2,
@@ -189,18 +192,18 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Learn about the social impact and business logic of the IT and communication industry through actual case studies.', jp: 'IT・通信業界の社会的インパクトやビジネスロジックを実際のケーススタディを通じて学ぶ。' }
   },
-  { 
-    id: 'fri-3', 
-    type: 'Classes', 
-    title: { en: 'Platform Architecture', jp: 'プラットフォームアーキテクチャ' }, 
-    teacher: { en: 'Satoshi Yamazaki', jp: '山崎 悟史' }, 
+  {
+    id: 'fri-3',
+    type: 'Classes',
+    title: { en: 'Platform Architecture', jp: 'プラットフォームアーキテクチャ' },
+    teacher: { en: 'Satoshi Yamazaki', jp: '山崎 悟史' },
     location: { en: 'Shinagawa 4101', jp: '品川キャンパス 4101' },
     dayOfWeek: 5,
     periods: [3],
-    time: '13:00 - 14:30', 
-    color: 'bg-brand-yellow', 
-    image: coursePlatform, 
-    icon: BookOpen, 
+    time: '13:00 - 14:30',
+    color: 'bg-brand-yellow',
+    image: coursePlatform,
+    icon: BookOpen,
     action: 'course',
     code: 'TTK065',
     credits: 2,
@@ -211,7 +214,27 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Basic concepts of platforms, IoT architecture, communication networks, and security technologies.', jp: 'プラットフォームの基本概念とIoTアーキテクチャ、通信ネットワーク・セキュリティ技術。事前にスライドPDF配布、印刷または持参必須。連絡はメール優先。' }
   },
-
+  {
+    id: 'mon-4',
+    type: 'Classes',
+    title: { en: 'Introduction to German Speaking Countries', jp: 'ドイツ語圏諸国入門' },
+    teacher: { en: 'TBD', jp: '未定' },
+    location: { en: 'Online (Teams)', jp: 'オンライン (Teams)' },
+    dayOfWeek: 1, // Monday
+    periods: [4],
+    time: '14:40 - 16:10',
+    color: 'bg-brand-gray',
+    image: courseEnglish, // placeholder image
+    icon: BookOpen,
+    action: 'course',
+    code: 'TTK001',
+    credits: 2,
+    evaluation: { en: 'Attendance & Assignments', jp: '出席・課題評価' },
+    evaluationBreakdown: [
+      { label: { en: 'Participation', jp: '参加度' }, percentage: 100, color: 'bg-brand-gray' }
+    ],
+    overview: { en: 'Comprehensive introduction to the culture, history, and society of German-speaking countries. Conducted online via Teams.', jp: 'ドイツ語圏諸国の文化、歴史、社会に関する包括的な導入。Teamsによるオンライン形式。' }
+  },
 ];
 
 export const getClassesForDate = (
