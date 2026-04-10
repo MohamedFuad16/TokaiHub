@@ -269,7 +269,7 @@ export const allItems: CourseItem[] = [
     periods: [3],
     time: '13:25 - 15:05',
     color: 'bg-purple-300',
-    image: courseProgramming, // placeholder image
+    image: courseSoftware, // placeholder image
     icon: BookOpen,
     action: 'course',
     code: 'BBE217',
