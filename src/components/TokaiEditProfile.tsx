@@ -24,6 +24,16 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Sync state if userProfile updates in the background after mounting
+  useEffect(() => {
+    if (userProfile && !isSaving && !saved) {
+      setCumulativeGpa(userProfile.cumulativeGpa?.toString() ?? '');
+      setLastSemGpa(userProfile.lastSemGpa?.toString() ?? '');
+      setSelectedCourseIds(userProfile.selectedCourseIds ?? []);
+    }
+  }, [userProfile, isSaving, saved]);
+
   const abortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
 
