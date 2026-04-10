@@ -306,11 +306,15 @@ export default function App() {
         getDashboard().then(data => {
           setUserProfile(prev => {
             if (!prev) return initialProfile;
+            const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
+            const rawCum = Number(profileData.cumulativeGpa);
+            const rawLast = Number(profileData.lastSemGpa);
+            
             return {
               ...prev,
               selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
-              cumulativeGpa: data.profile?.cumulativeGpa ?? prev.cumulativeGpa,
-              lastSemGpa: data.profile?.lastSemGpa ?? prev.lastSemGpa,
+              cumulativeGpa: rawCum > 0 ? rawCum : prev.cumulativeGpa,
+              lastSemGpa: rawLast > 0 ? rawLast : prev.lastSemGpa,
             };
           });
         }).catch(err => console.error('Failed to sync profile on boot:', err));
@@ -373,11 +377,15 @@ export default function App() {
       getDashboard().then(data => {
         setUserProfile(prev => {
           if (!prev) return initialProfile;
+          const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
+          const rawCum = Number(profileData.cumulativeGpa);
+          const rawLast = Number(profileData.lastSemGpa);
+
           return {
             ...prev,
             selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
-            cumulativeGpa: data.profile?.cumulativeGpa ?? prev.cumulativeGpa,
-            lastSemGpa: data.profile?.lastSemGpa ?? prev.lastSemGpa,
+            cumulativeGpa: rawCum > 0 ? rawCum : prev.cumulativeGpa,
+            lastSemGpa: rawLast > 0 ? rawLast : prev.lastSemGpa,
           };
         });
       }).catch(err => console.error('Failed to sync profile after login:', err));

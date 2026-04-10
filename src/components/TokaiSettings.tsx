@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut, Code2, Pencil, B
 import { ScreenProps, UserProfile } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { allItems } from '../data';
 
 const t = {
   en: {
@@ -189,15 +190,19 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
               <div className={`text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
                 {(() => {
                     const ids = userProfile?.selectedCourseIds ?? [];
-                    // Note: In real app we'd filter from courseItems, here we'll assume the component has access or just show a placeholder/derive
-                    // For now, I'll use a simplified version or just show the ID count as a proxy if credits aren't readily available here.
-                    // Actually, let's just use the userProfile data directly if we had a credits field, but it's derived in Home.
-                    // I will add a simple logic to show the count of enrolled courses if credits aren't synced to profile object.
-                    return ids.length * 2; // Assuming 2 credits per course for UI purposes if not pre-calculated
+                    const credits = allItems
+                      .filter(item => item.type === 'Classes' && (ids.includes(item.id) || ids.includes(item.code ?? '')))
+                      .reduce((acc, item) => acc + (item.credits || 0), 0);
+                    return credits;
                 })()}
               </div>
               <div className={`mt-3 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <div className={`h-full rounded-full transition-all duration-700 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: '60%' }} />
+                <div className={`h-full rounded-full transition-all duration-700 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min(((() => {
+                    const ids = userProfile?.selectedCourseIds ?? [];
+                    return allItems
+                      .filter(item => item.type === 'Classes' && (ids.includes(item.id) || ids.includes(item.code ?? '')))
+                      .reduce((acc, item) => acc + (item.credits || 0), 0);
+                })() / 20) * 100, 100)}%` }} />
               </div>
               <p className={`text-[10px] font-bold mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'} uppercase tracking-tighter`}>
                  {lang === 'en' ? 'View Breakdown →' : '内訳を表示 →'}

@@ -251,40 +251,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </div>
           </motion.div>
 
-          {/* Academic Overview (GPA & Credits) */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-2 gap-3 sm:gap-4">
-            {/* Cumulative GPA */}
-            <div className={`p-4 sm:p-5 rounded-3xl shadow-sm border ${isDark ? 'bg-[#1e1e20] border-white/5 shadow-[inset_0_2px_10px_rgba(255,255,255,0.02)]' : 'bg-white border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'}`}>
-              <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
-                <Target className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-[11px] sm:text-xs font-semibold uppercase tracking-wider ${textMuted}`}>{t[lang].gpa}</span>
-              </div>
-              <div className={`text-3xl sm:text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {cumGpa.toFixed(2)}
-              </div>
-              <div className="mt-2.5 inline-flex items-center px-2 py-1 rounded-lg bg-green-500/10 text-green-500 text-[10px] sm:text-xs font-semibold">
-                {lang === 'en' ? `Last Sem: ${lastSemGpa.toFixed(2)}` : `前学期: ${lastSemGpa.toFixed(2)}`}
-              </div>
-            </div>
-
-            {/* Selected Credits */}
-            <div 
-              onClick={() => navigate('/credits')}
-              className={`p-4 sm:p-5 rounded-3xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm border ${isDark ? 'bg-[#1e1e20] border-white/5 shadow-[inset_0_2px_10px_rgba(255,255,255,0.02)]' : 'bg-white border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]'}`}
-            >
-              <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
-                <GraduationCap className={`w-3.5 h-3.5 ${textMuted}`} />
-                <span className={`text-[11px] sm:text-xs font-semibold uppercase tracking-wider ${textMuted}`}>{t[lang].credits}</span>
-              </div>
-              <div className={`text-3xl sm:text-4xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {selectedCredits}
-              </div>
-              <div className={`mt-2.5 inline-flex items-center px-2 py-1 rounded-lg text-[10px] sm:text-xs font-semibold ${isDark ? 'text-blue-400 bg-blue-500/20' : 'text-blue-600 bg-blue-100'}`}>
-                {lang === 'en' ? 'Selected' : '履修中'}
-              </div>
-            </div>
-          </motion.div>
-
           {/* Weekly Schedule Section */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-10">
             <div className="flex items-center justify-between mb-6">
