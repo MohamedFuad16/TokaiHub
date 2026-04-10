@@ -133,7 +133,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
             <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
               TOKAI<br /><span className="text-brand-yellow">HUB</span>
             </div>
-            <img src={mascotLogo} alt="Tokai Mascot" className="w-10 h-10 object-contain ml-1 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
+            <img src={mascotLogo} alt="Tokai Mascot" className="w-auto h-12 object-contain ml-1 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
           </div>
           <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}</p>
           {userProfile && (

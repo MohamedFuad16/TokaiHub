@@ -71,7 +71,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                       {lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}
                     </p>
                   </div>
-                  <img src={mascotLogo} alt="Tokai Mascot" className="w-10 h-10 object-contain ml-2 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
+                  <img src={mascotLogo} alt="Tokai Mascot" className="w-auto h-12 object-contain ml-2 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
                 </div>
                 <button
                   onClick={onClose}
