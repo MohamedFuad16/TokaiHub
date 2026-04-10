@@ -27,6 +27,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
 
   // Sync state if userProfile updates in the background after mounting
   useEffect(() => {
+    console.log("TokaiEditProfile sync effect triggered. userProfile:", userProfile);
     if (userProfile && !isSaving && !saved) {
       setCumulativeGpa(userProfile.cumulativeGpa?.toString() ?? '');
       setLastSemGpa(userProfile.lastSemGpa?.toString() ?? '');
