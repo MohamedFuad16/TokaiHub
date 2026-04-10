@@ -70,6 +70,18 @@
 }
 
 @font-face {
+  font-family: 'MoshiMoshi Small';
+  src: url('/fonts/Gilroy-Heavy.woff') format('woff'),
+       url('/fonts/Gilroy-Heavy.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  /* Target only numbers (0-9) to match MoshiMoshi's thickness */
+  unicode-range: U+0030-0039;
+}
+
+
+@font-face {
   font-family: 'One More';
   src: url('/fonts/one-more-font/TBJ-One-More-Demo-BF69d64269631db.ttf') format('truetype');
   font-weight: normal;
