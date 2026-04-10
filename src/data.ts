@@ -439,7 +439,7 @@ export const allItems: CourseItem[] = [
     title: { en: 'Quality, Reliability and Safety', jp: '品質と信頼性・安全性' },
     teacher: { en: 'TBD', jp: '未定' },
     location: { en: 'TBD', jp: '未定' },
-    dayOfWeek: 2,
+    dayOfWeek: 3,
     periods: [2],
     time: '10:55 - 12:35',
     color: 'bg-brand-pink',
