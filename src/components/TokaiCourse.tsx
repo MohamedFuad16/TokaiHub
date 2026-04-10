@@ -92,20 +92,20 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
         <div className="mb-8">
           <div className="flex justify-between items-end mb-2 px-1">
              <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
-             <span className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-600'} opacity-80`}>{percentage}%</span>
+             <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-yellow'} opacity-90`}>{percentage}%</span>
           </div>
           <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: `${percentage}%` }}
-               className={`h-full ${percentage === 100 ? 'bg-green-500' : 'bg-amber-500'} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
+               className={`h-full ${percentage === 100 ? 'bg-brand-green' : 'bg-brand-yellow'} rounded-full`}
                transition={{ type: 'spring', stiffness: 50, damping: 15 }}
              />
           </div>
         </div>
 
         {/* Scrollable Date Section */}
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 no-scrollbar snap-x">
+        <div className="flex gap-3 overflow-x-auto pb-6 pt-2 -mx-2 px-2 no-scrollbar snap-x">
           {classDates.map((date) => {
             const dateStr = date.toISOString().split('T')[0];
             const isAttended = attendance[dateStr];
@@ -116,27 +116,28 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
               <button
                 key={dateStr}
                 onClick={() => toggleAttendance(dateStr)}
-                className={`flex-shrink-0 w-16 h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all snap-start relative
+                className={`flex-shrink-0 w-16 h-24 rounded-3xl flex flex-col items-center justify-center gap-1.5 border-2 transition-all snap-start relative
                   ${isToday 
-                      ? 'border-amber-500 bg-amber-500/5 shadow-md scale-[1.02]' 
-                      : isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-white shadow-sm'}
-                  ${isAttended && !isToday ? (isDark ? 'border-transparent bg-white/5' : 'border-transparent bg-black/5') : ''}
+                      ? 'border-brand-yellow bg-brand-yellow/10 shadow-inner scale-[1.02]' 
+                      : isAttended
+                          ? (isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50')
+                          : (isDark ? 'border-gray-700 bg-gray-900/50' : 'border-transparent bg-white shadow-sm')}
                 `}
               >
-                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? (isDark ? 'text-amber-400' : 'text-amber-600') : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-brand-yellow' : 'text-gray-400'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter ${isToday ? (isDark ? 'text-amber-400' : 'text-amber-600') : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-brand-yellow' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
                   {date.getDate()}
                 </span>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all
                   ${isAttended 
-                    ? isDark ? 'bg-white border-white' : 'bg-black border-black'
-                    : isDark ? 'border-gray-700' : 'border-gray-300'}
+                    ? 'bg-brand-black border-brand-black'
+                    : isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'}
                 `}>
-                  {isAttended && <CheckCircle className={`w-4 h-4 ${isDark ? 'text-black' : 'text-white'}`} />}
+                  {isAttended && <CheckCircle className="w-5 h-5 text-brand-yellow" />}
                 </div>
-                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-amber-500 text-white text-[7px] font-bold rounded-full shadow-md">{lang === 'en' ? 'TODAY' : '今日'}</div>}
+                {isToday && <div className="absolute -top-2.5 px-2.5 py-0.5 bg-brand-yellow text-brand-black text-[8px] font-black rounded-full shadow-md uppercase tracking-wider">{lang === 'en' ? 'TODAY' : '今日'}</div>}
               </button>
             );
           })}
@@ -310,14 +311,14 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
             </div>
 
             <div className={`${bgClass} p-5 rounded-3xl flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
                 <Calendar className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className={`text-xs ${textMuted} font-bold mb-1`}>
                   {lang === 'en' ? 'Weekly' : '毎週'}
                 </div>
-                <div className="font-bold text-base uppercase">
+                <div className="font-bold text-[14px] uppercase truncate">
                    {lang === 'en' 
                      ? (course.day || courseId.split('-')[0])?.toUpperCase() 
                      : (course.day === 'mon' || courseId.startsWith('mon') ? '月曜日' : 
@@ -334,25 +335,25 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
               <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
                 <User className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className={`text-xs ${textMuted} font-bold mb-1`}>
                   {lang === 'en' ? 'Teacher' : '担当教員'}
                 </div>
-                <div className="font-bold text-sm truncate max-w-[140px] sm:max-w-none">
+                <div className="font-bold text-[13.5px] leading-snug line-clamp-2">
                    {course.teacher?.[lang] || (lang === 'en' ? 'Staff' : '担当者')}
                 </div>
               </div>
             </div>
 
             <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
                 <BookOpen className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className={`text-xs ${textMuted} font-bold mb-1`}>
                   {lang === 'en' ? 'Field' : '分野'}
                 </div>
-                <div className="font-bold text-base">
+                <div className="font-bold text-[14px] truncate">
                   {t[lang].field}
                 </div>
               </div>
