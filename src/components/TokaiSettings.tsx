@@ -245,7 +245,7 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                   </div>
                   <div>
                     <div className={`font-bold text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{tx.notifications}</div>
-                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider ${isDark ? 'text-pink-400 bg-pink-500/20' : 'text-pink-600 bg-pink-100'}`}>Coming Soon</div>
+                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider ${isDark ? 'text-pink-400 bg-pink-500/20' : 'text-pink-600 bg-pink-100'}`}>{lang === 'en' ? 'Coming Soon' : '近日公開'}</div>
                   </div>
                 </div>
                 <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} isDark={isDark} />

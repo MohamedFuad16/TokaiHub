@@ -264,7 +264,7 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
             <div className={`${cardBg} rounded-2xl p-4 flex items-center justify-between shadow-sm ${isDark ? 'border border-gray-700' : ''}`}>
               <div className="flex-1 mr-4">
                 <div className="flex justify-between text-xs font-bold mb-2">
-                  <span className={textMuted}>Credits</span>
+                  <span className={textMuted}>{lang === 'en' ? 'Credits' : '単位'}</span>
                   <span className={selectedCredits > MAX_CREDITS ? 'text-red-500' : (isDark ? 'text-white' : 'text-brand-black')}>
                     {tx.creditsUsed(selectedCredits, MAX_CREDITS)}
                   </span>

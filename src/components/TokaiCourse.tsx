@@ -136,7 +136,7 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 `}>
                   {isAttended && <CheckCircle className={`w-4 h-4 ${isDark ? 'text-black' : 'text-white'}`} />}
                 </div>
-                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-amber-500 text-white text-[7px] font-bold rounded-full shadow-md">TODAY</div>}
+                {isToday && <div className="absolute -top-1 px-2 py-0.5 bg-amber-500 text-white text-[7px] font-bold rounded-full shadow-md">{lang === 'en' ? 'TODAY' : '今日'}</div>}
               </button>
             );
           })}

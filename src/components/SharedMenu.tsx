@@ -66,7 +66,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                     TOKAI<br /><span className="text-brand-yellow">HUB</span>
                   </div>
                   <p className={`text-xs font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Student Hub v1.0
+                    {lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}
                   </p>
                 </div>
                 <button

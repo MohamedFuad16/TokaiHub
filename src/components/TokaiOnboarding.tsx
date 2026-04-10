@@ -646,7 +646,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
                 <div className={`${cardBg} rounded-2xl p-4 mb-4 flex items-center justify-between shadow-sm`}>
                   <div className="flex-1 mr-4">
                     <div className="flex justify-between text-xs font-bold mb-2">
-                      <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Credits</span>
+                      <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{lang === 'en' ? 'Credits' : '単位'}</span>
                       <span className={selectedCredits > maxCredits ? 'text-red-500' : (isDark ? 'text-white' : 'text-brand-black')}>
                         {tx.creditsUsed(selectedCredits, maxCredits)}
                       </span>

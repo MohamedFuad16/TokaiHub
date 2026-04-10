@@ -131,7 +131,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
           <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
             TOKAI<br /><span className="text-brand-yellow">HUB</span>
           </div>
-          <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Student Hub v1.0</p>
+          <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}</p>
           {userProfile && (
             <div className={`mt-4 flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="w-9 h-9 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-sm text-brand-black shrink-0">
@@ -306,9 +306,9 @@ export default function App() {
         getDashboard().then(data => {
           setUserProfile(prev => {
             if (!prev) return initialProfile;
-            const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-            const rawCum = Number(profileData?.cumulativeGpa);
-            const rawLast = Number(profileData?.lastSemGpa);
+            const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
+            const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
+            const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
             
             console.log("App.tsx (checkAuthStatus) - raw API payload:", data);
             console.log("App.tsx (checkAuthStatus) - extracted profileData:", profileData);
@@ -381,9 +381,9 @@ export default function App() {
       getDashboard().then(data => {
         setUserProfile(prev => {
           if (!prev) return initialProfile;
-          const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-          const rawCum = Number(profileData?.cumulativeGpa);
-          const rawLast = Number(profileData?.lastSemGpa);
+          const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
+          const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
+          const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
 
           console.log("App.tsx (handleSignIn) - raw API payload:", data);
           console.log("App.tsx (handleSignIn) - extracted profileData:", profileData);
