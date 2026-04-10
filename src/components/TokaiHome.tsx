@@ -217,7 +217,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
         className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}
       >
-        <div className="flex items-end gap-1 lg:hidden">
+        <div className="flex items-center gap-1 lg:hidden">
           <div className={`font-bold text-xl tracking-tighter leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>
             TOKAI<br /><span className="text-brand-yellow">HUB</span>
           </div>
