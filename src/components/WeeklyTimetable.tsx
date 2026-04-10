@@ -53,10 +53,10 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'min-content repeat(6, calc((100cqw - 45px) / 5))',
+            gridTemplateColumns: 'min-content repeat(6, 18%)',
             gridTemplateRows: 'auto repeat(6, minmax(85px, auto))',
-            gap: '3px',
-            padding: '0 8px 8px 4px',
+            gap: '2px',
+            padding: '0 4px 8px 4px',
           }}
         >
           {/* ── Day header cells (Row 1) ── */}
@@ -80,7 +80,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
             <div
               key={`pl-${period.num}`}
               style={{ gridRow: pIdx + 2, gridColumn: 1 }}
-              className="flex flex-col items-center justify-start pt-2 pr-1.5"
+              className="flex flex-col items-center justify-start pt-2 pr-1"
             >
               <span className="text-brand-yellow font-bold text-[13px] sm:text-sm leading-none">{period.num}</span>
               <span className={`text-[9px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{period.time}</span>
@@ -107,9 +107,9 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
                     gridColumn: colIdx + 2,
                   }}
                   onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                  className={`${item.color} rounded-xl p-1 sm:p-1.5 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative`}
+                  className={`${item.color} rounded-xl px-0.5 py-1.5 sm:p-1.5 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative`}
                 >
-                  <div className="font-bold text-brand-black text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-tight tracking-tight break-words hyphens-auto w-full">
+                  <div className="font-bold text-brand-black text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-tight tracking-tight break-words hyphens-auto w-full text-center">
                     {item.title?.[lang]}
                   </div>
                   <div className="mt-1.5 pt-1 shrink-0 flex flex-wrap gap-1">
