@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Menu, ArrowRight, MapPin, User, Check, Search, Filter, BookOpen } from 'lucide-react';
+import { Menu, MapPin, User, Check, Search, BookOpen } from 'lucide-react';
 import { ScreenProps, preloadRoutes } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';

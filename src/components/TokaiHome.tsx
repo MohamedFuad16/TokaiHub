@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Menu, ArrowRight, Calendar, MapPin, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, Check } from 'lucide-react';
-import { ScreenProps, preloadRoutes } from '../App';
+import { Menu, Calendar, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, Check } from 'lucide-react';
+import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import WeeklyTimetable from './WeeklyTimetable';

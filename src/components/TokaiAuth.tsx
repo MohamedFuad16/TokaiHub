@@ -139,24 +139,14 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
   const [error, setError] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
   const isDark = settings.isDarkMode;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!cardRef.current || isPasswordFocused) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    setMousePos({ x, y });
-  }, [isPasswordFocused]);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setError('');
-    const len = e.target.value.length;
-    setMousePos({ x: Math.min(len * 0.12 - 0.4, 1), y: 0.15 });
   };
 
   const t = {
@@ -216,9 +206,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
 
   return (
     <div
-      className={`h-full w-full flex flex-col items-center justify-center transition-colors duration-500 p-6 relative ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'
-        }`}
-      onMouseMove={handleMouseMove}
+      className={`h-full w-full flex flex-col items-center justify-center transition-colors duration-500 p-6 relative ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}
     >
       {/* Language toggle */}
       <div className="absolute top-6 right-6 flex gap-1.5 z-10">

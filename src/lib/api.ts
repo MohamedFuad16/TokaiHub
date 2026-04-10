@@ -183,9 +183,9 @@ export async function updateProfile(
   return apiFetch<UpdateProfileResponse>('/profile', { method: 'PUT', body: updates, signal });
 }
 
-// ─── Legacy helpers (kept for compatibility) ───────────────────────────────────
+// ─── Mock assignment data — used as fallback in TokaiHome ─────────────────────
 
-const _mockAssignments: Assignment[] = [
+export const _mockAssignments: Assignment[] = [
   {
     id: '1',
     title: { en: 'VR Project Draft', jp: 'VRプロジェクト草案' },
@@ -211,16 +211,3 @@ const _mockAssignments: Assignment[] = [
     status: 'submitted',
   },
 ];
-
-export async function getCourses(): Promise<CourseItem[]> {
-  return allItems as CourseItem[];
-}
-
-export async function getAssignments(): Promise<Assignment[]> {
-  return _mockAssignments;
-}
-
-export async function getUserProfile(_userId: string): Promise<UserProfileAPI | null> {
-  return null;
-}
-
