@@ -53,41 +53,40 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'min-content repeat(6, minmax(0, 18.5vw))',
-            gridTemplateRows: 'auto repeat(6, minmax(75px, auto))',
-            gap: '3px',
+            gridTemplateColumns: 'min-content repeat(6, minmax(calc((100cqw - 50px) / 5), 1fr))',
+            gridTemplateRows: 'auto repeat(6, minmax(85px, auto))',
+            gap: '4px',
+            minWidth: 'max-content',
             padding: '0 12px 8px 12px',
           }}
         >
-          {/* ── Period header cells (Row 1) ── */}
+          {/* ── Day header cells (Row 1) ── */}
           <div style={{ gridRow: 1, gridColumn: 1 }} />
-          {PERIODS.map((period, pIdx) => (
-            <div
-              key={`ph-${period.num}`}
-              style={{ gridRow: 1, gridColumn: pIdx + 2 }}
-              className="flex flex-col items-center justify-center pb-2 pt-1"
-            >
-              <span className="text-brand-yellow font-bold text-sm leading-none">{period.num}</span>
-              <span className={`text-[8px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{period.time}</span>
-            </div>
-          ))}
-
-          {/* ── Day label cells (Col 1, Rows 2-7) ── */}
-          {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, dIdx) => {
-            const isToday = settings.enableEnhancedUI && WEEK_DAY_NUMS[dIdx] === new Date().getDay();
+          {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, i) => {
+            const isToday = settings.enableEnhancedUI && WEEK_DAY_NUMS[i] === new Date().getDay();
             return (
               <div
                 key={day}
-                style={{ gridRow: dIdx + 2, gridColumn: 1 }}
-                className={`flex flex-col items-center justify-center pr-3 py-4 ${isToday ? 'text-brand-yellow' : isDark ? 'text-white/30' : 'text-gray-400'}`}
+                style={{ gridRow: 1, gridColumn: i + 2 }}
+                className={`text-center text-[11px] sm:text-xs font-bold pb-2 pt-1 uppercase tracking-widest ${isToday ? 'text-brand-yellow' : isDark ? 'text-white/30' : 'text-gray-400'}`}
               >
-                <div className="text-[12px] font-bold uppercase tracking-widest leading-none text-center">
-                  {day}
-                </div>
-                {isToday && <div className="w-1.5 h-1.5 rounded-full bg-brand-yellow mx-auto mt-1.5" />}
+                {day}
+                {isToday && <div className="w-1 h-1 rounded-full bg-brand-yellow mx-auto mt-0.5" />}
               </div>
             );
           })}
+
+          {/* ── Period label cells (Col 1, Rows 2-7) ── */}
+          {PERIODS.map((period, pIdx) => (
+            <div
+              key={`pl-${period.num}`}
+              style={{ gridRow: pIdx + 2, gridColumn: 1 }}
+              className="flex flex-col items-center justify-start pt-2 pr-1.5"
+            >
+              <span className="text-brand-yellow font-bold text-[13px] sm:text-sm leading-none">{period.num}</span>
+              <span className={`text-[9px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{period.time}</span>
+            </div>
+          ))}
 
           {/* ── Class cards — placed with gridColumn + gridRow span ── */}
           {scheduleItems
@@ -97,25 +96,25 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
                 selectedCourseIds.includes(item.code ?? ''))
             )
             .map(item => {
-              const rowIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
-              if (rowIdx === -1) return null;
-              const colStart = (item.periods?.[0] ?? 1) + 1; // +1 because col 1 = header
-              const colSpan = item.periods?.length ?? 1;
+              const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
+              if (colIdx === -1) return null;
+              const rowStart = (item.periods?.[0] ?? 1) + 1; // +1 because row 1 = header
+              const rowSpan = item.periods?.length ?? 1;
               return (
                 <div
                   key={item.id}
                   style={{
-                    gridRow: rowIdx + 2,
-                    gridColumn: `${colStart} / span ${colSpan}`,
+                    gridRow: `${rowStart} / span ${rowSpan}`,
+                    gridColumn: colIdx + 2,
                   }}
                   onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                  className={`${item.color} rounded-xl p-2 sm:p-3 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between overflow-hidden shadow-sm`}
+                  className={`${item.color} rounded-[14px] p-2 sm:p-2.5 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative`}
                 >
-                  <div className="font-bold text-brand-black text-[10px] sm:text-xs leading-tight line-clamp-3 overflow-hidden text-ellipsis">
+                  <div className="font-bold text-brand-black text-[10px] @[400px]:text-[11px] sm:text-[12px] leading-snug break-words hyphens-auto w-full">
                     {item.title?.[lang]}
                   </div>
-                  <div className="mt-1.5 pt-1 overflow-hidden shrink-0">
-                    <span className="text-[9px] font-bold text-brand-black/50 bg-black/10 rounded-full px-2 py-0.5 inline-block text-center truncate max-w-full">
+                  <div className="mt-1.5 pt-1 shrink-0 flex flex-wrap gap-1">
+                    <span className="text-[8.5px] font-bold text-brand-black/60 bg-black/[0.08] rounded-md px-1.5 py-0.5 inline-block truncate max-w-full">
                       {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
                     </span>
                   </div>
@@ -124,16 +123,16 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
             })}
 
           {/* ── Empty background cells — skip positions occupied by classes ── */}
-          {WEEK_DAY_NUMS.map((dayNum, dIdx) =>
-            PERIODS.map((period, pIdx) => {
+          {PERIODS.map((period, pIdx) =>
+            WEEK_DAY_NUMS.map((dayNum, dIdx) => {
               // Skip if ANY class occupies this period for this day
               const dayMap = weeklyTimetable.get(dayNum);
               if (dayMap?.has(period.num)) return null;
               return (
                 <div
-                  key={`empty-${dayNum}-${period.num}`}
-                  style={{ gridRow: dIdx + 2, gridColumn: pIdx + 2 }}
-                  className={`rounded-xl border ${isDark ? 'bg-white/[0.02] border-white/[0.04]' : 'bg-gray-50 border-gray-100'}`}
+                  key={`empty-${period.num}-${dayNum}`}
+                  style={{ gridRow: pIdx + 2, gridColumn: dIdx + 2 }}
+                  className={`rounded-[14px] border border-dashed ${isDark ? 'bg-white/[0.02] border-white/[0.08]' : 'bg-transparent border-black/[0.08]'}`}
                 />
               );
             })
