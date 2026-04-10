@@ -53,7 +53,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'min-content repeat(6, calc((100vw - 80px) / 5))',
+            gridTemplateColumns: 'min-content repeat(6, calc((100vw - 95px) / 5))',
             gridTemplateRows: 'auto repeat(6, minmax(85px, auto))',
             gap: '4px',
             minWidth: 'max-content',
