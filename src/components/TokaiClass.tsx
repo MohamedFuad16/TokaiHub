@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Menu, ArrowRight, MapPin, User, Check, Search, Filter } from 'lucide-react';
+import { Menu, ArrowRight, MapPin, User, Check, Search, Filter, BookOpen } from 'lucide-react';
 import { ScreenProps, preloadRoutes } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -154,7 +154,7 @@ export default function TokaiClass({ lang, setLang, settings, userProfile }: Scr
           className="px-4 sm:px-6 pb-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
         >
           {filteredItems.map((item) => {
-            const Icon = item.icon;
+            const Icon = item.icon || BookOpen;
             const enrolled = isEnrolled(item);
             return (
               <motion.div
@@ -169,7 +169,7 @@ export default function TokaiClass({ lang, setLang, settings, userProfile }: Scr
                   <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c]">
                     {!loadedImages.has(item.id) && <div className="absolute inset-0 shimmer-light" />}
                     <img
-                      src={item.image}
+                      src={item.image || mascotIdle}
                       alt=""
                       onLoad={() => handleImageLoad(item.id)}
                       className={`absolute inset-0 w-full h-full object-cover saturate-150 transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
