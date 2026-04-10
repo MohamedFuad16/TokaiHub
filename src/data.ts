@@ -235,6 +235,54 @@ export const allItems: CourseItem[] = [
     ],
     overview: { en: 'Comprehensive introduction to the culture, history, and society of German-speaking countries. Conducted online via Teams.', jp: 'ドイツ語圏諸国の文化、歴史、社会に関する包括的な導入。Teamsによるオンライン形式。' }
   },
+  {
+    id: 'mon-3-aam185',
+    type: 'Classes',
+    title: { en: 'Practice of ICT in Modern Society', jp: '社会情報実践／和文' },
+    teacher: { en: 'Hidetaka Shirasawa', jp: '白澤 秀剛' },
+    location: { en: 'Online', jp: 'オンライン' },
+    dayOfWeek: 1, // MON
+    periods: [3],
+    time: '13:25 - 15:05',
+    color: 'bg-green-300',
+    image: courseEnglish, // placeholder image
+    icon: BookOpen,
+    action: 'course',
+    code: 'AAM185',
+    credits: 2,
+    evaluation: { en: 'Participation & Group Work', jp: '参加度・グループワーク' },
+    evaluationBreakdown: [
+      { label: { en: 'Participation', jp: '参加度' }, percentage: 100, color: 'bg-green-300' }
+    ],
+    overview: { 
+      en: 'Focuses on applying ICT to real-world societal problems. Students analyze modern information society challenges such as digital transformation (DX) and AI, and work in groups to propose solutions. The course emphasizes discussion, problem-solving, and presentations based on practical scenarios.', 
+      jp: 'DXやAIといった現代の情報社会の課題を分析し、グループワークを通じて実践的な解決策を提案する。ディスカッション、課題解決、プレゼンテーションを重視する。' 
+    }
+  },
+  {
+    id: 'tue-3-bbe217',
+    type: 'Classes',
+    title: { en: 'Identity and Conviviality', jp: 'アイデンティティと共生' },
+    teacher: { en: 'Michiya Kawajiri', jp: '川尻 道哉' },
+    location: { en: 'Online', jp: 'オンライン' },
+    dayOfWeek: 2, // TUE
+    periods: [3],
+    time: '13:25 - 15:05',
+    color: 'bg-purple-300',
+    image: courseProgramming, // placeholder image
+    icon: BookOpen,
+    action: 'course',
+    code: 'BBE217',
+    credits: 2,
+    evaluation: { en: 'Assignments & Reports', jp: '課題・レポート' },
+    evaluationBreakdown: [
+      { label: { en: 'Reports', jp: 'レポート' }, percentage: 100, color: 'bg-purple-300' }
+    ],
+    overview: { 
+      en: 'Explores identity, religion, and society through the study of Indian culture and Hinduism. Students examine how belief systems shape social structures, values, and worldviews, and develop a broader understanding of global cultures through historical and philosophical analysis.', 
+      jp: 'ヒンドゥー教やインド文化の研究を通じて、アイデンティティ、宗教、社会について探究する。信仰体系が社会構造や価値観にいかに影響を与えるかを検証し、歴史的・哲学的分析を通してグローバルな文化への理解を深める。' 
+    }
+  }
 ];
 
 export const getClassesForDate = (
