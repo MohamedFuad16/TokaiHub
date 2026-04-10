@@ -307,9 +307,13 @@ export default function App() {
           setUserProfile(prev => {
             if (!prev) return initialProfile;
             const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-            const rawCum = Number(profileData.cumulativeGpa);
-            const rawLast = Number(profileData.lastSemGpa);
+            const rawCum = Number(profileData?.cumulativeGpa);
+            const rawLast = Number(profileData?.lastSemGpa);
             
+            console.log("App.tsx (checkAuthStatus) - raw API payload:", data);
+            console.log("App.tsx (checkAuthStatus) - extracted profileData:", profileData);
+            console.log("App.tsx (checkAuthStatus) - parsed rawCum:", rawCum, "rawLast:", rawLast);
+
             return {
               ...prev,
               selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
@@ -378,8 +382,12 @@ export default function App() {
         setUserProfile(prev => {
           if (!prev) return initialProfile;
           const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-          const rawCum = Number(profileData.cumulativeGpa);
-          const rawLast = Number(profileData.lastSemGpa);
+          const rawCum = Number(profileData?.cumulativeGpa);
+          const rawLast = Number(profileData?.lastSemGpa);
+
+          console.log("App.tsx (handleSignIn) - raw API payload:", data);
+          console.log("App.tsx (handleSignIn) - extracted profileData:", profileData);
+          console.log("App.tsx (handleSignIn) - parsed rawCum:", rawCum, "rawLast:", rawLast);
 
           return {
             ...prev,

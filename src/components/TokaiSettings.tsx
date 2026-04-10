@@ -162,7 +162,10 @@ export default function TokaiSettings({ lang, settings, setSettings, userProfile
                 <Shield className="w-4 h-4 text-brand-yellow" />
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span>
               </div>
-              <div className="text-3xl font-bold tracking-tight text-white">{userProfile?.cumulativeGpa?.toFixed(2) ?? '0.00'}</div>
+              {(() => {
+                console.log("TokaiSettings rendering GPA card, userProfile.cumulativeGpa is:", userProfile?.cumulativeGpa);
+                return <div className="text-3xl font-bold tracking-tight text-white">{userProfile?.cumulativeGpa?.toFixed(2) ?? '0.00'}</div>;
+              })()}
               <div className="mt-3 h-1.5 rounded-full bg-white/10">
                 <div className="h-full rounded-full bg-brand-yellow transition-all duration-700" style={{ width: `${Math.min(((userProfile?.cumulativeGpa || 0) / 4) * 100, 100)}%` }} />
               </div>
