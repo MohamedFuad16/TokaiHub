@@ -48,17 +48,25 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
       .then(data => {
         if (cancelled || !data?.length) return;
         const merged = data.map((apiCourse: any) => {
-          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const rawId = apiCourse.courseId?.S ?? apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const courseCode = typeof rawId === 'object' ? rawId?.S ?? '' : String(rawId || '');
+
           const local = (allItems as CourseItem[]).find(item =>
             item.code === courseCode || item.id === courseCode
           );
-          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          
+          const rawName = apiCourse.courseName?.S ?? apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          const enTitle = typeof rawName === 'object' ? rawName?.en ?? rawName?.S ?? String(rawName) : String(rawName);
+
+          const rawCredits = apiCourse.credits?.N ?? apiCourse.credits ?? local?.credits;
+          const creds = typeof rawCredits === 'string' ? parseInt(rawCredits, 10) : Number(rawCredits);
+
           return {
             ...(local ?? {}),
             ...apiCourse,
             id: courseCode,
             code: courseCode,
-            credits: apiCourse.credits ?? local?.credits,
+            credits: isNaN(creds) ? local?.credits : creds,
             title: local
               ? { en: enTitle, jp: local.title.jp }
               : { en: enTitle, jp: enTitle },

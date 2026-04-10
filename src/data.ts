@@ -68,7 +68,7 @@ export const allItems: CourseItem[] = [
     image: courseSoftware,
     icon: BookOpen,
     action: 'course',
-    code: 'TTK031',
+    code: 'TTK030',
     credits: 2,
     evaluation: { en: 'Teams Assignments 20% + Midterm 20% + Final 20% + Group Minutes 20% + Presentation 20%', jp: 'Teams課題(第1-8回) 20% / 中間レポート 20% / 期末レポート 20% / グループワーク議事録 20% / グループ発表 20%' },
     evaluationBreakdown: [
@@ -78,7 +78,7 @@ export const allItems: CourseItem[] = [
       { label: { en: 'Minutes', jp: '議事録' }, percentage: 20, color: 'bg-blue-400' },
       { label: { en: 'Presentation', jp: '発表' }, percentage: 20, color: 'bg-orange-400' }
     ],
-    overview: { en: 'Software design and modeling using UML. PBL group exercises based on QCD principles.', jp: 'UMLを用いたソフトウェア設計・モデリング。QCD原則に基づくPBLグループ演習（テーマ選定→モデリング→発表）。企業での実務経験をもとに指導。Teamsコード: atu6xe6' }
+    overview: { en: 'Introduces software engineering with a focus on design and modeling techniques using UML. Students learn how to develop high-quality software considering quality, cost, and delivery (QCD). The course includes project-based learning where students work in groups to create and refine software models, emphasizing practical skills and collaborative problem-solving.', jp: 'UMLを用いた設計とモデリング技術に基づくソフトウェア工学を学びます。QCD（品質・コスト・納期）を考慮した高品質なソフトウェアの開発手法を習得します。グループでモデルを作成・改良するPBL（プロジェクト学習）を通じて、実践的なスキルと協調的な問題解決能力を養います。' }
   },
   {
     id: 'tue-3',

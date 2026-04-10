@@ -75,19 +75,28 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
       .then(data => {
         if (cancelled || !data?.length) return;
         const merged = data.map((apiCourse: any) => {
-          // DynamoDB returns courseId (e.g. "TTK031") — use it as the id so
-          // selectedCourseIds stores codes that the backend understands
-          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          // Safely extract from raw DynamoDB structures if they haven't been unmarshalled
+          const rawId = apiCourse.courseId?.S ?? apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
+          const courseCode = typeof rawId === 'object' ? rawId?.S ?? '' : String(rawId || '');
+
           const local = (allItems as CourseItem[]).find(item =>
             item.code === courseCode || item.id === courseCode
           );
-          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          
+          // Safely extract name
+          const rawName = apiCourse.courseName?.S ?? apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
+          const enTitle = typeof rawName === 'object' ? rawName?.en ?? rawName?.S ?? String(rawName) : String(rawName);
+
+          // Safely extract credits
+          const rawCredits = apiCourse.credits?.N ?? apiCourse.credits ?? local?.credits;
+          const creds = typeof rawCredits === 'string' ? parseInt(rawCredits, 10) : Number(rawCredits);
+
           return {
             ...(local ?? {}),
             ...apiCourse,
             id: courseCode,          // store code as id so enrollCourses sends the right value
             code: courseCode,
-            credits: apiCourse.credits ?? local?.credits,
+            credits: isNaN(creds) ? local?.credits : creds,
             title: local
               ? { en: enTitle, jp: local.title.jp }
               : { en: enTitle, jp: enTitle },
