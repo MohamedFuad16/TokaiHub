@@ -9,6 +9,7 @@ import { allItems, getClassesForDate } from '../data';
 import { getDashboard } from '../lib/api';
 import type { CourseItem, Assignment } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
+import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
 const t = {
   en: {
@@ -216,8 +217,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
         className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}
       >
-        <div className={`font-bold text-xl tracking-tighter leading-none lg:hidden ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          TOKAI<br /><span className="text-brand-yellow">HUB</span>
+        <div className="flex items-end gap-1 lg:hidden">
+          <div className={`font-bold text-xl tracking-tighter leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            TOKAI<br /><span className="text-brand-yellow">HUB</span>
+          </div>
+          <img src={mascotLogo} alt="Tokai Mascot" className="w-8 h-8 object-contain ml-0.5 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
         </div>
         <div className="hidden lg:block">
           <h2 className={`text-sm font-semibold ${textMuted}`}>{todayLabel}</h2>

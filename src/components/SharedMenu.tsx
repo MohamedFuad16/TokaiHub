@@ -3,6 +3,7 @@ import { X, Home, Calendar, ClipboardList, Settings, ChevronRight } from 'lucide
 import { Language, AppSettings } from '../App';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
 interface SharedMenuProps {
   isOpen: boolean;
@@ -61,13 +62,16 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
               className={`px-6 pb-4 shrink-0 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}
             >
               <div className="flex justify-between items-start">
-                <div>
-                  <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                    TOKAI<br /><span className="text-brand-yellow">HUB</span>
+                <div className="flex items-center gap-1">
+                  <div>
+                    <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
+                      TOKAI<br /><span className="text-brand-yellow">HUB</span>
+                    </div>
+                    <p className={`text-xs font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}
+                    </p>
                   </div>
-                  <p className={`text-xs font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}
-                  </p>
+                  <img src={mascotLogo} alt="Tokai Mascot" className="w-10 h-10 object-contain ml-2 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
                 </div>
                 <button
                   onClick={onClose}
