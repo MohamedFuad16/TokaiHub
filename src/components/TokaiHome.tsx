@@ -81,7 +81,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
       .then(data => {
         console.log("🔥 DASHBOARD RESPONSE:", data);
 
-        // ✅ Merge courses
+        // ✅ Merge courses - Preserve colors from allItems
         if (data.courses?.length) {
           const mergedCourses = data.courses.map(apiCourse => {
             const local = (allItems as CourseItem[]).find(
@@ -90,7 +90,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             if (!local) return apiCourse;
 
             return {
-              ...apiCourse,
+              ...local,      // Start with local (preserves color/credits)
+              ...apiCourse,  // Overwrite with API values (day/periods)
+              // Deep merge LocalizedStrings
               title: typeof apiCourse.title === 'string'
                 ? { en: apiCourse.title, jp: local.title.jp }
                 : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
@@ -120,29 +122,21 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         console.log("✅ NORMALIZED PROFILE:", profile);
 
-        // ✅ Update user profile safely
+        // ✅ Update user profile safely — PRIORITIZE API DATA
         if (setUserProfile) {
           setUserProfile(prev => {
-            const current = prev || {
-              name: '',
-              email: '',
-              studentId: '',
-              campus: '',
-              selectedCourseIds: [],
-              cumulativeGpa: 0,
-              lastSemGpa: 0
-            };
+            const current = (prev && prev.email) ? prev : initialProfile;
 
             const rawCum = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
             const rawLast = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa);
+            const apiCourseIds = data.enrolledCourseIds ?? profile?.enrolledCourses ?? profile?.selectedCourseIds;
 
             return {
               ...current,
-
-              selectedCourseIds:
-                current.selectedCourseIds?.length
-                  ? current.selectedCourseIds
-                  : (data.enrolledCourseIds ?? current.selectedCourseIds),
+              // Always use API course IDs if they exist to prevent state reverts
+              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
+                ? apiCourseIds 
+                : current.selectedCourseIds,
 
               cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
               lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,

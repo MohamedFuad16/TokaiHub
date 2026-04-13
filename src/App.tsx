@@ -322,20 +322,21 @@ export default function App() {
         // Fetch fresh academic data (GPA/Courses) from API immediately
         getDashboard().then(data => {
           setUserProfile(prev => {
-            if (!prev) return initialProfile;
+            const current = (prev && prev.email) ? prev : initialProfile;
             const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
             const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
             const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
+            const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
             
-            console.log("App.tsx (checkAuthStatus) - raw API payload:", data);
-            console.log("App.tsx (checkAuthStatus) - extracted profileData:", profileData);
             console.log("App.tsx (checkAuthStatus) - parsed rawCum:", rawCum, "rawLast:", rawLast);
 
             return {
-              ...prev,
-              selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
-              cumulativeGpa: isNaN(rawCum) ? prev.cumulativeGpa : rawCum,
-              lastSemGpa: isNaN(rawLast) ? prev.lastSemGpa : rawLast,
+              ...current,
+              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
+                ? apiCourseIds 
+                : current.selectedCourseIds,
+              cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
+              lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
             };
           });
         }).catch(err => console.error('Failed to sync profile on boot:', err));
@@ -397,20 +398,21 @@ export default function App() {
       // Fetch fresh data from API after login
       getDashboard().then(data => {
         setUserProfile(prev => {
-          if (!prev) return initialProfile;
+          const current = (prev && prev.email) ? prev : initialProfile;
           const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
           const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
           const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
+          const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
 
-          console.log("App.tsx (handleSignIn) - raw API payload:", data);
-          console.log("App.tsx (handleSignIn) - extracted profileData:", profileData);
           console.log("App.tsx (handleSignIn) - parsed rawCum:", rawCum, "rawLast:", rawLast);
 
           return {
-            ...prev,
-            selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
-            cumulativeGpa: isNaN(rawCum) ? prev.cumulativeGpa : rawCum,
-            lastSemGpa: isNaN(rawLast) ? prev.lastSemGpa : rawLast,
+            ...current,
+            selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
+              ? apiCourseIds 
+              : current.selectedCourseIds,
+            cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
+            lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
           };
         });
       }).catch(err => console.error('Failed to sync profile after login:', err));
