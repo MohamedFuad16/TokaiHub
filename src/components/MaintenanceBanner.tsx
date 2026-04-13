@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Clock } from 'lucide-react';
-// mascot_1_1 is the transparent-background mascot used across the app
-import mascot from '../assets/mascots/mascot_1_1.png';
+import mascot from '../assets/mascots/mascot_1_2.png';
 import type { Language } from '../App';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -14,17 +13,19 @@ const STORAGE_KEY = `tokaihub_notification_dismissed_${NOTIFICATION_ID}`;
 
 const copy = {
   en: {
-    eyebrow: 'Maintenance Notice',
-    title: "We'll be down\nfor a bit tonight.",
-    window: '8:00 PM – 12:00 AM  JST',
-    body: "TokaiHub will be briefly offline for scheduled maintenance. We're polishing things behind the scenes — thanks for your patience!",
+    title: 'Maintenance Notice',
+    timeLabel: 'Tonight',
+    timeValue: '8:00 PM – 12:00 AM JST',
+    status: 'Scheduled',
+    body: "TokaiHub will be briefly offline tonight for scheduled maintenance. We're polishing things behind the scenes — thanks for your patience!",
     dismiss: 'Got it!',
   },
   jp: {
-    eyebrow: 'メンテナンス予告',
-    title: '本日夜、\nメンテナンスがあります。',
-    window: '20:00 〜 深夜 0:00（JST）',
-    body: 'TokaiHubは本日夜、数時間のメンテナンスを予定しています。ご不便をおかけして申し訳ございませんが、より良いアプリのために取り組んでいます！',
+    title: 'メンテナンス予告',
+    timeLabel: '本日',
+    timeValue: '20:00 〜 深夜 0:00（JST）',
+    status: '予定',
+    body: 'TokaiHubは本日夜、数時間のメンテナンスを予定しています。ご不便をおかけして申し訳ございませんが、より快適なアプリのために取り組んでいます！',
     dismiss: '了解！',
   },
 };
@@ -50,175 +51,91 @@ export default function MaintenanceBanner({ lang, isDark, isAdmin }: Maintenance
   };
 
   const tx = copy[lang];
-  const isUser = !isAdmin;
 
-  // -- Accent colours --
-  const accentHex   = isUser ? '#FFD747' : '#3B82F6';
-  const accentShadow = isUser ? 'rgba(255,215,71,0.35)' : 'rgba(59,130,246,0.35)';
-
-  // Badge chip: yellow-tinted for users, blue-tinted for admin
-  const badgeBg    = isUser
-    ? (isDark ? 'rgba(255,215,71,0.12)' : 'rgba(255,215,71,0.22)')
-    : (isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.10)');
-  const badgeColor = isUser
-    ? (isDark ? '#FFD747' : '#8A6500')
-    : (isDark ? '#60A5FA' : '#1D4ED8');
-
-  // CTA button: brand-black on yellow for users (matching sidebar active state),
-  //             white on blue for admin
-  const btnBg   = isUser ? '#1A1A1A' : '#3B82F6';
-  const btnText = '#FFFFFF';
-
-  // Card background
-  const cardBg = isDark ? '#111113' : '#FFFFFF';
-  const pillBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-  const pillText = isDark ? 'rgba(255,255,255,0.80)' : '#1A1A1A';
-  const bodyText = isDark ? 'rgba(255,255,255,0.45)' : '#6B7280';
-  const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const closeBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const closeColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
-  const dragPill = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
+  // Yellow for regular users, blue for admin
+  const accentColor = isAdmin ? 'bg-blue-100' : 'bg-brand-yellow';
+  const accentText  = isAdmin ? 'text-blue-900' : 'text-brand-black';
+  const btnBg       = isAdmin ? 'bg-blue-500'   : 'bg-brand-black';
+  const btnText     = isAdmin ? 'text-white'     : 'text-white';
 
   return (
     <AnimatePresence>
       {visible && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — exactly matches TokaiHome sheet backdrop */}
           <motion.div
-            key="maint-bg"
+            key="maint-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
             onClick={dismiss}
-            className="fixed inset-0 z-50 backdrop-blur-md"
-            style={{ background: 'rgba(0,0,0,0.55)' }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
           />
 
-          {/* Sheet */}
+          {/* Sheet — exactly matches TokaiHome Classes Today sheet */}
           <motion.div
             key="maint-sheet"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-            className="fixed z-50 inset-x-0 bottom-0 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-10 sm:w-[400px] overflow-hidden"
-            style={{
-              borderRadius: '30px 30px 0 0',
-              background: cardBg,
-              ...(typeof window !== 'undefined' && window.innerWidth >= 640 && {
-                borderRadius: '30px',
-              }),
-            }}
+            transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
+            className={`
+              absolute bottom-0 left-0 right-0 z-50
+              ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}
+              rounded-t-[40px] p-6 flex flex-col
+              lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8
+            `}
           >
-            {/* Accent bar */}
-            <div style={{ height: 3, background: `linear-gradient(90deg, ${accentHex}99, ${accentHex}, ${accentHex}99)` }} />
-
-            {/* Drag pill — mobile only  */}
-            <div className="flex justify-center pt-3 pb-0 sm:hidden">
-              <div style={{ width: 36, height: 4, borderRadius: 9999, background: dragPill }} />
-            </div>
-
-            {/* ── Body ──────────────────────────────────────────── */}
-            <div className="px-5 pt-5 pb-6" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
-
-              {/* Row 1: eyebrow + close */}
-              <div className="flex items-center justify-between mb-6">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-[0.14em] px-3 py-1.5"
-                  style={{ borderRadius: 9999, background: badgeBg, color: badgeColor }}
-                >
-                  {tx.eyebrow}
-                </span>
-
-                <button
-                  onClick={dismiss}
-                  aria-label="Dismiss"
-                  className="flex items-center justify-center transition-opacity hover:opacity-70 active:scale-95"
-                  style={{ width: 32, height: 32, borderRadius: 9999, background: closeBg, color: closeColor }}
-                >
-                  <X style={{ width: 15, height: 15 }} />
-                </button>
-              </div>
-
-              {/* Row 2: title + mascot side-by-side */}
-              <div className="flex items-center gap-1 mb-4">
-                {/* Title */}
-                <div className="flex-1">
-                  <h2
-                    className="font-bold"
-                    style={{
-                      fontSize: 26,
-                      lineHeight: 1.2,
-                      letterSpacing: '-0.02em',
-                      whiteSpace: 'pre-line',
-                      color: isDark ? '#FFFFFF' : '#1A1A1A',
-                    }}
-                  >
-                    {tx.title}
-                  </h2>
-                </div>
-
-                {/* Mascot — no background container */}
-                <motion.img
-                  src={mascot}
-                  alt="TokaiHub Mascot"
-                  animate={{ y: [-6, 5, -6] }}
-                  transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{
-                    width: 100,
-                    height: 100,
-                    objectFit: 'contain',
-                    flexShrink: 0,
-                    filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.18))',
-                  }}
-                />
-              </div>
-
-              {/* Time pill */}
-              <div
-                className="inline-flex items-center gap-2 mb-5"
-                style={{ background: pillBg, borderRadius: 14, padding: '8px 14px' }}
-              >
-                <Clock style={{ width: 13, height: 13, color: accentHex, flexShrink: 0 }} />
-                <span className="font-bold" style={{ fontSize: 12, color: pillText }}>{tx.window}</span>
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: dividerColor, marginBottom: 16 }} />
-
-              {/* Body text */}
-              <p className="mb-6" style={{ fontSize: 13.5, lineHeight: 1.6, color: bodyText }}>
-                {tx.body}
-              </p>
-
-              {/* CTA — premium pill button */}
-              <motion.button
+            {/* Header — title + close button, identical to Classes Today */}
+            <div className="flex justify-between items-center mb-6 shrink-0">
+              <h2 className="text-2xl font-bold">{tx.title}</h2>
+              <button
                 onClick={dismiss}
-                whileTap={{ scale: 0.97 }}
-                className="w-full font-bold flex items-center justify-center"
-                style={{
-                  height: 56,
-                  borderRadius: 18,
-                  background: btnBg,
-                  color: btnText,
-                  fontSize: 16,
-                  letterSpacing: '-0.01em',
-                  boxShadow: `0 4px 20px ${accentShadow}, 0 1px 3px rgba(0,0,0,0.15)`,
-                  border: isUser && !isDark ? `1.5px solid ${accentHex}` : 'none',
-                }}
+                aria-label="Dismiss"
+                className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center`}
               >
-                {tx.dismiss}
-              </motion.button>
-
-              {/* Footer */}
-              <p
-                className="text-center font-bold mt-4 uppercase tracking-widest"
-                style={{ fontSize: 9, color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)' }}
-              >
-                © 2026 Mohamed Fuad™
-              </p>
+                <X className="w-5 h-5" />
+              </button>
             </div>
+
+            {/* Time row — styled like a class card (same p-5 rounded-[32px] pattern) */}
+            <div
+              className={`p-5 rounded-[32px] ${accentColor} ${accentText} flex gap-4 items-center mb-4
+                shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5`}
+            >
+              {/* Time bubble — same as the time circle in class cards */}
+              <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-lg leading-tight">{tx.timeLabel}</div>
+                <div className="text-sm font-medium opacity-80">{tx.timeValue}</div>
+              </div>
+              {/* Mascot — floated to the right, without any background box */}
+              <motion.img
+                src={mascot}
+                alt="TokaiHub Mascot"
+                animate={{ y: [-5, 5, -5] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                className="w-16 h-16 object-contain shrink-0"
+                style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))' }}
+              />
+            </div>
+
+            {/* Body text */}
+            <p className={`text-sm font-medium leading-relaxed mb-6 px-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {tx.body}
+            </p>
+
+            {/* CTA — same pill style as the edit-profile button in the empty state */}
+            <motion.button
+              onClick={dismiss}
+              whileTap={{ scale: 0.97 }}
+              className={`w-full py-4 rounded-[22px] ${btnBg} ${btnText} font-bold text-[15px] tracking-tight
+                transition-all active:scale-95 hover:brightness-95`}
+            >
+              {tx.dismiss}
+            </motion.button>
           </motion.div>
         </>
       )}
