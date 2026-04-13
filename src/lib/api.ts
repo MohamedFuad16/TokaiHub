@@ -87,7 +87,7 @@ function normalizeCourse(item: any): CourseItem {
   } else {
     day = Number(day);
   }
-  if (isNaN(day)) day = 1;
+  if (isNaN(day as number)) day = undefined as any; // let merge caller fall back to local data
 
   // 2. Periods: Ensure we always have an array of numbers
   let rawPeriods = item.periods;
@@ -100,7 +100,7 @@ function normalizeCourse(item: any): CourseItem {
     // Handles "1" or "1,2"
     periods = rawPeriods.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
   }
-  if (periods.length === 0) periods = [1]; // Fallback to period 1
+  // Don't default to [1] — leave empty so merge can use local data.ts values
 
   // 3. GPA & Credits casting
   const credits = Number(item.credits || 0);

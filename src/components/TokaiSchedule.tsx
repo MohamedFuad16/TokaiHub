@@ -75,9 +75,9 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             return {
               ...local,
               ...apiItem,
-              // Prioritize API values for these since they're live registration data
-              dayOfWeek: apiItem.dayOfWeek,
-              periods: apiItem.periods,
+              // Only use API value if it's actually set; fall back to local data.ts otherwise
+              dayOfWeek: (apiItem.dayOfWeek !== undefined && apiItem.dayOfWeek !== null) ? apiItem.dayOfWeek : local.dayOfWeek,
+              periods: (Array.isArray(apiItem.periods) && apiItem.periods.length > 0) ? apiItem.periods : local.periods,
               // Ensure titles/locations are merged safely
               title: typeof apiItem.title === 'string'
                 ? { en: apiItem.title, jp: local.title.jp }
