@@ -58,8 +58,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   }, [setSearchParams]);
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
 
-  // Fetch schedule from API; fall back to local data on error
-  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>(allItems as CourseItem[]);
+  // Start empty — only populate from API. allItems is only used for metadata merging.
+  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>([]);
   useEffect(() => {
     const controller = new AbortController();
     getSchedule(controller.signal)

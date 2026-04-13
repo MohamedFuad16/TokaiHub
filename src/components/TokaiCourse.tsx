@@ -158,49 +158,57 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
   const textNormal = isDark ? 'text-gray-300' : 'text-gray-600';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
 
-  const courseId = id || 'mon-1-2';
-  const localCourse = allItems.find(item => item.id === courseId) || allItems[0];
-  const [course, setCourse] = useState<CourseItem>(localCourse);
+  const courseId = id || '';
+  // Use local item only as a metadata seed (colors, credits); API overwrites everything
+  const localSeed = allItems.find(item => item.id === courseId || item.code === courseId) ?? null;
+  const [course, setCourse] = useState<CourseItem | null>(localSeed);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!courseId) return;
     const controller = new AbortController();
-    const apiCourseId = localCourse.code ?? courseId;
+    // Try the courseId directly, then its code equivalent
+    const apiId = localSeed?.code ?? courseId;
 
-    getCourseDetails(apiCourseId, controller.signal)
+    getCourseDetails(apiId, controller.signal)
       .then(data => {
         const { overview, evaluation, title, teacher, location, ...rest } = data;
-
         setCourse(prev => {
-          const safeTitle = typeof title === 'string' 
-            ? { en: title, jp: prev.title.jp } 
-            : { ...prev.title, ...title };
-            
+          const base = prev ?? {} as CourseItem;
+          const safeTitle = typeof title === 'string'
+            ? { en: title, jp: (base.title?.jp ?? title) }
+            : (title ? { ...base.title, ...title } : base.title);
+
           const safeTeacher = typeof teacher === 'string'
-            ? { en: teacher, jp: prev.teacher?.jp || '' }
-            : (teacher ? { ...prev.teacher, ...teacher } : prev.teacher);
+            ? { en: teacher, jp: base.teacher?.jp ?? '' }
+            : (teacher ? { ...base.teacher, ...teacher } : base.teacher);
 
           const safeLocation = typeof location === 'string'
-            ? { en: location, jp: prev.location?.jp || '' }
-            : (location ? { ...prev.location, ...location } : prev.location);
+            ? { en: location, jp: base.location?.jp ?? '' }
+            : (location ? { ...base.location, ...location } : base.location);
 
           return {
-            ...prev,
+            ...base,
             ...rest,
             title: safeTitle,
             teacher: safeTeacher,
             location: safeLocation,
-            overview: typeof overview === "string"
-              ? { ...prev.overview, en: overview }
-              : (overview ? { ...prev.overview, ...overview } : prev.overview),
-            evaluation: typeof evaluation === "string"
-              ? { ...prev.evaluation, en: evaluation }
-              : (evaluation ? { ...prev.evaluation, ...evaluation } : prev.evaluation),
+            overview: typeof overview === 'string'
+              ? { ...(base.overview ?? {}), en: overview }
+              : (overview ? { ...(base.overview ?? {}), ...overview } : base.overview),
+            evaluation: typeof evaluation === 'string'
+              ? { ...(base.evaluation ?? {}), en: evaluation }
+              : (evaluation ? { ...(base.evaluation ?? {}), ...evaluation } : base.evaluation),
           };
         });
       })
-      .catch(err => { if (err?.name !== 'AbortError') { /* keep local data */ } });
+      .catch(err => {
+        if (err?.name !== 'AbortError') {
+          setLoadError('Failed to load course details.');
+        }
+      });
     return () => controller.abort();
-  }, [courseId, localCourse.code]);
+  }, [courseId, localSeed?.code]);
 
   // UI text
   const t = {
@@ -223,6 +231,21 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
       fallbackEvaluation: "出席・実験40%＋レポート60%"
     }
   };
+
+  // Show loading/error state when course hasn't loaded from API yet
+  if (!course) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3">
+        {loadError ? (
+          <p className="text-sm text-red-400 font-medium">{loadError}</p>
+        ) : (
+          <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+            {lang === 'en' ? 'Loading course…' : 'ロード中…'}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   const apiCourseId = course.code || "TTK000";
   const fallback = courseFallbacks[apiCourseId];

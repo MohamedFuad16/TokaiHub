@@ -70,8 +70,8 @@ const itemVariants = {
 export default function TokaiHome({ lang, setLang, settings, userProfile, setUserProfile }: ScreenProps) {
   const navigate = useNavigate();
 
-  // API-fetched data — falls back to local data on error
-  const [courseItems, setCourseItems] = useState<CourseItem[]>(allItems as CourseItem[]);
+  // Start empty — only populate from API response. allItems is only used for color/metadata merging.
+  const [courseItems, setCourseItems] = useState<CourseItem[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
 
   useEffect(() => {
