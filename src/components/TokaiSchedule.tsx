@@ -295,11 +295,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           key={cls.id}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                          className={`p-4 rounded-[28px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.5)] border border-black/5 hover:translate-y-[-2px] mb-3`}
+                          className={`p-4 rounded-[28px] ${cls.color || 'bg-white/10'} ${cls.color ? 'text-brand-black' : 'text-white'} flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.5)] border border-black/5 hover:translate-y-[-2px] mb-3`}
                           tabIndex={0}
                         >
-                          <div className="w-12 h-12 bg-black/15 rounded-[14px] flex items-center justify-center font-bold text-sm shrink-0">
-                            {cls.time.split(' ')[0]}
+                          <div className={`w-12 h-12 ${cls.color ? 'bg-black/15' : 'bg-white/10'} rounded-[14px] flex items-center justify-center font-bold text-sm shrink-0`}>
+                            {(cls.time ?? '').split(' ')[0] || `P${cls.periods?.[0] ?? '?'}`}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-bold text-base leading-tight truncate">{cls.title?.[lang]}</div>

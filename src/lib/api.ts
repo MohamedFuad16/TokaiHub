@@ -123,6 +123,25 @@ function normalizeCourse(item: any): CourseItem {
     title = { en: title, jp: title };
   }
 
+  // 8. Generate time string from periods for the monthly view
+  const PERIOD_TIMES: Record<number, string> = {
+    1: '09:00 - 10:40',
+    2: '10:55 - 12:35',
+    3: '13:25 - 15:05',
+    4: '15:20 - 17:00',
+    5: '17:15 - 18:55',
+    6: '19:05 - 20:45',
+  };
+  const time = item.time || (() => {
+    if (!periods.length) return '';
+    const first = PERIOD_TIMES[periods[0]];
+    const last = PERIOD_TIMES[periods[periods.length - 1]];
+    if (!first) return '';
+    const startTime = first.split(' - ')[0];
+    const endTime = (last || first).split(' - ')[1];
+    return `${startTime} - ${endTime}`;
+  })();
+
   return {
     ...item,
     id: courseCode,
@@ -133,6 +152,7 @@ function normalizeCourse(item: any): CourseItem {
     dayOfWeek: day,
     periods: periods || [],
     credits: isNaN(credits) ? 0 : credits,
+    time,
   };
 }
 

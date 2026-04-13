@@ -501,8 +501,9 @@ export const getClassesForDate = (
 
   const dayOfWeek = date.getDay();
   // Always filter by selectedCourseIds — single source of truth
+  // Use Number() to handle items where dayOfWeek might be a string
   return items.filter(
-    item => item.dayOfWeek === dayOfWeek &&
+    item => Number(item.dayOfWeek) === dayOfWeek &&
       (selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
   );
 };
