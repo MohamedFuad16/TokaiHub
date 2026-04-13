@@ -24,6 +24,16 @@ const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
 const WEEK_DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
 
+const DAY_MAP: Record<string, number> = {
+  SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
+};
+
+/** Convert string day ("MON") or number to a numeric day. */
+function normalizeDay(day: unknown): number {
+  if (typeof day === 'string') return DAY_MAP[day.toUpperCase()] ?? Number(day) || 1;
+  return Number(day) || 1;
+}
+
 export default function WeeklyTimetable({
   scheduleItems,
   selectedCourseIds,
@@ -161,6 +171,10 @@ export default function WeeklyTimetable({
             const rowStart = start + 1;
             const rowSpan = end - start + 1;
 
+            const hasColor = !!item.color;
+            const textCls = hasColor || !isDark ? 'text-[#0a0a0c]' : 'text-white';
+            const mutedCls = hasColor || !isDark ? 'text-[#0a0a0c]/60' : 'text-white/60';
+
             return (
               <div
                 key={`${item.id}-${day}-${periods.join('-')}`}
@@ -169,10 +183,15 @@ export default function WeeklyTimetable({
                   gridColumn: colIdx + 2,
                 }}
                 onClick={() => navigate(`/course/${item.id}`)}
-                className="rounded-xl p-2 cursor-pointer shadow-sm flex flex-col gap-1"
+                className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')} rounded-xl p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all shadow-sm flex flex-col gap-1 border ${isDark ? 'border-white/5' : 'border-black/5'}`}
               >
-                <div className="text-xs font-semibold text-center line-clamp-3">
+                <div className={`text-xs font-semibold text-center line-clamp-3 ${textCls}`}>
                   {item.title?.[lang]}
+                </div>
+                <div className="mt-auto flex justify-center">
+                  <span className={`text-[8.5px] font-bold rounded-md px-1.5 py-0.5 truncate max-w-full ${mutedCls} bg-black/[0.05]`}>
+                    {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
+                  </span>
                 </div>
               </div>
             );
