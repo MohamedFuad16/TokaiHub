@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
+import MaintenanceBanner from './components/MaintenanceBanner';
 import { configureAmplify } from './lib/awsConfig';
 import { clearCoursesCache, getDashboard } from './lib/api';
 import mascotLogo from './assets/mascots/mascot_1_1.png';
@@ -133,6 +134,8 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
   const navigate = useNavigate();
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+      {/* One-time maintenance notification — dismisses via localStorage */}
+      <MaintenanceBanner lang={lang} isDark={isDark} />
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
         <div className="p-8 pb-4">
