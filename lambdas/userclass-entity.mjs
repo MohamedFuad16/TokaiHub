@@ -3,7 +3,8 @@ import {
     DynamoDBDocumentClient,
     QueryCommand,
     GetCommand,
-    UpdateCommand
+    UpdateCommand,
+    BatchGetCommand
 } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
@@ -68,6 +69,9 @@ async function getProfile(userId) {
 //
 // 📚 GET AVAILABLE COURSES (A/B + ALL)
 //
+//
+// 📚 GET AVAILABLE COURSES (A/B + ALL)
+//
 async function getAvailableCourses(userId) {
     // 1️⃣ Get user
     const userRes = await ddb.send(new GetCommand({
@@ -79,37 +83,62 @@ async function getAvailableCourses(userId) {
     }));
 
     const user = userRes.Item;
-
     if (!user) {
         return response({ error: "User not found" }, 404);
     }
 
-    const userClass = user.class;
+    const userClass = user.class || "A";
 
-    // 2️⃣ Fetch class-specific courses
-    const classRes = await ddb.send(new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: "PK = :pk",
-        ExpressionAttributeValues: {
-            ":pk": `CLASSGROUP#${userClass}`
-        }
-    }));
-
-    // 3️⃣ Fetch ALL courses
-    const allRes = await ddb.send(new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: "PK = :pk",
-        ExpressionAttributeValues: {
-            ":pk": "CLASSGROUP#ALL"
-        }
-    }));
+    // 2️⃣ Fetch class-specific courses AND ALL courses
+    const [classRes, allRes] = await Promise.all([
+        ddb.send(new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: { ":pk": `CLASSGROUP#${userClass}` }
+        })),
+        ddb.send(new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: { ":pk": "CLASSGROUP#ALL" }
+        }))
+    ]);
 
     const combined = [
         ...(classRes.Items || []),
         ...(allRes.Items || [])
     ];
 
-    return response(combined);
+    if (combined.length === 0) return response([]);
+
+    // 3️⃣ FETCH METADATA (titles, colors) for these courses using BatchGet
+    const uniqueCodes = [...new Set(combined.map(item => item.courseCode))];
+    
+    // Split into batches of 100 (DynamoDB limit) - though 100 is unlikely here
+    const metaRes = await ddb.send(new BatchGetCommand({
+        RequestItems: {
+            [TABLE_NAME]: {
+                Keys: uniqueCodes.map(code => ({
+                    PK: `COURSE#${code}`,
+                    SK: "META"
+                }))
+            }
+        }
+    }));
+
+    const metaMap = {};
+    (metaRes.Responses[TABLE_NAME] || []).forEach(m => {
+        metaMap[m.courseCode] = m;
+    });
+
+    // 4️⃣ MERGE metadata into the classgroup items
+    const merged = combined.map(item => ({
+        ...metaMap[item.courseCode],
+        ...item,
+        // Ensure sub-objects aren't accidentally wiped if they exist in both
+        title: metaMap[item.courseCode]?.courseName || item.courseName || item.title || item.courseCode,
+    }));
+
+    return response(merged);
 }
 
 //

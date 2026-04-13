@@ -98,10 +98,28 @@ function normalizeCourse(item: any): CourseItem {
   // 4. Unified ID/Code mapping
   const courseCode = item.courseCode || item.code || item.id || item.courseId;
 
+  // 5. Categorize as 'Classes' for the Weekly view filter if type is missing
+  const type = item.type || 'Classes';
+
+  // 6. Map roomNumber -> location (LocalizedString)
+  let location = item.location || item.roomNumber;
+  if (typeof location === 'string') {
+    location = { en: location, jp: location };
+  }
+
+  // 7. Map courseName -> title (LocalizedString)
+  let title = item.title || item.courseName;
+  if (typeof title === 'string') {
+    title = { en: title, jp: title };
+  }
+
   return {
     ...item,
     id: courseCode,
     code: courseCode,
+    type,
+    title,
+    location,
     dayOfWeek: day,
     periods: periods || [],
     credits: isNaN(credits) ? 0 : credits,
