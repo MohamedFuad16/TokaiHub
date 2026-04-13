@@ -133,8 +133,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               lastSemGpa: 0
             };
 
-            const safeCumGpa = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa) || 0;
-            const safeLastSemGpa = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa) || 0;
+            const rawCum = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
+            const rawLast = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa);
 
             return {
               ...current,

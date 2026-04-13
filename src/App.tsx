@@ -409,8 +409,8 @@ export default function App() {
           return {
             ...prev,
             selectedCourseIds: data.enrolledCourseIds?.length ? data.enrolledCourseIds : prev.selectedCourseIds,
-            cumulativeGpa: rawCum > 0 ? rawCum : prev.cumulativeGpa,
-            lastSemGpa: rawLast > 0 ? rawLast : prev.lastSemGpa,
+            cumulativeGpa: isNaN(rawCum) ? prev.cumulativeGpa : rawCum,
+            lastSemGpa: isNaN(rawLast) ? prev.lastSemGpa : rawLast,
           };
         });
       }).catch(err => console.error('Failed to sync profile after login:', err));
