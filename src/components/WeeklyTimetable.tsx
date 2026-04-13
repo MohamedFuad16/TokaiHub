@@ -103,38 +103,45 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
           ))}
 
           {/* ── Class cards — placed with gridColumn + gridRow span ── */}
-          {scheduleItems
-            .filter(item =>
-              item.type === 'Classes' &&
-              (selectedCourseIds.includes(item.id) ||
-                selectedCourseIds.includes(item.code ?? ''))
-            )
-            .map(item => {
-              const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
-              if (colIdx === -1) return null;
-              const rowStart = (item.periods?.[0] ?? 1) + 1; // +1 because row 1 = header
-              const rowSpan = item.periods?.length ?? 1;
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    gridRow: `${rowStart} / span ${rowSpan}`,
-                    gridColumn: colIdx + 2,
-                  }}
-                  onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                  className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')} rounded-xl px-1 py-2 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative border ${isDark ? 'border-white/5' : 'border-black/5'}`}
-                >
-                  <div className={`font-bold text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-tight tracking-tight break-words hyphens-auto w-full text-center ${item.color?.includes('light') || item.color?.includes('-100') || !isDark ? 'text-brand-black' : 'text-white'}`}>
-                    {item.title?.[lang]}
-                  </div>
-                  <div className="mt-1.5 pt-1 shrink-0 flex flex-wrap gap-1 justify-center">
-                    <span className={`text-[8.5px] font-bold rounded-md px-1.5 py-0.5 inline-block truncate max-w-full ${item.color?.includes('light') || item.color?.includes('-100') || !isDark ? 'text-brand-black/60 bg-black/[0.08]' : 'text-white/60 bg-white/[0.08]'}`}>
-                      {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
-                    </span>
-                  </div>
+          {Array.from(new Map(
+            scheduleItems
+              .filter(item => 
+                item && 
+                item.type === 'Classes' && 
+                (selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
+              )
+              .map(item => [item.id, item]) // Deduplicate by ID
+          ).values()).map(item => {
+            const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
+            if (colIdx === -1) return null;
+            const rowStart = (item.periods?.[0] ?? 1) + 1; // +1 because row 1 = header
+            const rowSpan = item.periods?.length ?? 1;
+
+            const hasCustomColor = item.color && !item.color.includes('white/10') && !item.color.includes('gray-100');
+            const cardTextClass = hasCustomColor || !isDark ? 'text-[#0a0a0c]' : 'text-white';
+            const mutedTextClass = hasCustomColor || !isDark ? 'text-[#0a0a0c]/60' : 'text-white/60';
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  gridRow: `${rowStart} / span ${rowSpan}`,
+                  gridColumn: colIdx + 2,
+                }}
+                onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
+                className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')} rounded-xl px-1.5 py-2 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col gap-1 shadow-sm min-h-0 relative border ${isDark ? 'border-white/5' : 'border-black/5'}`}
+              >
+                <div className={`font-bold text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-[1.2] tracking-tight break-words hyphens-auto w-full text-center ${cardTextClass}`}>
+                  {item.title?.[lang]}
                 </div>
-              );
-            })}
+                <div className="mt-auto pt-1 shrink-0 flex flex-wrap gap-1 justify-center">
+                  <span className={`text-[8.5px] font-bold rounded-md px-1.5 py-0.5 inline-block truncate max-w-full ${mutedTextClass} bg-black/[0.05]`}>
+                    {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
 
           {/* ── Empty background cells — skip positions occupied by classes ── */}
           {PERIODS.map((period, pIdx) =>
