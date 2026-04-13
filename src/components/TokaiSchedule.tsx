@@ -70,23 +70,15 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               item => item.id === apiItem.id || item.code === apiItem.code
             );
 
-            // normalize dayOfWeek (fix)
-            let normalizedDay = apiItem.dayOfWeek;
-
-            // If API uses 0–6 (Sun–Sat), convert to 1–6 (Mon–Sat)
-            if (normalizedDay === 0) return null; // ignore Sunday
-            if (normalizedDay >= 1 && normalizedDay <= 6) {
-              // OK already
-            } else if (normalizedDay >= 0 && normalizedDay <= 6) {
-              normalizedDay = normalizedDay === 0 ? 1 : normalizedDay;
-            }
-
-            if (!local) return { ...apiItem, dayOfWeek: normalizedDay };
+            if (!local) return apiItem;
 
             return {
               ...local,
               ...apiItem,
-              dayOfWeek: normalizedDay, // ✅ FIX HERE
+              // Prioritize API values for these since they're live registration data
+              dayOfWeek: apiItem.dayOfWeek,
+              periods: apiItem.periods,
+              // Ensure titles/locations are merged safely
               title: typeof apiItem.title === 'string'
                 ? { en: apiItem.title, jp: local.title.jp }
                 : (apiItem.title ? { ...local.title, ...apiItem.title } : local.title),
@@ -97,9 +89,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 ? { en: apiItem.teacher, jp: local.teacher?.jp || '' }
                 : (apiItem.teacher ? { ...local.teacher, ...apiItem.teacher } : local.teacher),
             };
-          }).filter(Boolean);
+          });
           setScheduleItems(merged);
-
         }
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });

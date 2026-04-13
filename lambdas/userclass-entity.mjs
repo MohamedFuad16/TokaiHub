@@ -142,13 +142,13 @@ async function updateCourses(userId, event) {
 
     if (cumulativeGpa !== undefined) {
         updateExp.push("#cumGpa = :cumGpa");
-        attrValues[":cumGpa"] = cumulativeGpa.toString();
+        attrValues[":cumGpa"] = Number(cumulativeGpa);
         attrNames["#cumGpa"] = "cumulativeGpa";
     }
 
     if (lastSemGpa !== undefined) {
         updateExp.push("#lastGpa = :lastGpa");
-        attrValues[":lastGpa"] = lastSemGpa.toString();
+        attrValues[":lastGpa"] = Number(lastSemGpa);
         attrNames["#lastGpa"] = "lastSemGpa";
     }
 

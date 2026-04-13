@@ -66,6 +66,44 @@ async function apiFetch<T>(path: string, signalOrOptions?: AbortSignal | ApiFetc
   return (await res.json()) as T;
 }
 
+// ─── Normalization Helpers ───────────────────────────────────────────────────
+
+const DAY_MAP: Record<string, number> = {
+  SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
+};
+
+/** Converts backend items (string days, string periods) into the numeric format frontend expects. */
+function normalizeCourse(item: any): CourseItem {
+  if (!item) return item;
+
+  // 1. Day of week: "THU" -> 4
+  let day = item.dayOfWeek;
+  if (typeof day === 'string') {
+    day = DAY_MAP[day.toUpperCase()] ?? 1;
+  }
+
+  // 2. Periods: ["1", "2"] -> [1, 2]
+  let periods = item.periods;
+  if (Array.isArray(periods)) {
+    periods = periods.map((p: any) => Number(p)).filter((p: number) => !isNaN(p));
+  }
+
+  // 3. GPA & Credits casting
+  const credits = Number(item.credits || 0);
+
+  // 4. Unified ID/Code mapping
+  const courseCode = item.courseCode || item.code || item.id || item.courseId;
+
+  return {
+    ...item,
+    id: courseCode,
+    code: courseCode,
+    dayOfWeek: day,
+    periods: periods || [],
+    credits: isNaN(credits) ? 0 : credits,
+  };
+}
+
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
 
 export interface DashboardResponse {
@@ -102,7 +140,7 @@ export async function getDashboard(signal?: AbortSignal): Promise<DashboardRespo
   return {
     profile: profileRes,
     enrolledCourseIds: profileRes?.enrolledCourses || profileRes?.selectedCourseIds || [],
-    courses: courses || [],
+    courses: (courses || []).map(normalizeCourse),
     assignments: _mockAssignments,
   };
 }
@@ -111,7 +149,8 @@ export async function getDashboard(signal?: AbortSignal): Promise<DashboardRespo
 
 /** Fetches the authenticated user's full schedule. Returns available courses the user can select/filter. */
 export async function getSchedule(signal?: AbortSignal): Promise<CourseItem[]> {
-  return apiFetch<CourseItem[]>('/user-course?action=courses', { signal });
+  const courses = await apiFetch<any[]>('/user-course?action=courses', { signal });
+  return (courses || []).map(normalizeCourse);
 }
 
 // ─── Course Details ────────────────────────────────────────────────────────────
@@ -136,9 +175,10 @@ let _coursesCache: CourseItem[] | null = null;
  */
 export async function fetchAvailableCourses(): Promise<CourseItem[]> {
   if (_coursesCache) return _coursesCache;
-  const result = await apiFetch<CourseItem[]>('/user-course?action=courses');
-  _coursesCache = result;
-  return result;
+  const result = await apiFetch<any[]>('/user-course?action=courses');
+  const normalized = (result || []).map(normalizeCourse);
+  _coursesCache = normalized;
+  return normalized;
 }
 
 /** Clear the courses cache (e.g. after sign-out). */
