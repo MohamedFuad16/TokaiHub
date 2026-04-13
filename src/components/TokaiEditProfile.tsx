@@ -124,18 +124,16 @@ const TokaiEditProfile = React.memo(function TokaiEditProfile({ lang, settings, 
     setSaveError(null);
 
     try {
-      // selectedCourseIds are already course codes (e.g. "TTK085")
+      // Consolidated update: saves GPA AND enrolled courses in one atomic request
       await updateProfile(
         {
           selectedCourseIds,
+          enrolledCourses: selectedCourseIds,
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         },
         abortRef.current.signal,
       );
-
-      // ENSURE DynamoDB enrolledCourses is updated (matching onboarding behavior)
-      await enrollCourses(selectedCourseIds);
 
       onSave({
         ...userProfile,

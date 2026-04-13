@@ -144,8 +144,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                   ? current.selectedCourseIds
                   : (data.enrolledCourseIds ?? current.selectedCourseIds),
 
-              cumulativeGpa: safeCumGpa > 0 ? safeCumGpa : current.cumulativeGpa,
-              lastSemGpa: safeLastSemGpa > 0 ? safeLastSemGpa : current.lastSemGpa,
+              cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
+              lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
             };
           });
         }

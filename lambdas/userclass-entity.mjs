@@ -117,6 +117,7 @@ async function getAvailableCourses(userId) {
 //
 async function updateCourses(userId, event) {
     const body = event.body ? JSON.parse(event.body) : {};
+    console.log(`[updateCourses] User: ${userId}, Body:`, JSON.stringify(body));
 
     const { selectedCourseIds, enrolledCourses, cumulativeGpa, lastSemGpa } = body;
 
@@ -155,6 +156,8 @@ async function updateCourses(userId, event) {
     updateExp.push("#updatedAt = :updatedAt");
     attrValues[":updatedAt"] = new Date().toISOString();
     attrNames["#updatedAt"] = "updatedAt";
+
+    console.log(`[updateCourses] UpdateExpression: SET ${updateExp.join(", ")}`);
 
     await ddb.send(new UpdateCommand({
         TableName: TABLE_NAME,

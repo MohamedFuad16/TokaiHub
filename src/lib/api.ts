@@ -56,6 +56,10 @@ async function apiFetch<T>(path: string, signalOrOptions?: AbortSignal | ApiFetc
     ? AbortSignal.any([opts.signal, timeoutSignal])
     : timeoutSignal;
 
+  if (opts.method === 'PUT') {
+    console.log(`[apiFetch] PUT ${path} body:`, opts.body);
+  }
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: opts.method ?? 'GET',
     headers,
@@ -205,8 +209,9 @@ export async function enrollCourses(courseIds: string[]): Promise<void> {
 // ─── Update Profile ────────────────────────────────────────────────────────────
 
 export interface UpdateProfileRequest {
-  /** Course codes e.g. ["TTK085", "TTT032"] — convert from local IDs before calling */
+  /** Course codes e.g. ["TTK085", "TTT032"] */
   selectedCourseIds?: string[];
+  enrolledCourses?: string[];
   cumulativeGpa?: number;
   lastSemGpa?: number;
 }
