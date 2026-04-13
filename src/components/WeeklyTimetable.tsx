@@ -65,13 +65,12 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
 
       {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
       <div className="overflow-x-auto no-scrollbar w-full" style={{ containerType: 'inline-size' }}>
-        <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'min-content repeat(6, 18%)',
-            gridTemplateRows: 'auto repeat(6, minmax(85px, auto))',
-            gap: '2px',
-            padding: '0 4px 8px 4px',
+            gridTemplateColumns: 'min-content repeat(6, minmax(80px, 1fr))',
+            gridTemplateRows: 'auto repeat(6, minmax(90px, auto))',
+            gap: '3px',
+            padding: '4px 8px 12px 4px',
           }}
         >
           {/* ── Day header cells (Row 1) ── */}
@@ -122,13 +121,13 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
                     gridColumn: colIdx + 2,
                   }}
                   onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                  className={`${item.color} rounded-xl px-0.5 py-1.5 sm:p-1.5 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative`}
+                  className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')} rounded-xl px-1 py-2 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col justify-between shadow-sm min-h-0 relative border ${isDark ? 'border-white/5' : 'border-black/5'}`}
                 >
-                  <div className="font-bold text-brand-black text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-tight tracking-tight break-words hyphens-auto w-full text-center">
+                  <div className={`font-bold text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-tight tracking-tight break-words hyphens-auto w-full text-center ${item.color?.includes('light') || item.color?.includes('-100') || !isDark ? 'text-brand-black' : 'text-white'}`}>
                     {item.title?.[lang]}
                   </div>
-                  <div className="mt-1.5 pt-1 shrink-0 flex flex-wrap gap-1">
-                    <span className="text-[8.5px] font-bold text-brand-black/60 bg-black/[0.08] rounded-md px-1.5 py-0.5 inline-block truncate max-w-full">
+                  <div className="mt-1.5 pt-1 shrink-0 flex flex-wrap gap-1 justify-center">
+                    <span className={`text-[8.5px] font-bold rounded-md px-1.5 py-0.5 inline-block truncate max-w-full ${item.color?.includes('light') || item.color?.includes('-100') || !isDark ? 'text-brand-black/60 bg-black/[0.08]' : 'text-white/60 bg-white/[0.08]'}`}>
                       {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
                     </span>
                   </div>
