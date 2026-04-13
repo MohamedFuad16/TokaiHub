@@ -67,29 +67,26 @@ async function getProfile(userId) {
 }
 
 //
-// 📚 GET AVAILABLE COURSES (A/B + ALL)
-//
-//
-// 📚 GET AVAILABLE COURSES (A/B + ALL)
+// 📚 GET AVAILABLE COURSES (A/B + ALL + user's enrolled)
 //
 async function getAvailableCourses(userId) {
-    // 1️⃣ Get user
+    // 1️⃣ Get user profile (need class + enrolledCourses)
     const userRes = await ddb.send(new GetCommand({
         TableName: TABLE_NAME,
-        Key: {
-            PK: `USER#${userId}`,
-            SK: "PROFILE"
-        }
+        Key: { PK: `USER#${userId}`, SK: "PROFILE" }
     }));
 
     const user = userRes.Item;
-    if (!user) {
-        return response({ error: "User not found" }, 404);
-    }
+    if (!user) return response({ error: "User not found" }, 404);
 
     const userClass = user.class || "A";
+    // All course codes the user is actually enrolled in
+    const enrolledCodes = [
+        ...(user.enrolledCourses || []),
+        ...(user.selectedCourseIds || [])
+    ].filter(Boolean);
 
-    // 2️⃣ Fetch class-specific courses AND ALL courses
+    // 2️⃣ Fetch class-specific + ALL classgroup courses in parallel
     const [classRes, allRes] = await Promise.all([
         ddb.send(new QueryCommand({
             TableName: TABLE_NAME,
@@ -103,21 +100,26 @@ async function getAvailableCourses(userId) {
         }))
     ]);
 
-    const combined = [
+    const classGroupItems = [
         ...(classRes.Items || []),
         ...(allRes.Items || [])
     ];
 
-    if (combined.length === 0) return response([]);
+    // Codes already covered by the classgroup query
+    const classGroupCodes = new Set(classGroupItems.map(i => i.courseCode).filter(Boolean));
 
-    // 3️⃣ FETCH METADATA (titles, colors) for these courses using BatchGet
-    const uniqueCodes = [...new Set(combined.map(item => item.courseCode))];
-    
-    // Split into batches of 100 (DynamoDB limit) - though 100 is unlikely here
+    // 3️⃣ Find enrolled courses NOT in the classgroup results — need direct META fetch
+    const missingCodes = [...new Set(enrolledCodes)].filter(code => !classGroupCodes.has(code));
+
+    // 4️⃣ BatchGet COURSE#META for ALL unique codes (classgroup + missing enrolled)
+    const allCodes = [...new Set([...classGroupCodes, ...missingCodes])];
+
+    if (allCodes.length === 0) return response([]);
+
     const metaRes = await ddb.send(new BatchGetCommand({
         RequestItems: {
             [TABLE_NAME]: {
-                Keys: uniqueCodes.map(code => ({
+                Keys: allCodes.map(code => ({
                     PK: `COURSE#${code}`,
                     SK: "META"
                 }))
@@ -126,19 +128,42 @@ async function getAvailableCourses(userId) {
     }));
 
     const metaMap = {};
-    (metaRes.Responses[TABLE_NAME] || []).forEach(m => {
+    (metaRes.Responses?.[TABLE_NAME] || []).forEach(m => {
         metaMap[m.courseCode] = m;
     });
 
-    // 4️⃣ MERGE metadata into the classgroup items
-    const merged = combined.map(item => ({
-        ...metaMap[item.courseCode],
-        ...item,
-        // Ensure sub-objects aren't accidentally wiped if they exist in both
-        title: metaMap[item.courseCode]?.courseName || item.courseName || item.title || item.courseCode,
-    }));
+    // 5️⃣ Build final list:
+    //    - classgroup items merged with their META (META wins on schedule fields)
+    //    - missing enrolled courses added purely from META
+    const fromClassGroup = classGroupItems.map(item => {
+        const meta = metaMap[item.courseCode] || {};
+        return {
+            ...item,
+            ...meta,
+            courseCode: item.courseCode,
+            title: meta.courseName || meta.title || item.courseName || item.courseCode,
+        };
+    });
 
-    return response(merged);
+    const fromMissingEnrolled = missingCodes
+        .filter(code => metaMap[code]) // only if META exists in DB
+        .map(code => ({
+            ...metaMap[code],
+            courseCode: code,
+            title: metaMap[code].courseName || metaMap[code].title || code,
+        }));
+
+    // Deduplicate by courseCode
+    const seen = new Set();
+    const result = [...fromClassGroup, ...fromMissingEnrolled].filter(item => {
+        if (!item.courseCode || seen.has(item.courseCode)) return false;
+        seen.add(item.courseCode);
+        return true;
+    });
+
+    console.log(`[getAvailableCourses] userId=${userId} class=${userClass} total=${result.length} (classgroup=${fromClassGroup.length} + directEnrolled=${fromMissingEnrolled.length})`);
+
+    return response(result);
 }
 
 //

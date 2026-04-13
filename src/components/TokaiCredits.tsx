@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
 import { allItems } from '../data';
-import { fetchAvailableCourses } from '../lib/api';
+import { getDashboard } from '../lib/api';
 import type { CourseItem } from '../lib/types';
 
 const DAY_LABELS: Record<number, { en: string; jp: string }> = {
@@ -28,38 +28,41 @@ export default function TokaiCredits({ lang, settings, userProfile }: ScreenProp
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
 
-  // Use cached API courses (populated by onboarding/edit-profile); falls back to allItems instantly
-  const [catalogCourses, setCatalogCourses] = useState<CourseItem[]>(
-    (allItems as CourseItem[]).filter(i => i.type === 'Classes')
-  );
+  // Start empty — fetch from same getDashboard source as TokaiHome
+  const [catalogCourses, setCatalogCourses] = useState<CourseItem[]>([]);
 
   useEffect(() => {
-    fetchAvailableCourses()
+    const controller = new AbortController();
+    getDashboard(controller.signal)
       .then(data => {
-        if (!data?.length) return;
-        const merged = data.map((apiCourse: any) => {
-          const courseCode = apiCourse.courseId ?? apiCourse.code ?? apiCourse.id;
-          const local = (allItems as CourseItem[]).find(item =>
-            item.code === courseCode || item.id === courseCode
+        if (!data.courses?.length) return;
+        const enrolledIds = data.enrolledCourseIds ?? [];
+        console.log('📊 TokaiCredits — enrolled:', enrolledIds, 'courses:', data.courses.length);
+
+        const merged = data.courses.map(apiCourse => {
+          const local = (allItems as CourseItem[]).find(
+            item => item.id === apiCourse.id || item.code === apiCourse.code
           );
-          const enTitle: string = apiCourse.courseName ?? apiCourse.title ?? courseCode ?? '';
           return {
             ...(local ?? {}),
             ...apiCourse,
-            id: courseCode,
-            code: courseCode,
-            credits: apiCourse.credits ?? local?.credits,
-            title: local ? { en: enTitle, jp: local.title.jp } : { en: enTitle, jp: enTitle },
-            location: local?.location,
-            color: local?.color,
-            time: local?.time,
-            dayOfWeek: local?.dayOfWeek,
-            periods: local?.periods,
+            id: apiCourse.id,
+            code: apiCourse.code,
+            // Prefer local metadata for display fields
+            color: local?.color ?? apiCourse.color,
+            credits: apiCourse.credits ?? local?.credits ?? 0,
+            dayOfWeek: (apiCourse.dayOfWeek !== undefined && apiCourse.dayOfWeek !== null) ? apiCourse.dayOfWeek : local?.dayOfWeek,
+            periods: (Array.isArray(apiCourse.periods) && apiCourse.periods.length > 0) ? apiCourse.periods : local?.periods,
+            time: apiCourse.time || local?.time,
+            title: typeof apiCourse.title === 'string'
+              ? { en: apiCourse.title, jp: local?.title?.jp ?? apiCourse.title }
+              : (apiCourse.title ?? local?.title ?? { en: '', jp: '' }),
           } as CourseItem;
         });
         setCatalogCourses(merged);
       })
-      .catch(() => { /* keep allItems fallback */ });
+      .catch(err => { if (err?.name !== 'AbortError') console.error('Credits fetch error:', err); });
+    return () => controller.abort();
   }, []);
 
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];

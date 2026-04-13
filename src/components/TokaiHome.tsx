@@ -83,6 +83,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         // ✅ Merge courses - Preserve colors from allItems
         if (data.courses?.length) {
+          const enrolledIds = data.enrolledCourseIds ?? [];
+          console.log('🎯 ENROLLED IDs:', enrolledIds);
+          console.log('📚 API COURSE IDs:', data.courses.map(c => ({ id: c.id, code: c.code, type: c.type })));
+
           const mergedCourses = data.courses.map(apiCourse => {
             const local = (allItems as CourseItem[]).find(
               item => item.id === apiCourse.id || item.code === apiCourse.code
@@ -92,6 +96,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             return {
               ...local,      // Start with local (preserves color/credits)
               ...apiCourse,  // Overwrite with API values (day/periods)
+              // Prefer local dayOfWeek/periods if API gave a defaulted value
+              dayOfWeek: (apiCourse.dayOfWeek !== undefined && apiCourse.dayOfWeek !== null) ? apiCourse.dayOfWeek : local.dayOfWeek,
+              periods: (Array.isArray(apiCourse.periods) && apiCourse.periods.length > 0) ? apiCourse.periods : local.periods,
               // Deep merge LocalizedStrings
               title: typeof apiCourse.title === 'string'
                 ? { en: apiCourse.title, jp: local.title.jp }
@@ -105,6 +112,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             };
           });
 
+          const matched = mergedCourses.filter(c =>
+            enrolledIds.includes(c.id) || enrolledIds.includes(c.code ?? '')
+          );
+          console.log(`✅ MATCHED ${matched.length}/${mergedCourses.length} courses for schedule:`, matched.map(c => ({ id: c.id, day: c.dayOfWeek, periods: c.periods })));
+
           setCourseItems(mergedCourses as CourseItem[]);
         }
 
@@ -113,23 +125,28 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
           setAssignments(data.assignments);
         }
 
-        // ✅ Normalize ALL possible API shapes
-        const profile =
-          data.profile ??
-          data.user ??
-          data.Item ??   // DynamoDB
-          data;
+        // ✅ Normalize ALL possible API shapes — data.profile may be {} (empty), so
+        //    we can't rely on ?? alone; instead pick whichever shape has enrolledCourses.
+        const candidates = [data.profile, data.user, data.Item, data] as any[];
+        const profile = candidates.find(c =>
+          c && typeof c === 'object' &&
+          (c.enrolledCourses || c.selectedCourseIds || c.email || c.name)
+        ) ?? {};
 
         console.log("✅ NORMALIZED PROFILE:", profile);
 
         // ✅ Update user profile safely — PRIORITIZE API DATA
         if (setUserProfile) {
           setUserProfile(prev => {
-            const current = (prev && prev.email) ? prev : initialProfile;
+            const current = (prev && prev.email) ? prev : { email: '', name: '', studentId: '', selectedCourseIds: [], cumulativeGpa: 0, lastSemGpa: 0 };
 
             const rawCum = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
             const rawLast = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa);
-            const apiCourseIds = data.enrolledCourseIds ?? profile?.enrolledCourses ?? profile?.selectedCourseIds;
+            // Check all locations for enrolled IDs
+            const apiCourseIds =
+              data.enrolledCourseIds ??
+              profile?.enrolledCourses ??
+              profile?.selectedCourseIds;
 
             return {
               ...current,
