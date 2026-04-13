@@ -175,17 +175,7 @@ export default function TokaiSplash({ lang, isDark: _isDark, onDone }: TokaiSpla
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Glow — morphs between slides */}
-      <motion.div
-        key={`glow-${slide.id}`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(58% 42% at ${slide.glowPos}, ${slide.glowColor} 0%, transparent 70%)`,
-        }}
-      />
+
 
       {/* Top bar */}
       <div

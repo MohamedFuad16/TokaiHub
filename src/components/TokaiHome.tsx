@@ -281,7 +281,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               </button>
             </div>
 
-            <div className={`pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] shadow-[0_8px_30px_rgba(0,0,0,0.1)] border ${isDark ? 'border-gray-800 bg-gray-900/50' : 'border-black/5 bg-white/50'} overflow-hidden relative`}>
+            <div className="pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] overflow-hidden relative" style={{ background: '#0C0C0E' }}>
               <WeeklyTimetable
                 lang={lang}
                 settings={settings}
