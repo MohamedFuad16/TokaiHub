@@ -151,8 +151,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             return {
               ...current,
               // Always use API course IDs if they exist to prevent state reverts
-              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
-                ? apiCourseIds 
+              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
+                ? apiCourseIds
                 : current.selectedCourseIds,
 
               cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
@@ -273,25 +273,25 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 <Calendar className="w-5 h-5 text-brand-yellow" />
                 {lang === 'en' ? "Weekly Schedule" : "週間スケジュール"}
               </h2>
-              <button 
+              <button
                 onClick={() => navigate('/schedule')}
                 className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
               >
                 {lang === 'en' ? "Full View →" : "詳細を表示 →"}
               </button>
             </div>
-            
+
             <div className={`pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] shadow-[0_8px_30px_rgba(0,0,0,0.1)] border ${isDark ? 'border-gray-800 bg-gray-900/50' : 'border-black/5 bg-white/50'} overflow-hidden relative`}>
-              <WeeklyTimetable 
+              <WeeklyTimetable
                 lang={lang}
                 settings={settings}
                 selectedCourseIds={selectedCourseIds}
                 scheduleItems={courseItems}
               />
             </div>
-            
+
             <div className="mt-6 flex justify-center">
-              <button 
+              <button
                 onClick={() => navigate('/class')}
                 className={`flex items-center gap-2 font-bold text-sm px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black hover:brightness-95 active:scale-95 transition-all shadow-lg shadow-yellow-500/10`}
               >
