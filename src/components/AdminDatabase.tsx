@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ChevronLeft, Search, Database, Plus, Pencil, Trash2,
   Eye, Filter, Loader2, CheckCircle, AlertTriangle, X, ChevronDown,
@@ -27,7 +27,7 @@ const t = {
     filterCourse: 'COURSE#',
     filterCustom: 'Custom prefix…',
     noItems: 'No items found. Connect a Lambda to fetch data.',
-    loadData: 'Load Data',
+    loadData: 'Refresh',
     loading: 'Fetching records…',
     pk: 'Partition Key (PK)',
     sk: 'Sort Key (SK)',
@@ -60,7 +60,7 @@ const t = {
     filterCourse: 'COURSE#',
     filterCustom: 'カスタムプレフィックス…',
     noItems: 'アイテムが見つかりません。Lambdaを接続してデータを取得してください。',
-    loadData: 'データを読み込む',
+    loadData: '更新',
     loading: 'レコードを取得中…',
     pk: 'パーティションキー (PK)',
     sk: 'ソートキー (SK)',
@@ -188,21 +188,25 @@ export default function AdminDatabase({ lang, settings }: ScreenProps) {
     setTimeout(() => setSuccessMsg(''), 2500);
   }, []);
 
-  // Fetch items from DynamoDB via /testDB Lambda
+  // Fetch all items from DynamoDB via full table scan — prefix filtering is client-side
   const handleLoadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const prefix = filterPrefix || customPrefix || undefined;
-      const search = searchQuery.trim() || undefined;
-      const data = await adminBrowse({ pk: prefix, search });
+      // Always do a full scan — the filteredItems useMemo handles prefix/search filtering locally
+      const data = await adminBrowse();
       setItems(data);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to fetch data');
     } finally {
       setIsLoading(false);
     }
-  }, [filterPrefix, customPrefix, searchQuery]);
+  }, []);
+
+  // Auto-load data on mount
+  useEffect(() => {
+    handleLoadData();
+  }, [handleLoadData]);
 
   // Save edited item via PUT /testDB?action=edit
   const handleSaveEdit = useCallback(async () => {
