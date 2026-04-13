@@ -30,7 +30,7 @@ const SLIDES = [
     glowColor: 'rgba(129,140,248,0.18)',
     glowPos: '50% 30%',
     mascot: mascot2,
-    stage: 'glass' as const,
+    stage: 'direct' as const,
     eyebrow: { en: 'Smart Schedule', jp: 'スマートスケジュール' },
     headline: { en: 'Never miss\na class.', jp: '授業を\n見逃さない。' },
     sub: { en: 'Daily, weekly and monthly timetable views — always one tap away.', jp: '日別・週別・月別の時間割。いつでもすぐに確認できます。' },
