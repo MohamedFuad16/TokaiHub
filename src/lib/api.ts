@@ -211,3 +211,35 @@ export const _mockAssignments: Assignment[] = [
     status: 'submitted',
   },
 ];
+
+// ─── Admin Database CRUD (via /testDB Lambda) ─────────────────────────────────
+
+export interface DbItem {
+  PK: string;
+  SK: string;
+  [key: string]: unknown;
+}
+
+/** Browse/search the DynamoDB table. Optionally filter by PK prefix, SK prefix, or free-text search. */
+export async function adminBrowse(opts?: { pk?: string; sk?: string; search?: string }): Promise<DbItem[]> {
+  const params = new URLSearchParams({ action: 'browse' });
+  if (opts?.pk) params.set('pk', opts.pk);
+  if (opts?.sk) params.set('sk', opts.sk);
+  if (opts?.search) params.set('search', opts.search);
+  return apiFetch<DbItem[]>(`/testDB?${params.toString()}`);
+}
+
+/** Add a new item to DynamoDB. Body must include PK and SK. */
+export async function adminAddItem(item: DbItem): Promise<{ message: string; item: DbItem }> {
+  return apiFetch('/testDB?action=add', { method: 'POST', body: item });
+}
+
+/** Update an existing item. Body must include PK, SK, and the fields to update. */
+export async function adminEditItem(item: DbItem): Promise<{ message: string }> {
+  return apiFetch('/testDB?action=edit', { method: 'PUT', body: item });
+}
+
+/** Delete an item by PK + SK. */
+export async function adminDeleteItem(pk: string, sk: string): Promise<{ message: string }> {
+  return apiFetch('/testDB?action=delete', { method: 'DELETE', body: { PK: pk, SK: sk } });
+}

@@ -6,14 +6,9 @@ import {
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { adminBrowse, adminAddItem, adminEditItem, adminDeleteItem, type DbItem } from '../lib/api';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface DbItem {
-  PK: string;
-  SK: string;
-  [key: string]: unknown;
-}
+// DbItem type imported from lib/api.ts
 
 type Tab = 'browse' | 'edit' | 'add' | 'delete';
 
@@ -88,19 +83,7 @@ const t = {
   },
 };
 
-// ─── Mock data for preview ───────────────────────────────────────────────────
-
-const MOCK_ITEMS: DbItem[] = [
-  { PK: 'COURSE#TTK085', SK: 'METADATA', courseName: 'CG & Virtual Reality', credits: 2, dayOfWeek: 1, periods: [1, 2] },
-  { PK: 'COURSE#TTK030', SK: 'METADATA', courseName: 'Software Design Modeling', credits: 2, dayOfWeek: 2, periods: [2] },
-  { PK: 'COURSE#TTK040', SK: 'METADATA', courseName: '情報通信ネットワーク', credits: 2, dayOfWeek: 3, periods: [3, 4] },
-  { PK: 'COURSE#TTT032', SK: 'METADATA', courseName: 'Technical English', credits: 2, dayOfWeek: 2, periods: [1] },
-  { PK: 'COURSE#TTK095', SK: 'METADATA', courseName: '品質と信頼性・安全性', credits: 2, dayOfWeek: 3, periods: [2] },
-  { PK: 'CLASSGROUP#A', SK: 'INFO', className: 'Class A', studentCount: 45, advisor: 'Prof. Tanaka' },
-  { PK: 'CLASSGROUP#B', SK: 'INFO', className: 'Class B', studentCount: 42, advisor: 'Prof. Suzuki' },
-  { PK: 'COURSE#TTK050', SK: 'METADATA', courseName: 'Platform & Infrastructure', credits: 2, dayOfWeek: 5, periods: [4] },
-  { PK: 'COURSE#TTM010', SK: 'METADATA', courseName: 'Introduction to German Speaking Countries', credits: 2, dayOfWeek: 5, periods: [5] },
-];
+// No mock data — items are fetched from DynamoDB via /testDB Lambda
 
 // ─── Animation variants ─────────────────────────────────────────────────────
 
@@ -132,7 +115,8 @@ export default function AdminDatabase({ lang, settings }: ScreenProps) {
 
   // State
   const [activeTab, setActiveTab] = useState<Tab>('browse');
-  const [items, setItems] = useState<DbItem[]>(MOCK_ITEMS);
+  const [items, setItems] = useState<DbItem[]>([]);
+  const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPrefix, setFilterPrefix] = useState('');
@@ -204,71 +188,86 @@ export default function AdminDatabase({ lang, settings }: ScreenProps) {
     setTimeout(() => setSuccessMsg(''), 2500);
   }, []);
 
-  // Stub: Load data from API
+  // Fetch items from DynamoDB via /testDB Lambda
   const handleLoadData = useCallback(async () => {
     setIsLoading(true);
-    // TODO: Replace with actual API call
-    // const data = await apiFetch<DbItem[]>('/admin/scan', { method: 'POST', body: { prefix: filterPrefix } });
-    await new Promise(r => setTimeout(r, 1200));
-    setIsLoading(false);
-  }, []);
+    setErrorMsg('');
+    try {
+      const prefix = filterPrefix || customPrefix || undefined;
+      const search = searchQuery.trim() || undefined;
+      const data = await adminBrowse({ pk: prefix, search });
+      setItems(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to fetch data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filterPrefix, customPrefix, searchQuery]);
 
-  // Stub: Save edited item
+  // Save edited item via PUT /testDB?action=edit
   const handleSaveEdit = useCallback(async () => {
     if (!selectedItem) return;
     setIsLoading(true);
-    // TODO: Replace with actual API call
-    // await apiFetch('/admin/update', { method: 'PUT', body: { PK, SK, ...fields } });
-    await new Promise(r => setTimeout(r, 800));
-
-    // Optimistic update
-    const updated: DbItem = { PK: selectedItem.PK, SK: selectedItem.SK };
-    editFields.forEach(f => {
-      if (f.key.trim()) {
-        try { updated[f.key] = JSON.parse(f.value); } catch { updated[f.key] = f.value; }
-      }
-    });
-    setItems(prev => prev.map(i => (i.PK === updated.PK && i.SK === updated.SK ? updated : i)));
-    setSelectedItem(updated);
-    setIsLoading(false);
-    flashSuccess(tx.saved);
+    setErrorMsg('');
+    try {
+      const updated: DbItem = { PK: selectedItem.PK, SK: selectedItem.SK };
+      editFields.forEach(f => {
+        if (f.key.trim()) {
+          try { updated[f.key] = JSON.parse(f.value); } catch { updated[f.key] = f.value; }
+        }
+      });
+      await adminEditItem(updated);
+      setItems(prev => prev.map(i => (i.PK === updated.PK && i.SK === updated.SK ? updated : i)));
+      setSelectedItem(updated);
+      flashSuccess(tx.saved);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to save changes');
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedItem, editFields, tx.saved, flashSuccess]);
 
-  // Stub: Add new item
+  // Add new item via POST /testDB?action=add
   const handleAddItem = useCallback(async () => {
     if (!newPK.trim() || !newSK.trim()) return;
     setIsLoading(true);
-    // TODO: Replace with actual API call
-    // await apiFetch('/admin/create', { method: 'POST', body: { PK, SK, ...fields } });
-    await new Promise(r => setTimeout(r, 800));
-
-    const newItem: DbItem = { PK: newPK, SK: newSK };
-    newFields.forEach(f => {
-      if (f.key.trim()) {
-        try { newItem[f.key] = JSON.parse(f.value); } catch { newItem[f.key] = f.value; }
-      }
-    });
-    setItems(prev => [...prev, newItem]);
-    setNewPK('');
-    setNewSK('');
-    setNewFields([{ key: '', value: '' }]);
-    setIsLoading(false);
-    flashSuccess(tx.added);
+    setErrorMsg('');
+    try {
+      const newItem: DbItem = { PK: newPK, SK: newSK };
+      newFields.forEach(f => {
+        if (f.key.trim()) {
+          try { newItem[f.key] = JSON.parse(f.value); } catch { newItem[f.key] = f.value; }
+        }
+      });
+      await adminAddItem(newItem);
+      setItems(prev => [...prev, newItem]);
+      setNewPK('');
+      setNewSK('');
+      setNewFields([{ key: '', value: '' }]);
+      flashSuccess(tx.added);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to add item');
+    } finally {
+      setIsLoading(false);
+    }
   }, [newPK, newSK, newFields, tx.added, flashSuccess]);
 
-  // Stub: Delete item
+  // Delete item via DELETE /testDB?action=delete
   const handleDeleteItem = useCallback(async () => {
     if (!selectedItem) return;
     setIsLoading(true);
-    // TODO: Replace with actual API call
-    // await apiFetch('/admin/delete', { method: 'DELETE', body: { PK, SK } });
-    await new Promise(r => setTimeout(r, 800));
-
-    setItems(prev => prev.filter(i => !(i.PK === selectedItem.PK && i.SK === selectedItem.SK)));
-    setSelectedItem(null);
-    setShowDeleteConfirm(false);
-    setIsLoading(false);
-    flashSuccess(tx.deleted);
+    setErrorMsg('');
+    try {
+      await adminDeleteItem(selectedItem.PK, selectedItem.SK);
+      setItems(prev => prev.filter(i => !(i.PK === selectedItem.PK && i.SK === selectedItem.SK)));
+      setSelectedItem(null);
+      setShowDeleteConfirm(false);
+      flashSuccess(tx.deleted);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to delete item');
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedItem, tx.deleted, flashSuccess]);
 
   return (
@@ -328,6 +327,28 @@ export default function AdminDatabase({ lang, settings }: ScreenProps) {
             <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-green-500/10 border border-green-500/20">
               <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
               <span className="text-green-500 text-sm font-bold">{successMsg}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error banner */}
+      <AnimatePresence>
+        {errorMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-4 sm:mx-6 mt-2 max-w-4xl w-full sm:mx-auto"
+          >
+            <div className="flex items-center justify-between gap-2 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                <span className="text-red-500 text-sm font-bold truncate">{errorMsg}</span>
+              </div>
+              <button onClick={() => setErrorMsg('')} className="text-red-400 shrink-0">
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         )}
