@@ -30,10 +30,25 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
 
   const weeklyTimetable = React.useMemo(() => {
     const map = new Map<number, Map<number, CourseItem>>();
-    scheduleItems.filter(i => i.type === 'Classes' && (selectedCourseIds.includes(i.id) || selectedCourseIds.includes(i.code ?? ''))).forEach(item => {
-      if (!map.has(item.dayOfWeek)) map.set(item.dayOfWeek, new Map());
-      (item.periods || [1]).forEach(p => {
-        map.get(item.dayOfWeek)!.set(p, item);
+    
+    // Safety check for scheduleItems being an array
+    if (!Array.isArray(scheduleItems)) return map;
+
+    scheduleItems.filter(i => 
+      i && 
+      i.type === 'Classes' && 
+      (selectedCourseIds.includes(i.id) || selectedCourseIds.includes(i.code ?? ''))
+    ).forEach(item => {
+      const day = item.dayOfWeek ?? 1;
+      if (!map.has(day)) map.set(day, new Map());
+      
+      // Defensively handle periods in case normalization missed something
+      const periods = Array.isArray(item.periods) ? item.periods : [1];
+      periods.forEach(p => {
+        const periodNum = Number(p);
+        if (!isNaN(periodNum)) {
+          map.get(day)!.set(periodNum, item);
+        }
       });
     });
     return map;

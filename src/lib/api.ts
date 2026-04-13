@@ -80,17 +80,27 @@ const DAY_MAP: Record<string, number> = {
 function normalizeCourse(item: any): CourseItem {
   if (!item) return item;
 
-  // 1. Day of week: "THU" -> 4
+  // 1. Day of week: "THU" -> 4 or ensure number
   let day = item.dayOfWeek;
   if (typeof day === 'string') {
-    day = DAY_MAP[day.toUpperCase()] ?? 1;
+    day = DAY_MAP[day.toUpperCase()] ?? Number(day);
+  } else {
+    day = Number(day);
   }
+  if (isNaN(day)) day = 1;
 
-  // 2. Periods: ["1", "2"] -> [1, 2]
-  let periods = item.periods;
-  if (Array.isArray(periods)) {
-    periods = periods.map((p: any) => Number(p)).filter((p: number) => !isNaN(p));
+  // 2. Periods: Ensure we always have an array of numbers
+  let rawPeriods = item.periods;
+  let periods: number[] = [];
+  if (Array.isArray(rawPeriods)) {
+    periods = rawPeriods.map((p: any) => Number(p)).filter((p: number) => !isNaN(p));
+  } else if (typeof rawPeriods === 'number') {
+    periods = [rawPeriods];
+  } else if (typeof rawPeriods === 'string') {
+    // Handles "1" or "1,2"
+    periods = rawPeriods.split(',').map(p => Number(p.trim())).filter(p => !isNaN(p));
   }
+  if (periods.length === 0) periods = [1]; // Fallback to period 1
 
   // 3. GPA & Credits casting
   const credits = Number(item.credits || 0);
