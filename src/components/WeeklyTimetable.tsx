@@ -117,10 +117,10 @@ export default function WeeklyTimetable({
                 <div
                   key={day}
                   className={`text-center text-xs font-bold pb-2 pt-1 uppercase ${isToday
-                      ? 'text-brand-yellow'
-                      : isDark
-                        ? 'text-white/30'
-                        : 'text-gray-400'
+                    ? 'text-brand-yellow'
+                    : isDark
+                      ? 'text-white/30'
+                      : 'text-gray-400'
                     }`}
                 >
                   {day}
@@ -150,34 +150,29 @@ export default function WeeklyTimetable({
 
           {/* 🔥 CLASS CARDS (single render) */}
           {filteredItems.map((item) => {
-            const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
+            const day = normalizeDay(item.dayOfWeek);
+            const colIdx = WEEK_DAY_NUMS.indexOf(day);
             if (colIdx === -1) return null;
 
-            const rowStart = (item.periods?.[0] ?? 1) + 1;
-            const rowSpan = item.periods?.length ?? 1;
+            const periods = (item.periods || []).map(Number).sort((a, b) => a - b);
+            const start = periods[0] ?? 1;
+            const end = periods[periods.length - 1] ?? start;
+
+            const rowStart = start + 1;
+            const rowSpan = end - start + 1;
 
             return (
               <div
-                key={item.id}
+                key={`${item.id}-${day}-${periods.join('-')}`}
                 style={{
                   gridRow: `${rowStart} / span ${rowSpan}`,
                   gridColumn: colIdx + 2,
                 }}
-                onClick={() =>
-                  setTimeout(() => navigate(`/course/${item.id}`), 100)
-                }
-                className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')
-                  } rounded-xl p-2 cursor-pointer shadow-sm flex flex-col gap-1`}
+                onClick={() => navigate(`/course/${item.id}`)}
+                className="rounded-xl p-2 cursor-pointer shadow-sm flex flex-col gap-1"
               >
                 <div className="text-xs font-semibold text-center line-clamp-3">
                   {item.title?.[lang]}
-                </div>
-
-                <div className="mt-auto text-[10px] text-center opacity-70">
-                  {(item.location?.[lang] ?? '').replace(
-                    'Shinagawa ',
-                    ''
-                  )}
                 </div>
               </div>
             );
@@ -198,8 +193,8 @@ export default function WeeklyTimetable({
                     gridColumn: dIdx + 2,
                   }}
                   className={`rounded-lg border border-dashed ${isDark
-                      ? 'bg-white/[0.02] border-white/[0.08]'
-                      : 'bg-transparent border-black/[0.08]'
+                    ? 'bg-white/[0.02] border-white/[0.08]'
+                    : 'bg-transparent border-black/[0.08]'
                     }`}
                 />
               );
