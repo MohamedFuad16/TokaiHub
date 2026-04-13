@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
 import MaintenanceBanner from './components/MaintenanceBanner';
+import TokaiSplash from './components/TokaiSplash';
 import { configureAmplify } from './lib/awsConfig';
 import { clearCoursesCache, getDashboard } from './lib/api';
 import mascotLogo from './assets/mascots/mascot_1_1.png';
@@ -260,6 +261,7 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('signIn');
+  const [splashDone, setSplashDone] = useState(() => !!localStorage.getItem('tokaihub_splash_seen_v1'));
   const [userProfile, setUserProfile] = useState<UserProfile | undefined>(() => {
     try {
       const stored = localStorage.getItem('tokaihub_user_profile');
@@ -484,6 +486,17 @@ export default function App() {
   }
 
   if (!isAuthenticated && !settings.devSkipAuth) {
+    // Show splash first (only once), then auth
+    if (!splashDone) {
+      return (
+        <TokaiSplash
+          lang={lang}
+          isDark={isDark}
+          onDone={() => setSplashDone(true)}
+        />
+      );
+    }
+
     return (
       <div className={`h-[100dvh] w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
         <AnimatePresence mode="wait">
