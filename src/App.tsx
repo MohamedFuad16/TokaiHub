@@ -22,6 +22,7 @@ const lazyAssignmentDetail = () => import('./components/TokaiAssignmentDetail');
 const lazyEditProfile = () => import('./components/TokaiEditProfile');
 const lazyCredits = () => import('./components/TokaiCredits');
 const lazyClass = () => import('./components/TokaiClass');
+const lazyAdminDb = () => import('./components/AdminDatabase');
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
@@ -32,6 +33,7 @@ const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
 const TokaiEditProfile = React.lazy(lazyEditProfile);
 const TokaiCredits = React.lazy(lazyCredits);
 const TokaiClass = React.lazy(lazyClass);
+const AdminDatabase = React.lazy(lazyAdminDb);
 
 // Preload all route components after initial paint
 export function preloadRoutes() {
@@ -44,6 +46,7 @@ export function preloadRoutes() {
   lazyEditProfile().catch(() => {});
   lazyCredits().catch(() => {});
   lazyClass().catch(() => {});
+  lazyAdminDb().catch(() => {});
 }
 
 // Start preloading immediately to hide chunk fetch times
@@ -80,7 +83,11 @@ export interface ScreenProps {
   userProfile?: UserProfile;
   setUserProfile?: React.Dispatch<React.SetStateAction<UserProfile | undefined>>;
   onSignOut?: () => void;
+  isAdmin?: boolean;
 }
+
+// Admin email whitelist
+const ADMIN_EMAILS = ['mohamed.fuad.jp@gmail.com'];
 
 const sidebarNav = [
   { path: '/', icon: Home, labelEn: 'Home', labelJp: 'ホーム' },
@@ -224,6 +231,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
                 <Route path="/credits" element={<TokaiCredits {...screenProps} />} />
                 <Route path="/class" element={<TokaiClass {...screenProps} />} />
+                <Route path="/admin/database" element={screenProps.isAdmin ? <AdminDatabase {...screenProps} /> : <Navigate to="/" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
@@ -449,6 +457,13 @@ export default function App() {
   }, []);
 
   const isDark = settings.isDarkMode;
+  const isAdmin = ADMIN_EMAILS.includes(userProfile?.email?.toLowerCase() ?? '');
+
+  // Set data-admin attribute on the root element for CSS theme override
+  useEffect(() => {
+    document.documentElement.setAttribute('data-admin', String(isAdmin));
+    return () => document.documentElement.removeAttribute('data-admin');
+  }, [isAdmin]);
 
   const screenProps: ScreenProps = React.useMemo(() => ({
     lang,
@@ -458,7 +473,8 @@ export default function App() {
     userProfile,
     setUserProfile: handleUpdateProfile,
     onSignOut: handleSignOut,
-  }), [lang, setLang, settings, userProfile, handleUpdateProfile, handleSignOut]);
+    isAdmin,
+  }), [lang, setLang, settings, userProfile, handleUpdateProfile, handleSignOut, isAdmin]);
 
   if (isLoading) {
     return <LoadingScreen lang={lang} isDark={isDark} />;

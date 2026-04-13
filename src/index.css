@@ -120,6 +120,12 @@
   --color-brand-pink: #FFD6E0;
   --color-brand-green: #E8F5A2;
   --color-brand-gray: #F5F7EE;
+  --color-brand-admin: #3B82F6;
+}
+
+/* Admin theme override — swaps gold accent → blue globally */
+[data-admin="true"] {
+  --color-brand-yellow: #3B82F6 !important;
 }
 
 /* Safe area insets for notch devices */

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut,
-  Code2, Pencil, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2,
+  Code2, Pencil, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Database,
 } from 'lucide-react';
 import { ScreenProps, UserProfile } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -122,7 +122,7 @@ interface SettingsProps extends ScreenProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TokaiSettings({
-  lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange,
+  lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange, isAdmin,
 }: SettingsProps) {
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
@@ -589,6 +589,34 @@ export default function TokaiSettings({
               </div>
             </div>
           </motion.div>
+
+          {/* ── Admin section (visible only for admin users) ──────────────── */}
+          {isAdmin && (
+            <motion.div variants={itemVariants} className="space-y-3">
+              <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                {lang === 'en' ? 'Administration' : '管理'}
+              </h3>
+              <div className={`${isDark ? 'bg-gray-800 border-blue-500/20' : 'bg-blue-50 border-blue-200'} border-2 rounded-3xl p-2`}>
+                <button
+                  onClick={() => navigate('/admin/database')}
+                  className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-colors ${isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100'}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
+                      <Database className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-sm">{lang === 'en' ? 'Database Manager' : 'データベース管理'}</div>
+                      <div className={`text-xs font-medium ${isDark ? 'text-blue-400/60' : 'text-blue-500/70'}`}>
+                        {lang === 'en' ? 'Browse, edit, add & delete records' : 'レコードの閲覧・編集・追加・削除'}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {/* ── Sign out ──────────────────────────────────────────────────── */}
           <motion.button
