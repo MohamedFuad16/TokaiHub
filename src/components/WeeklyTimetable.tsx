@@ -65,6 +65,7 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
 
       {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
       <div className="overflow-x-auto no-scrollbar w-full" style={{ containerType: 'inline-size' }}>
+        <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'min-content repeat(6, minmax(80px, 1fr))',
