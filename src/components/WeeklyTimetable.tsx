@@ -24,102 +24,137 @@ const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
 const WEEK_DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
 
-export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang, settings, forceDark }: WeeklyTimetableProps) {
+export default function WeeklyTimetable({
+  scheduleItems,
+  selectedCourseIds,
+  lang,
+  settings,
+  forceDark,
+}: WeeklyTimetableProps) {
   const navigate = useNavigate();
   const isDark = forceDark || settings.isDarkMode;
 
-  const weeklyTimetable = React.useMemo(() => {
-    const map = new Map<number, Map<number, CourseItem>>();
-    
-    // Safety check for scheduleItems being an array
-    if (!Array.isArray(scheduleItems)) return map;
+  /**
+   * 🔥 SINGLE SOURCE OF TRUTH
+   * - filters
+   * - deduplicates
+   * - builds occupied slots
+   */
+  const { filteredItems, occupiedSlots } = React.useMemo(() => {
+    const seen = new Map<string, CourseItem>();
+    const occupied = new Set<string>();
 
-    scheduleItems.filter(i => 
-      i && 
-      i.type === 'Classes' && 
-      (selectedCourseIds.includes(i.id) || selectedCourseIds.includes(i.code ?? ''))
-    ).forEach(item => {
-      const day = item.dayOfWeek ?? 1;
-      if (!map.has(day)) map.set(day, new Map());
-      
-      // Defensively handle periods in case normalization missed something
+    if (!Array.isArray(scheduleItems)) {
+      return { filteredItems: [], occupiedSlots: occupied };
+    }
+
+    scheduleItems.forEach((item) => {
+      if (
+        !item ||
+        item.type !== 'Classes' ||
+        (!selectedCourseIds.includes(item.id) &&
+          !selectedCourseIds.includes(item.code ?? ''))
+      ) {
+        return;
+      }
+
+      // dedupe by id
+      if (!seen.has(item.id)) {
+        seen.set(item.id, item);
+      }
+
+      // mark ALL occupied periods
       const periods = Array.isArray(item.periods) ? item.periods : [1];
-      periods.forEach(p => {
+      periods.forEach((p) => {
         const periodNum = Number(p);
         if (!isNaN(periodNum)) {
-          map.get(day)!.set(periodNum, item);
+          occupied.add(`${item.dayOfWeek}-${periodNum}`);
         }
       });
     });
-    return map;
-  }, [selectedCourseIds, scheduleItems]);
+
+    return {
+      filteredItems: Array.from(seen.values()),
+      occupiedSlots: occupied,
+    };
+  }, [scheduleItems, selectedCourseIds]);
 
   return (
     <div className="flex flex-col w-full">
       {/* Header */}
       <div className="flex justify-center items-center mb-4 shrink-0">
-        <div className={`font-bold text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div
+          className={`font-bold text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}
+        >
           {lang === 'en' ? '2026 — 1st Semester' : '2026年 1学期'}
         </div>
       </div>
 
-      {/* Single CSS Grid timetable — scrolls horizontally on mobile */}
-      <div className="overflow-x-auto no-scrollbar w-full" style={{ containerType: 'inline-size' }}>
+      {/* Grid wrapper */}
+      <div className="overflow-x-auto w-full no-scrollbar">
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'min-content repeat(6, minmax(80px, 1fr))',
-            gridTemplateRows: 'auto repeat(6, minmax(90px, auto))',
-            gap: '3px',
+            gridTemplateColumns:
+              'min-content repeat(6, minmax(100px, 1fr))',
+            gridTemplateRows:
+              'auto repeat(6, minmax(90px, auto))',
+            gap: '4px',
             padding: '4px 8px 12px 4px',
+            minWidth: '700px', // 🔥 prevents squeeze
           }}
         >
-          {/* ── Day header cells (Row 1) ── */}
-          <div style={{ gridRow: 1, gridColumn: 1 }} />
-          {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map((day, i) => {
-            const isToday = settings.enableEnhancedUI && WEEK_DAY_NUMS[i] === new Date().getDay();
-            return (
-              <div
-                key={day}
-                style={{ gridRow: 1, gridColumn: i + 2 }}
-                className={`text-center text-[11px] sm:text-xs font-bold pb-2 pt-1 uppercase tracking-widest ${isToday ? 'text-brand-yellow' : isDark ? 'text-white/30' : 'text-gray-400'}`}
-              >
-                {day}
-                {isToday && <div className="w-1 h-1 rounded-full bg-brand-yellow mx-auto mt-0.5" />}
-              </div>
-            );
-          })}
+          {/* Day headers */}
+          <div />
+          {(lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP).map(
+            (day, i) => {
+              const isToday =
+                settings.enableEnhancedUI &&
+                WEEK_DAY_NUMS[i] === new Date().getDay();
 
-          {/* ── Period label cells (Col 1, Rows 2-7) ── */}
+              return (
+                <div
+                  key={day}
+                  className={`text-center text-xs font-bold pb-2 pt-1 uppercase ${isToday
+                      ? 'text-brand-yellow'
+                      : isDark
+                        ? 'text-white/30'
+                        : 'text-gray-400'
+                    }`}
+                >
+                  {day}
+                </div>
+              );
+            }
+          )}
+
+          {/* Period labels */}
           {PERIODS.map((period, pIdx) => (
             <div
-              key={`pl-${period.num}`}
+              key={period.num}
               style={{ gridRow: pIdx + 2, gridColumn: 1 }}
-              className="flex flex-col items-center justify-start pt-2 pr-1"
+              className="flex flex-col items-center pt-2 pr-1"
             >
-              <span className="text-brand-yellow font-bold text-[13px] sm:text-sm leading-none">{period.num}</span>
-              <span className={`text-[9px] leading-tight mt-1 text-center whitespace-pre-line ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{period.time}</span>
+              <span className="text-brand-yellow font-bold text-sm">
+                {period.num}
+              </span>
+              <span
+                className={`text-[10px] whitespace-pre-line text-center ${isDark ? 'text-white/60' : 'text-gray-500'
+                  }`}
+              >
+                {period.time}
+              </span>
             </div>
           ))}
 
-          {/* ── Class cards — placed with gridColumn + gridRow span ── */}
-          {Array.from(new Map(
-            scheduleItems
-              .filter(item => 
-                item && 
-                item.type === 'Classes' && 
-                (selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
-              )
-              .map(item => [item.id, item]) // Deduplicate by ID
-          ).values()).map(item => {
+          {/* 🔥 CLASS CARDS (single render) */}
+          {filteredItems.map((item) => {
             const colIdx = WEEK_DAY_NUMS.indexOf(item.dayOfWeek);
             if (colIdx === -1) return null;
-            const rowStart = (item.periods?.[0] ?? 1) + 1; // +1 because row 1 = header
-            const rowSpan = item.periods?.length ?? 1;
 
-            const hasCustomColor = item.color && !item.color.includes('white/10') && !item.color.includes('gray-100');
-            const cardTextClass = hasCustomColor || !isDark ? 'text-[#0a0a0c]' : 'text-white';
-            const mutedTextClass = hasCustomColor || !isDark ? 'text-[#0a0a0c]/60' : 'text-white/60';
+            const rowStart = (item.periods?.[0] ?? 1) + 1;
+            const rowSpan = item.periods?.length ?? 1;
 
             return (
               <div
@@ -128,32 +163,44 @@ export default function WeeklyTimetable({ scheduleItems, selectedCourseIds, lang
                   gridRow: `${rowStart} / span ${rowSpan}`,
                   gridColumn: colIdx + 2,
                 }}
-                onClick={() => setTimeout(() => navigate(`/course/${item.id}`), 150)}
-                className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')} rounded-xl px-1.5 py-2 sm:p-2 cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex flex-col gap-1 shadow-sm min-h-0 relative border ${isDark ? 'border-white/5' : 'border-black/5'}`}
+                onClick={() =>
+                  setTimeout(() => navigate(`/course/${item.id}`), 100)
+                }
+                className={`${item.color || (isDark ? 'bg-white/10' : 'bg-gray-100')
+                  } rounded-xl p-2 cursor-pointer shadow-sm flex flex-col gap-1`}
               >
-                <div className={`font-bold text-[9.5px] @[400px]:text-[10.5px] sm:text-xs leading-[1.2] tracking-tight break-words hyphens-auto w-full text-center ${cardTextClass}`}>
+                <div className="text-xs font-semibold text-center line-clamp-3">
                   {item.title?.[lang]}
                 </div>
-                <div className="mt-auto pt-1 shrink-0 flex flex-wrap gap-1 justify-center">
-                  <span className={`text-[8.5px] font-bold rounded-md px-1.5 py-0.5 inline-block truncate max-w-full ${mutedTextClass} bg-black/[0.05]`}>
-                    {(item.location?.[lang] ?? '').replace('品川キャンパス ', '').replace('Shinagawa ', '')}
-                  </span>
+
+                <div className="mt-auto text-[10px] text-center opacity-70">
+                  {(item.location?.[lang] ?? '').replace(
+                    'Shinagawa ',
+                    ''
+                  )}
                 </div>
               </div>
             );
           })}
 
-          {/* ── Empty background cells — skip positions occupied by classes ── */}
+          {/* 🔥 EMPTY CELLS (corrected logic) */}
           {PERIODS.map((period, pIdx) =>
             WEEK_DAY_NUMS.map((dayNum, dIdx) => {
-              // Skip if ANY class occupies this period for this day
-              const dayMap = weeklyTimetable.get(dayNum);
-              if (dayMap?.has(period.num)) return null;
+              if (occupiedSlots.has(`${dayNum}-${period.num}`)) {
+                return null;
+              }
+
               return (
                 <div
                   key={`empty-${period.num}-${dayNum}`}
-                  style={{ gridRow: pIdx + 2, gridColumn: dIdx + 2 }}
-                  className={`rounded-[14px] border border-dashed ${isDark ? 'bg-white/[0.02] border-white/[0.08]' : 'bg-transparent border-black/[0.08]'}`}
+                  style={{
+                    gridRow: pIdx + 2,
+                    gridColumn: dIdx + 2,
+                  }}
+                  className={`rounded-lg border border-dashed ${isDark
+                      ? 'bg-white/[0.02] border-white/[0.08]'
+                      : 'bg-transparent border-black/[0.08]'
+                    }`}
                 />
               );
             })
