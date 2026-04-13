@@ -135,7 +135,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
       {/* One-time maintenance notification — dismisses via localStorage */}
-      <MaintenanceBanner lang={lang} isDark={isDark} />
+      <MaintenanceBanner lang={lang} isDark={isDark} isAdmin={screenProps.isAdmin} />
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
         <div className="p-8 pb-4">
