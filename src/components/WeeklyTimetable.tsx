@@ -30,7 +30,7 @@ const DAY_MAP: Record<string, number> = {
 
 /** Convert string day ("MON") or number to a numeric day. */
 function normalizeDay(day: unknown): number {
-  if (typeof day === 'string') return DAY_MAP[day.toUpperCase()] ?? Number(day) || 1;
+  if (typeof day === 'string') return (DAY_MAP[day.toUpperCase()] ?? Number(day)) || 1;
   return Number(day) || 1;
 }
 

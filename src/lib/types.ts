@@ -23,6 +23,7 @@ export interface CourseItem {
   periods?: number[];
   time?: string;
   color?: string;
+  icon?: string;
   image?: string;
   action?: string;
   code?: string;
