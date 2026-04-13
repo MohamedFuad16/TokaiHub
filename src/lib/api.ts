@@ -6,12 +6,9 @@
  *
  * ─── Endpoints ────────────────────────────────────────────────────────────────
  *
- * GET  /dashboard                    → getDashboard()         → DashboardResponse
- * GET  /schedule                     → getSchedule()          → CourseItem[]
- * GET  /course-details/{courseId}    → getCourseDetails()     → CourseItem
- * GET  /course                       → fetchAvailableCourses() → CourseItem[]
- * POST /enroll-courses               → enrollCourses()        → void
- * PUT  /profile                      → updateProfile()        → UpdateProfileResponse
+ * GET  /user-course?action=profile    → user profile
+ * GET  /user-course?action=courses    → courses (class group + all)
+ * PUT  /user-course?action=updateCourses → enroll courses & update profile
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -95,23 +92,36 @@ export interface DashboardResponse {
   };
 }
 
-/** Fetches dashboard summary data: courses, assignments, and user profile. */
+/** Fetches dashboard summary data: user profile (with GPA/enrolled courses), and course catalog. */
 export async function getDashboard(signal?: AbortSignal): Promise<DashboardResponse> {
-  return apiFetch<DashboardResponse>('/dashboard', { signal });
+  const [profileRes, courses] = await Promise.all([
+    apiFetch<Record<string, any>>('/user-course?action=profile', { signal }),
+    apiFetch<CourseItem[]>('/user-course?action=courses', { signal })
+  ]);
+  
+  return {
+    profile: profileRes,
+    enrolledCourseIds: profileRes?.enrolledCourses || profileRes?.selectedCourseIds || [],
+    courses: courses || [],
+    assignments: _mockAssignments,
+  };
 }
 
 // ─── Schedule ──────────────────────────────────────────────────────────────────
 
-/** Fetches the authenticated user's full schedule. */
+/** Fetches the authenticated user's full schedule. Returns available courses the user can select/filter. */
 export async function getSchedule(signal?: AbortSignal): Promise<CourseItem[]> {
-  return apiFetch<CourseItem[]>('/schedule', signal);
+  return apiFetch<CourseItem[]>('/user-course?action=courses', { signal });
 }
 
 // ─── Course Details ────────────────────────────────────────────────────────────
 
-/** Fetches detailed info for a single course. */
+/** Fetches detailed info for a single course. Looks up within the available courses. */
 export async function getCourseDetails(courseId: string, signal?: AbortSignal): Promise<CourseItem> {
-  return apiFetch<CourseItem>(`/course-details/${courseId}`, signal);
+  const courses = await apiFetch<CourseItem[]>('/user-course?action=courses', { signal });
+  const course = courses.find((c: any) => c.id === courseId || c.courseId === courseId || c.code === courseId);
+  if (!course) throw new Error(`Course not found: ${courseId}`);
+  return course;
 }
 
 // ─── Available Courses (for onboarding / edit-profile) ────────────────────────
@@ -126,7 +136,7 @@ let _coursesCache: CourseItem[] | null = null;
  */
 export async function fetchAvailableCourses(): Promise<CourseItem[]> {
   if (_coursesCache) return _coursesCache;
-  const result = await apiFetch<CourseItem[]>('/course');
+  const result = await apiFetch<CourseItem[]>('/user-course?action=courses');
   _coursesCache = result;
   return result;
 }
@@ -143,18 +153,13 @@ export function clearCoursesCache(): void {
  * Requires an active Cognito session — call only after signIn() completes.
  */
 export async function enrollCourses(courseIds: string[]): Promise<void> {
-  const token = await getAuthToken();
-  if (!token) throw new Error('enrollCourses: no auth session — call after signIn()');
-
-  const res = await fetch(`${API_BASE_URL}/enroll-courses`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ courseIds }),
+  await apiFetch('/user-course?action=updateCourses', {
+    method: 'PUT',
+    body: {
+      selectedCourseIds: courseIds,
+      enrolledCourses: courseIds
+    }
   });
-  if (!res.ok) throw new Error(`enrollCourses → ${res.status}`);
 }
 
 // ─── Update Profile ────────────────────────────────────────────────────────────
@@ -180,7 +185,11 @@ export async function updateProfile(
   updates: UpdateProfileRequest,
   signal?: AbortSignal,
 ): Promise<UpdateProfileResponse> {
-  return apiFetch<UpdateProfileResponse>('/profile', { method: 'PUT', body: updates, signal });
+  return apiFetch<UpdateProfileResponse>('/user-course?action=updateCourses', { 
+    method: 'PUT', 
+    body: updates, 
+    signal 
+  });
 }
 
 // ─── Mock assignment data — used as fallback in TokaiHome ─────────────────────
