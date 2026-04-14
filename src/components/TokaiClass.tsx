@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Menu, MapPin, User, Check, Search, BookOpen } from 'lucide-react';
+import { Menu, Check, Search } from 'lucide-react';
 import { ScreenProps, preloadRoutes } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -154,57 +154,107 @@ export default function TokaiClass({ lang, setLang, settings, userProfile }: Scr
           className="px-4 sm:px-6 pb-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
         >
           {filteredItems.map((item) => {
-            const Icon = item.icon || BookOpen;
             const enrolled = isEnrolled(item);
+            // Derive a per-card accent colour from the item's color token
+            const cardBg = '#4a5040'; // olive-slate base (neutral, works for all subjects)
             return (
               <motion.div
                 key={item.id}
                 variants={itemVariants}
                 onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                whileHover={{ y: -4, scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className={`h-[340px] bg-[#1e1e20] rounded-[32px] p-3.5 flex flex-col gap-3 relative cursor-pointer shadow-xl border ${enrolled ? 'border-green-500/30' : 'border-white/5'}`}
+                whileHover={{ y: -6 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="relative w-full overflow-hidden rounded-[32px] cursor-pointer"
+                style={{ background: cardBg, boxShadow: '0 20px 50px -12px rgba(0,0,0,0.35)' }}
               >
-                  {/* Reuse your premium card logic here */}
-                  <div className="relative w-full flex-1 rounded-[20px] overflow-hidden bg-[#0a0a0c]">
-                    {!loadedImages.has(item.id) && <div className="absolute inset-0 shimmer-light" />}
-                    <img
-                      src={item.image || mascotIdle}
-                      alt=""
-                      onLoad={() => handleImageLoad(item.id)}
-                      className={`absolute inset-0 w-full h-full object-cover saturate-150 transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-70' : 'opacity-0'}`}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                    <div className="relative z-10 p-4 h-full flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                          {enrolled && (
-                            <span className="px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 shadow-sm">
-                              <Check className="w-2.5 h-2.5" />Enrolled
-                            </span>
-                          )}
-                          <span className="text-[10px] font-bold text-white/70 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm ml-auto">
-                            {item.time}
-                          </span>
-                        </div>
-                        <h3 className="text-base font-bold text-white drop-shadow-md line-clamp-2 uppercase">
-                          {item.title?.[lang]}
-                        </h3>
-                    </div>
+                {/* ── Image Section ── */}
+                <div className="relative h-[200px] w-full">
+                  {/* Shimmer placeholder */}
+                  {!loadedImages.has(item.id) && (
+                    <div className="absolute inset-0 shimmer-light rounded-t-[32px]" />
+                  )}
+                  <motion.img
+                    whileHover={{ scale: 1.06 }}
+                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                    src={item.image || mascotIdle}
+                    alt={item.title?.[lang] ?? ''}
+                    onLoad={() => handleImageLoad(item.id)}
+                    className={`h-full w-full object-cover transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                  {/* Gradient blending image into card background */}
+                  <div
+                    className="absolute inset-0 bg-gradient-to-t from-[#4a5040] via-[#4a5040]/70 via-30% to-transparent pointer-events-none"
+                  />
+
+                  {/* Enrolled badge */}
+                  {enrolled && (
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 shadow-md">
+                      <Check className="w-2.5 h-2.5" />Enrolled
+                    </span>
+                  )}
+
+                  {/* Pagination dots */}
+                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 space-x-1.5 pointer-events-none">
+                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
+                  </div>
+                </div>
+
+                {/* ── Content Section ── */}
+                <div className="flex flex-col px-5 pb-5 pt-1">
+
+                  {/* Title + Credits pill */}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h2 className="text-[18px] font-bold tracking-tight text-white leading-tight line-clamp-2 flex-1">
+                      {item.title?.[lang]}
+                    </h2>
+                    {item.credits != null && (
+                      <motion.div
+                        whileHover={{ scale: 1.08 }}
+                        className="shrink-0 rounded-full bg-black/40 px-3 py-1 text-[12px] font-semibold text-white backdrop-blur-sm"
+                      >
+                        {item.credits} {lang === 'jp' ? '単位' : 'cr'}
+                      </motion.div>
+                    )}
                   </div>
 
-                  <div className="flex gap-[1px] h-[70px] shrink-0 bg-[#0a0a0c] rounded-[18px] p-[1px]">
-                     <div className="flex-[2] bg-[#1e1e20] rounded-l-[17px] rounded-r-[4px] flex flex-col items-center justify-center px-2">
-                        <MapPin className="w-3.5 h-3.5 text-gray-500 mb-1" />
-                        <span className="text-[8px] font-bold text-gray-500 text-center line-clamp-2 uppercase">{item.location?.[lang]}</span>
-                     </div>
-                     <div className="flex-[1.5] bg-[#1e1e20] rounded-[4px] flex flex-col items-center justify-center px-1">
-                        <User className="w-3.5 h-3.5 text-gray-500 mb-1" />
-                        <span className="text-[8px] font-bold text-gray-500 text-center line-clamp-2 uppercase">{item.teacher?.[lang]}</span>
-                     </div>
-                     <div className="flex-1 bg-[#1e1e20] rounded-r-[17px] rounded-l-[4px] flex flex-col items-center justify-center">
-                        <Icon className="w-4 h-4 text-white" />
-                     </div>
+                  {/* Teacher as description */}
+                  <p className="mb-4 text-[13px] leading-[1.4] text-white/65 line-clamp-1">
+                    {item.teacher?.[lang] ?? (lang === 'jp' ? '担当教員未定' : 'Instructor TBD')}
+                  </p>
+
+                  {/* Tags: day + time */}
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {item.time && (
+                      <motion.span
+                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+                        className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white transition-colors"
+                      >
+                        {item.time}
+                      </motion.span>
+                    )}
+                    {item.location?.[lang] && (
+                      <motion.span
+                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+                        className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white transition-colors line-clamp-1 max-w-[160px]"
+                      >
+                        {item.location?.[lang]}
+                      </motion.span>
+                    )}
                   </div>
+
+                  {/* CTA Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02, backgroundColor: '#f9fafb' }}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full rounded-full bg-white py-3 text-[14px] font-bold text-black transition-all"
+                  >
+                    {lang === 'jp' ? '詳細を見る' : 'View Course'}
+                  </motion.button>
+
+                </div>
               </motion.div>
             );
           })}
