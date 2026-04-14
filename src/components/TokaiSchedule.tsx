@@ -75,11 +75,14 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             return {
               ...local,
               ...apiItem,
+              // 🛡️ PROTECT SCHEDULING FIELDS: Local data.ts is the ground truth for day/period
+              dayOfWeek: local.dayOfWeek,
+              periods: local.periods,
+              time: local.time || apiItem.time,
               // 🛡️ PROTECT CURATED TRANSLATIONS: If we have local definitions, use them!
               title: { ...apiItem.title, ...local.title },
               location: local.location?.jp ? { ...apiItem.location, ...local.location } : apiItem.location,
               teacher: local.teacher?.jp ? { ...apiItem.teacher, ...local.teacher } : apiItem.teacher,
-              // Add other descriptive fields that should be curated
               overview: local.overview || apiItem.overview,
               evaluation: local.evaluation || apiItem.evaluation,
             };

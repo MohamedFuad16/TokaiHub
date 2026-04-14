@@ -95,13 +95,15 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
             return {
               ...local,      // Start with local (preserves color/credits/curated translations)
-              ...apiCourse,  // Overwrite with API values (day/periods/isVerified)
-              // 🛡️ PROTECT CURATED TRANSLATIONS: If we have local definitions, use them!
-              // Only fallback to API if local is missing specific fields.
+              ...apiCourse,  // Overwrite with API values (isVerified, etc.)
+              // 🛡️ PROTECT SCHEDULING FIELDS: Local data.ts is the ground truth for day/period
+              dayOfWeek: local.dayOfWeek,
+              periods: local.periods,
+              time: local.time || apiCourse.time,
+              // 🛡️ PROTECT CURATED TRANSLATIONS
               title: { ...apiCourse.title, ...local.title },
               location: local.location?.jp ? { ...apiCourse.location, ...local.location } : apiCourse.location,
               teacher: local.teacher?.jp ? { ...apiCourse.teacher, ...local.teacher } : apiCourse.teacher,
-              // Add other descriptive fields that should be curated
               overview: local.overview || apiCourse.overview,
               evaluation: local.evaluation || apiCourse.evaluation,
             };
@@ -146,18 +148,27 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             const rawCum = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
             const rawLast = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa);
             // Check all locations for enrolled IDs
-            const apiCourseIds =
+            const apiCourseIds: string[] =
               data.enrolledCourseIds ??
               profile?.enrolledCourses ??
-              profile?.selectedCourseIds;
+              profile?.selectedCourseIds ?? [];
+
+            // 🔧 EXPAND: The API may only return some course codes (e.g. TTK085, TTK060).
+            // Cross-match against allItems so every enrolled course's local id AND code
+            // is included — this ensures WeeklyTimetable shows all enrolled courses.
+            const expandedIds = new Set<string>(Array.isArray(apiCourseIds) ? apiCourseIds : []);
+            for (const local of allItems) {
+              const isEnrolled = expandedIds.has(local.id) || expandedIds.has(local.code ?? '');
+              if (isEnrolled) {
+                expandedIds.add(local.id);
+                if (local.code) expandedIds.add(local.code);
+              }
+            }
+            const finalCourseIds = expandedIds.size > 0 ? Array.from(expandedIds) : current.selectedCourseIds;
 
             return {
               ...current,
-              // Always use API course IDs if they exist to prevent state reverts
-              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
-                ? apiCourseIds
-                : current.selectedCourseIds,
-
+              selectedCourseIds: finalCourseIds,
               cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
               lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
             };
