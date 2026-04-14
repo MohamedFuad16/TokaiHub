@@ -75,19 +75,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             return {
               ...local,
               ...apiItem,
-              // Only use API value if it's actually set; fall back to local data.ts otherwise
-              dayOfWeek: (apiItem.dayOfWeek !== undefined && apiItem.dayOfWeek !== null) ? apiItem.dayOfWeek : local.dayOfWeek,
-              periods: (Array.isArray(apiItem.periods) && apiItem.periods.length > 0) ? apiItem.periods : local.periods,
-              // Ensure titles/locations are merged safely
-              title: typeof apiItem.title === 'string'
-                ? { en: apiItem.title, jp: local.title.jp }
-                : (apiItem.title ? { ...local.title, ...apiItem.title } : local.title),
-              location: typeof apiItem.location === 'string'
-                ? { en: apiItem.location, jp: local.location?.jp || '' }
-                : (apiItem.location ? { ...local.location, ...apiItem.location } : local.location),
-              teacher: typeof apiItem.teacher === 'string'
-                ? { en: apiItem.teacher, jp: local.teacher?.jp || '' }
-                : (apiItem.teacher ? { ...local.teacher, ...apiItem.teacher } : local.teacher),
+              // 🛡️ PROTECT CURATED TRANSLATIONS: If we have local definitions, use them!
+              title: { ...apiItem.title, ...local.title },
+              location: local.location?.jp ? { ...apiItem.location, ...local.location } : apiItem.location,
+              teacher: local.teacher?.jp ? { ...apiItem.teacher, ...local.teacher } : apiItem.teacher,
+              // Add other descriptive fields that should be curated
+              overview: local.overview || apiItem.overview,
+              evaluation: local.evaluation || apiItem.evaluation,
             };
           });
           setScheduleItems(merged);

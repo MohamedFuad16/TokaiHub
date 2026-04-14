@@ -94,21 +94,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             if (!local) return apiCourse;
 
             return {
-              ...local,      // Start with local (preserves color/credits)
-              ...apiCourse,  // Overwrite with API values (day/periods)
-              // Prefer local dayOfWeek/periods if API gave a defaulted value
-              dayOfWeek: (apiCourse.dayOfWeek !== undefined && apiCourse.dayOfWeek !== null) ? apiCourse.dayOfWeek : local.dayOfWeek,
-              periods: (Array.isArray(apiCourse.periods) && apiCourse.periods.length > 0) ? apiCourse.periods : local.periods,
-              // Deep merge LocalizedStrings
-              title: typeof apiCourse.title === 'string'
-                ? { en: apiCourse.title, jp: local.title.jp }
-                : (apiCourse.title ? { ...local.title, ...apiCourse.title } : local.title),
-              location: typeof apiCourse.location === 'string'
-                ? { en: apiCourse.location, jp: local.location?.jp || '' }
-                : (apiCourse.location ? { ...local.location, ...apiCourse.location } : local.location),
-              teacher: typeof apiCourse.teacher === 'string'
-                ? { en: apiCourse.teacher, jp: local.teacher?.jp || '' }
-                : (apiCourse.teacher ? { ...local.teacher, ...apiCourse.teacher } : local.teacher),
+              ...local,      // Start with local (preserves color/credits/curated translations)
+              ...apiCourse,  // Overwrite with API values (day/periods/isVerified)
+              // 🛡️ PROTECT CURATED TRANSLATIONS: If we have local definitions, use them!
+              // Only fallback to API if local is missing specific fields.
+              title: { ...apiCourse.title, ...local.title },
+              location: local.location?.jp ? { ...apiCourse.location, ...local.location } : apiCourse.location,
+              teacher: local.teacher?.jp ? { ...apiCourse.teacher, ...local.teacher } : apiCourse.teacher,
+              // Add other descriptive fields that should be curated
+              overview: local.overview || apiCourse.overview,
+              evaluation: local.evaluation || apiCourse.evaluation,
             };
           });
 

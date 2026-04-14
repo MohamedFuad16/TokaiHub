@@ -94,13 +94,14 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
              <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
              <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-yellow'} opacity-90`}>{percentage}%</span>
           </div>
-          <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
-             <motion.div 
-               initial={{ width: 0 }}
-               animate={{ width: `${percentage}%` }}
-               className={`h-full ${percentage === 100 ? 'bg-brand-green' : 'bg-brand-yellow'} rounded-full`}
-               transition={{ type: 'spring', stiffness: 50, damping: 15 }}
-             />
+          {/* Neon Progress Track */}
+          <div className="relative h-[22px] w-full bg-[#1b331c] rounded-full">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${percentage}%` }}
+              className="absolute top-0 left-0 h-full bg-[#27d545] rounded-full shadow-[0_0_24px_rgba(39,213,69,0.5)]"
+              transition={{ type: 'spring', stiffness: 50, damping: 15 }}
+            />
           </div>
         </div>
 
@@ -174,31 +175,15 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
       .then(data => {
         const { overview, evaluation, title, teacher, location, ...rest } = data;
         setCourse(prev => {
-          const base = prev ?? {} as CourseItem;
-          const safeTitle = typeof title === 'string'
-            ? { en: title, jp: (base.title?.jp ?? title) }
-            : (title ? { ...base.title, ...title } : base.title);
-
-          const safeTeacher = typeof teacher === 'string'
-            ? { en: teacher, jp: base.teacher?.jp ?? '' }
-            : (teacher ? { ...base.teacher, ...teacher } : base.teacher);
-
-          const safeLocation = typeof location === 'string'
-            ? { en: location, jp: base.location?.jp ?? '' }
-            : (location ? { ...base.location, ...location } : base.location);
-
           return {
             ...base,
             ...rest,
-            title: safeTitle,
-            teacher: safeTeacher,
-            location: safeLocation,
-            overview: typeof overview === 'string'
-              ? { ...(base.overview ?? {}), en: overview }
-              : (overview ? { ...(base.overview ?? {}), ...overview } : base.overview),
-            evaluation: typeof evaluation === 'string'
-              ? { ...(base.evaluation ?? {}), en: evaluation }
-              : (evaluation ? { ...(base.evaluation ?? {}), ...evaluation } : base.evaluation),
+            // 🛡️ PROTECT CURATED TRANSLATIONS: Always prefer local translations if they exist!
+            title: title ? { ...title, ...base.title } : base.title,
+            teacher: (base.teacher?.jp || base.teacher?.en) ? { ...teacher, ...base.teacher } : teacher,
+            location: (base.location?.jp || base.location?.en) ? { ...location, ...base.location } : location,
+            overview: (base.overview?.jp || base.overview?.en) ? { ...overview, ...base.overview } : overview,
+            evaluation: (base.evaluation?.jp || base.evaluation?.en) ? { ...evaluation, ...base.evaluation } : evaluation,
           };
         });
       })
@@ -439,18 +424,19 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                             {item.percentage}%
                           </span>
                         </div>
-                        <div className={`h-3 w-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden shadow-inner`}>
+                        {/* Neon Progress Track */}
+                        <div className="relative h-[22px] w-full bg-[#1b331c] rounded-full">
                           <motion.div
                             initial={{ width: 0 }}
                             whileInView={{ width: `${item.percentage}%` }}
                             viewport={{ once: true }}
-                            transition={{ 
-                              type: 'spring', 
-                              stiffness: 100, 
-                              damping: 20, 
-                              delay: 0.1 + (idx * 0.1) 
+                            transition={{
+                              type: 'spring',
+                              stiffness: 100,
+                              damping: 20,
+                              delay: 0.1 + (idx * 0.1)
                             }}
-                            className={`h-full ${item.color} rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
+                            className="absolute top-0 left-0 h-full bg-[#27d545] rounded-full shadow-[0_0_24px_rgba(39,213,69,0.5)]"
                           />
                         </div>
                       </div>
