@@ -175,6 +175,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
       .then(data => {
         const { overview, evaluation, title, teacher, location, ...rest } = data;
         setCourse(prev => {
+          const base = prev ?? {} as CourseItem;
           return {
             ...base,
             ...rest,
