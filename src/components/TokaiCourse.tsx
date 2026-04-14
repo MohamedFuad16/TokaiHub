@@ -117,28 +117,25 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
               <button
                 key={dateStr}
                 onClick={() => toggleAttendance(dateStr)}
-                className={`flex-shrink-0 w-16 h-24 rounded-3xl flex flex-col items-center justify-center gap-1.5 border-2 transition-all snap-start relative
-                  ${isToday 
-                      ? 'border-brand-yellow bg-brand-yellow/10 shadow-inner scale-[1.02]' 
-                      : isAttended
-                          ? (isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50')
-                          : (isDark ? 'border-gray-700 bg-gray-900/50' : 'border-transparent bg-white shadow-sm')}
+                className={`flex-shrink-0 w-[68px] h-[68px] rounded-[20px] flex flex-col items-center justify-center gap-1 transition-all snap-start relative active:scale-95
+                  ${isAttended
+                      ? 'bg-[#27d545] shadow-[0_0_20px_rgba(39,213,69,0.45)]'
+                      : isToday
+                          ? 'bg-[#2c2c2e] shadow-[0_0_0_2px_#27d545]'
+                          : 'bg-[#2c2c2e] shadow-[0_4px_12px_rgba(0,0,0,0.3)]'}
                 `}
               >
-                <span className={`text-[9px] uppercase font-bold tracking-widest ${isToday ? 'text-brand-yellow' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-widest
+                  ${isAttended ? 'text-[#0a1f0b]' : isToday ? 'text-[#27d545]' : 'text-white/40'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter ${isToday ? 'text-brand-yellow' : isDark ? 'text-gray-200' : 'text-brand-black'}`}>
+                <span className={`text-xl font-bold tracking-tighter leading-none
+                  ${isAttended ? 'text-[#0a1f0b]' : 'text-white'}`}>
                   {date.getDate()}
                 </span>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all
-                  ${isAttended 
-                    ? 'bg-brand-black border-brand-black'
-                    : isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-gray-50'}
-                `}>
-                  {isAttended && <CheckCircle className="w-5 h-5 text-brand-yellow" />}
-                </div>
-                {isToday && <div className="absolute -top-2.5 px-2.5 py-0.5 bg-brand-yellow text-brand-black text-[8px] font-black rounded-full shadow-md uppercase tracking-wider">{lang === 'en' ? 'TODAY' : '今日'}</div>}
+                {isAttended && <CheckCircle className="w-4 h-4 text-[#0a1f0b] mt-0.5" />}
+                {isToday && !isAttended && <div className="w-1.5 h-1.5 rounded-full bg-[#27d545]" />}
+                {isToday && <div className="absolute -top-2.5 px-2 py-0.5 bg-[#27d545] text-[#0a1f0b] text-[7px] font-black rounded-full uppercase tracking-wider">{lang === 'en' ? 'TODAY' : '今日'}</div>}
               </button>
             );
           })}
