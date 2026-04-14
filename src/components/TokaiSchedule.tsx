@@ -58,8 +58,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   }, [setSearchParams]);
   const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
 
-  // Start empty — only populate from API. allItems is only used for metadata merging.
-  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>([]);
+  // Initialize with allItems so the schedule is never empty even before the API responds
+  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>(allItems as CourseItem[]);
   useEffect(() => {
     const controller = new AbortController();
     getSchedule(controller.signal)
@@ -84,7 +84,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               evaluation: local.evaluation || apiItem.evaluation,
             };
           });
-          setScheduleItems(merged);
+
+          // 🔧 SUPPLEMENT: If the API missed any enrolled course IDs, add them from local data
+          const mergedIds = new Set(merged.flatMap(c => [c.id, c.code].filter(Boolean)));
+          const missingLocals = (allItems as CourseItem[]).filter(
+            local => !mergedIds.has(local.id) && !mergedIds.has(local.code ?? '')
+          );
+          setScheduleItems([...merged, ...missingLocals] as CourseItem[]);
         }
       })
       .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });

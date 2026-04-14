@@ -107,12 +107,20 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             };
           });
 
-          const matched = mergedCourses.filter(c =>
+          // 🔧 SUPPLEMENT: If the API missed any enrolled course IDs, add them from local data
+          const mergedCourseIds = new Set(mergedCourses.flatMap(c => [c.id, c.code].filter(Boolean)));
+          const missingLocals = (allItems as CourseItem[]).filter(local =>
+            enrolledIds.some(eid => eid === local.id || eid === local.code) &&
+            !mergedCourseIds.has(local.id) && !mergedCourseIds.has(local.code ?? '')
+          );
+          const allMerged = [...mergedCourses, ...missingLocals];
+
+          const matched = allMerged.filter(c =>
             enrolledIds.includes(c.id) || enrolledIds.includes(c.code ?? '')
           );
-          console.log(`✅ MATCHED ${matched.length}/${mergedCourses.length} courses for schedule:`, matched.map(c => ({ id: c.id, day: c.dayOfWeek, periods: c.periods })));
+          console.log(`✅ MATCHED ${matched.length}/${allMerged.length} courses for schedule:`, matched.map(c => ({ id: c.id, day: c.dayOfWeek, periods: c.periods })));
 
-          setCourseItems(mergedCourses as CourseItem[]);
+          setCourseItems(allMerged as CourseItem[]);
         }
 
         // ✅ Assignments
