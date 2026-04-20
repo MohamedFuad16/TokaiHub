@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from
 
 import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
 import TokaiOnboarding from './components/TokaiOnboarding';
+import TokaiFederatedOnboarding from './components/TokaiFederatedOnboarding';
 import MaintenanceBanner from './components/MaintenanceBanner';
 import TokaiSplash from './components/TokaiSplash';
 import { configureAmplify } from './lib/awsConfig';
@@ -55,7 +56,7 @@ export function preloadRoutes() {
 preloadRoutes();
 
 export type Language = 'en' | 'jp';
-export type AuthScreen = 'signIn' | 'signUp';
+export type AuthScreen = 'signIn' | 'signUp' | 'federatedOnboarding';
 
 export interface AppSettings {
   isDarkMode: boolean;
@@ -306,16 +307,27 @@ export default function App() {
           setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
         }
         
+        const customStudentId = attrs['custom:studentId'] as string;
+
         const initialProfile: UserProfile = {
           name: attrs.name || 'Student',
           email: attrs.email || user.username,
-          studentId: (attrs['custom:studentId'] as string) || '4CJE1108',
+          studentId: customStudentId || '4CJE1108',
           campus: 'shinagawa',
           selectedCourseIds: [],
           cumulativeGpa: 0,
           lastSemGpa: 0,
           isVerified: true,
         };
+
+        if (!customStudentId || customStudentId.trim() === '') {
+          setUserProfile({ ...initialProfile, studentId: '' });
+          setAuthScreen('federatedOnboarding');
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
         setUserProfile(initialProfile);
         setIsAuthenticated(true);
 
@@ -381,16 +393,26 @@ export default function App() {
         setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
       }
 
+      const customStudentId = attrs['custom:studentId'] as string;
+
       const initialProfile: UserProfile = {
         name: attrs.name || 'Student',
         email: attrs.email || user.username,
-        studentId: attrs['custom:studentId'] as string,
+        studentId: customStudentId || '4CJE1108',
         campus: 'shinagawa',
         selectedCourseIds: [],
         cumulativeGpa: 0,
         lastSemGpa: 0,
         isVerified: true,
       };
+
+      if (!customStudentId || customStudentId.trim() === '') {
+        setUserProfile({ ...initialProfile, studentId: '' });
+        setAuthScreen('federatedOnboarding');
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
       
       setUserProfile(initialProfile);
       setIsAuthenticated(true);
@@ -519,7 +541,7 @@ export default function App() {
                 settings={settings}
               />
             </motion.div>
-          ) : (
+          ) : authScreen === 'signUp' ? (
             <motion.div
               key="signUp"
               initial={{ opacity: 0 }}
@@ -531,6 +553,28 @@ export default function App() {
               <TokaiOnboarding
                 onComplete={handleOnboardingComplete}
                 onBack={() => setAuthScreen('signIn')}
+                lang={lang}
+                setLang={setLang}
+                settings={settings}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="federatedOnboarding"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 z-50 bg-white"
+            >
+              <TokaiFederatedOnboarding
+                onComplete={(partialProfile) => {
+                  handleOnboardingComplete({
+                    ...(userProfile as UserProfile),
+                    ...partialProfile,
+                    isVerified: true,
+                  } as UserProfile);
+                }}
                 lang={lang}
                 setLang={setLang}
                 settings={settings}
