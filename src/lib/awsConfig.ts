@@ -14,7 +14,7 @@ export function configureAmplify(): void {
           email: true,
           oauth: {
             domain: import.meta.env.VITE_COGNITO_DOMAIN ?? 'ap-northeast-1g22ubnckk.auth.ap-northeast-1.amazoncognito.com',
-            scopes: ['email', 'profile', 'openid'],
+            scopes: ['email', 'profile', 'openid', 'aws.cognito.signin.user.admin'],
             redirectSignIn: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_IN ?? window.location.origin + '/'],
             redirectSignOut: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_OUT ?? window.location.origin + '/'],
             responseType: 'code',
