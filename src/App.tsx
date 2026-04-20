@@ -510,9 +510,17 @@ export default function App() {
 
   const handleSignOut = useCallback(async () => {
     try {
-      await signOut();
+      // Use global: false to avoid redirecting to Cognito's hosted logout page
+      // (which requires redirect_uri to be configured and causes "redirect_uri not present" errors)
+      await signOut({ global: false });
     } catch (error) {
       console.error('Error signing out:', error);
+      // If signOut throws (e.g. for federated users), manually clear all Amplify tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
+          localStorage.removeItem(key);
+        }
+      });
     }
     // Clear persisted data so next login starts fresh
     clearCoursesCache();
