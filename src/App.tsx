@@ -508,25 +508,21 @@ export default function App() {
     }
   };
 
-  const handleSignOut = useCallback(async () => {
-    try {
-      // Use global: false to avoid redirecting to Cognito's hosted logout page
-      // (which requires redirect_uri to be configured and causes "redirect_uri not present" errors)
-      await signOut({ global: false });
-    } catch (error) {
-      console.error('Error signing out:', error);
-      // If signOut throws (e.g. for federated users), manually clear all Amplify tokens
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
-          localStorage.removeItem(key);
-        }
-      });
-    }
-    // Clear persisted data so next login starts fresh
+  const handleSignOut = useCallback(() => {
+    // Directly clear all Cognito / Amplify tokens without calling signOut().
+    // signOut() with OAuth config ALWAYS redirects to Cognito's hosted logout page,
+    // which requires redirect_uri to be configured. Clearing localStorage is equivalent
+    // for a client-side logout and avoids the redirect entirely.
+    const keysToRemove = Object.keys(localStorage).filter(
+      k => k.startsWith('CognitoIdentityServiceProvider') || k.startsWith('amplify')
+    );
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+    // Clear persisted app data so next login starts fresh
     clearCoursesCache();
     localStorage.removeItem('tokaihub_user_profile');
     localStorage.removeItem('tokaihub_settings');
-    // Reset URL to root so next login lands on home
+    // Reset URL to root
     window.history.replaceState(null, '', '/');
     setIsAuthenticated(false);
     setUserProfile(undefined);
