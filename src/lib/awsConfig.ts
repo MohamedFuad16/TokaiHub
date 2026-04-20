@@ -10,7 +10,16 @@ export function configureAmplify(): void {
       Cognito: {
         userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID ?? 'ap-northeast-1_G22UBNCKK',
         userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID ?? '4ej101oqii0dopq22duiodvah7',
-        loginWith: { email: true },
+        loginWith: { 
+          email: true,
+          oauth: {
+            domain: import.meta.env.VITE_COGNITO_DOMAIN ?? 'tokaihub.auth.ap-northeast-1.amazoncognito.com',
+            scopes: ['email', 'profile', 'openid'],
+            redirectSignIn: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_IN ?? window.location.origin + '/'],
+            redirectSignOut: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_OUT ?? window.location.origin + '/'],
+            responseType: 'code',
+          }
+        },
       },
     },
   });
