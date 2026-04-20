@@ -291,7 +291,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
         // ⚠️ CRITICAL FIX: clear any existing session
         try {
-          await signOut();
+          await signOut({ global: false });
         } catch (e) {
           // ignore if no session exists
         }

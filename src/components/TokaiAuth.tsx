@@ -364,7 +364,7 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
                     await signInWithRedirect({ provider: 'Google' });
                   } catch (e: any) {
                     if (e?.name === 'UserAlreadyAuthenticatedException') {
-                      try { await signOut(); } catch {}
+                      try { await signOut({ global: false }); } catch {}
                       await signInWithRedirect({ provider: 'Google' });
                     } else {
                       console.error(e);
