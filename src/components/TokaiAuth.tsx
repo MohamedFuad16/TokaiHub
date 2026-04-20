@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, ArrowRight, Mail, Loader2 } from 'lucide-react';
-import { signIn, signInWithRedirect } from 'aws-amplify/auth';
+import { signIn, signInWithRedirect, signOut } from 'aws-amplify/auth';
 import { Language, AppSettings } from '../App';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotCover from '../assets/mascots/mascot_2_2.png';

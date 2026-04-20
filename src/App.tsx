@@ -299,21 +299,26 @@ export default function App() {
   }, [settings.fontFamily, lang]);
 
   useEffect(() => {
-    async function checkAuthStatus() {
+    let cancelled = false;
+
+    async function resolveAuthenticatedUser() {
       try {
         const user = await getCurrentUser();
         const attrs = await fetchUserAttributes();
-        // Apply locale from Cognito attribute so language matches what the user chose at sign-up
+
+        if (cancelled) return;
+
+        // Apply locale from Cognito attribute
         if (attrs.locale) {
           setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
         }
-        
+
         const customStudentId = attrs['custom:studentId'] as string;
 
         const initialProfile: UserProfile = {
-          name: attrs.name || 'Student',
+          name: attrs.name || attrs.given_name || 'Student',
           email: attrs.email || user.username,
-          studentId: customStudentId || '4CJE1108',
+          studentId: customStudentId || '',
           campus: 'shinagawa',
           selectedCourseIds: [],
           cumulativeGpa: 0,
@@ -321,7 +326,9 @@ export default function App() {
           isVerified: true,
         };
 
-        if (!customStudentId || customStudentId.trim() === '') {
+        // Federated user without studentId → send to onboarding
+        if (!customStudentId || customStudentId.trim() === '' || customStudentId === 'PENDING') {
+          console.log('[Auth] Federated user detected — missing studentId, routing to onboarding');
           setUserProfile({ ...initialProfile, studentId: '' });
           setAuthScreen('federatedOnboarding');
           setIsAuthenticated(false);
@@ -329,24 +336,27 @@ export default function App() {
           return;
         }
 
+        // Fully set up user → go straight to dashboard
         setUserProfile(initialProfile);
         setIsAuthenticated(true);
+        setIsLoading(false);
 
-        // Fetch fresh academic data (GPA/Courses) from API immediately
+        // Fetch fresh academic data (GPA/Courses) from API
         getDashboard().then(data => {
+          if (cancelled) return;
           setUserProfile(prev => {
             const current = (prev && prev.email) ? prev : initialProfile;
             const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
             const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
             const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
             const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
-            
+
             console.log("App.tsx (checkAuthStatus) - parsed rawCum:", rawCum, "rawLast:", rawLast);
 
             return {
               ...current,
-              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
-                ? apiCourseIds 
+              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
+                ? apiCourseIds
                 : current.selectedCourseIds,
               cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
               lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
@@ -355,25 +365,36 @@ export default function App() {
         }).catch(err => console.error('Failed to sync profile on boot:', err));
 
       } catch (e) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
+        console.log('[Auth] No active session found:', (e as Error)?.name);
+        if (cancelled) return;
+        // Only give up if we are NOT in the middle of an OAuth redirect
+        const params = new URLSearchParams(window.location.search);
+        const isOAuthRedirect = params.has('code') || params.has('state');
+        if (!isOAuthRedirect) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
+        // If we ARE in an OAuth redirect, keep isLoading=true and wait for Hub event
       }
     }
 
     if (!settings.devSkipAuth) {
       const unsubscribe = Hub.listen('auth', ({ payload }) => {
+        console.log('[Auth Hub]', payload.event);
         if (payload.event === 'signInWithRedirect') {
-          checkAuthStatus();
+          // OAuth code exchange completed — now fetch the user
+          resolveAuthenticatedUser();
         } else if (payload.event === 'signInWithRedirect_failure') {
           console.error('OAuth sign in failed:', payload.data);
           setIsAuthenticated(false);
           setIsLoading(false);
+          // Clean up the URL
+          window.history.replaceState(null, '', '/');
         }
       });
 
-      checkAuthStatus(); // also run initially
-      return unsubscribe;
+      resolveAuthenticatedUser();
+      return () => { cancelled = true; unsubscribe(); };
     } else {
       preloadRoutes();
       setIsLoading(false);
