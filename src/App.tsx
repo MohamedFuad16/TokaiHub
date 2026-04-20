@@ -303,8 +303,20 @@ export default function App() {
 
     async function resolveAuthenticatedUser() {
       try {
+        console.log('[Auth] Attempting getCurrentUser...');
         const user = await getCurrentUser();
-        const attrs = await fetchUserAttributes();
+        console.log('[Auth] getCurrentUser succeeded:', user.username, user.signInDetails?.loginId);
+
+        let attrs: Record<string, string> = {};
+        try {
+          console.log('[Auth] Attempting fetchUserAttributes...');
+          attrs = (await fetchUserAttributes()) as Record<string, string>;
+          console.log('[Auth] fetchUserAttributes succeeded:', JSON.stringify(attrs));
+        } catch (attrErr) {
+          console.warn('[Auth] fetchUserAttributes failed:', (attrErr as Error)?.name, (attrErr as Error)?.message);
+          // For federated users, we may not be able to fetch attributes immediately
+          // Proceed with basic info from getCurrentUser
+        }
 
         if (cancelled) return;
 
@@ -316,8 +328,8 @@ export default function App() {
         const customStudentId = attrs['custom:studentId'] as string;
 
         const initialProfile: UserProfile = {
-          name: attrs.name || attrs.given_name || 'Student',
-          email: attrs.email || user.username,
+          name: attrs.name || attrs.given_name || user.signInDetails?.loginId || 'Student',
+          email: attrs.email || user.signInDetails?.loginId || user.username,
           studentId: customStudentId || '',
           campus: 'shinagawa',
           selectedCourseIds: [],
@@ -337,6 +349,7 @@ export default function App() {
         }
 
         // Fully set up user → go straight to dashboard
+        console.log('[Auth] Fully set up user, loading dashboard');
         setUserProfile(initialProfile);
         setIsAuthenticated(true);
         setIsLoading(false);
