@@ -16,19 +16,17 @@ export const handler = async (event) => {
 
     const { sub, email, name } = event.request.userAttributes;
 
-    // ✅ REQUIRED: custom studentId
-    const studentId = event.request.userAttributes["custom:studentId"];
-    if (!studentId) {
-      throw new Error("studentId is required");
-    }
+    // ✅ OPTIONAL at this stage (Google users will add this later in the app)
+    const studentId = event.request.userAttributes["custom:studentId"] || "PENDING";
 
     // ✅ Determine class (A / B)
     // Logic: Parses the last 4 digits of the student ID
-    const num = parseInt(studentId.slice(-4));
-
     let studentClass = "A";
-    if (num >= 1200 && num <= 1299) {
-      studentClass = "B";
+    if (studentId !== "PENDING") {
+      const num = parseInt(studentId.slice(-4));
+      if (num >= 1200 && num <= 1299) {
+        studentClass = "B";
+      }
     }
 
     const now = new Date().toISOString();
