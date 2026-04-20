@@ -359,7 +359,18 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
 
               <motion.button
                 type="button"
-                onClick={() => signInWithRedirect({ provider: 'Google' })}
+                onClick={async () => {
+                  try {
+                    await signInWithRedirect({ provider: 'Google' });
+                  } catch (e: any) {
+                    if (e?.name === 'UserAlreadyAuthenticatedException') {
+                      try { await signOut(); } catch {}
+                      await signInWithRedirect({ provider: 'Google' });
+                    } else {
+                      console.error(e);
+                    }
+                  }
+                }}
                 disabled={isSigningIn}
                 whileTap={!isSigningIn ? { scale: 0.97 } : {}}
                 className={`w-full rounded-2xl py-3.5 font-bold text-[15px] flex items-center justify-center gap-3 transition-colors shadow-sm ${isDark ? 'bg-white text-gray-900 hover:bg-gray-100' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
