@@ -369,10 +369,15 @@ export default function App() {
         console.log('[Auth] No active session found:', errName);
         if (cancelled) return;
 
-        // If tokens are corrupted (e.g. from a failed PostConfirmation), sign out to clear them
+        // If tokens are corrupted (e.g. from a failed PostConfirmation), clear them locally
         if (errName === 'NotAuthorizedException') {
-          console.log('[Auth] Corrupted session detected — signing out to recover');
-          try { await signOut(); } catch { /* ignore */ }
+          console.log('[Auth] Corrupted session detected — clearing local tokens');
+          // Clear Amplify/Cognito tokens from localStorage without triggering a redirect
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
+              localStorage.removeItem(key);
+            }
+          });
           window.history.replaceState(null, '', '/');
           setIsAuthenticated(false);
           setIsLoading(false);
