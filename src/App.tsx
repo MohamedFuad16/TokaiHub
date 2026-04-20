@@ -365,8 +365,20 @@ export default function App() {
         }).catch(err => console.error('Failed to sync profile on boot:', err));
 
       } catch (e) {
-        console.log('[Auth] No active session found:', (e as Error)?.name);
+        const errName = (e as Error)?.name;
+        console.log('[Auth] No active session found:', errName);
         if (cancelled) return;
+
+        // If tokens are corrupted (e.g. from a failed PostConfirmation), sign out to clear them
+        if (errName === 'NotAuthorizedException') {
+          console.log('[Auth] Corrupted session detected — signing out to recover');
+          try { await signOut(); } catch { /* ignore */ }
+          window.history.replaceState(null, '', '/');
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
         // Only give up if we are NOT in the middle of an OAuth redirect
         const params = new URLSearchParams(window.location.search);
         const isOAuthRedirect = params.has('code') || params.has('state');
