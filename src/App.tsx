@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
@@ -354,15 +355,25 @@ export default function App() {
         }).catch(err => console.error('Failed to sync profile on boot:', err));
 
       } catch (e) {
-        // Stale session pointing to a deleted Cognito user — clear it so sign-up works fresh
-        try { await signOut(); } catch { /* ignore */ }
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     }
+
     if (!settings.devSkipAuth) {
-      checkAuthStatus();
+      const unsubscribe = Hub.listen('auth', ({ payload }) => {
+        if (payload.event === 'signInWithRedirect') {
+          checkAuthStatus();
+        } else if (payload.event === 'signInWithRedirect_failure') {
+          console.error('OAuth sign in failed:', payload.data);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
+      });
+
+      checkAuthStatus(); // also run initially
+      return unsubscribe;
     } else {
       preloadRoutes();
       setIsLoading(false);
