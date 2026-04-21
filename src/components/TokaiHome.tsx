@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
 import { getDashboard } from '../lib/api';
 import type { CourseItem, Assignment } from '../lib/types';
+import { LoadingScreen } from './TokaiAuth';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
@@ -73,6 +74,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   // Start empty — only populate from API response. allItems is only used for color/metadata merging.
   const [courseItems, setCourseItems] = useState<CourseItem[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -174,11 +176,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             };
           });
         }
+        setIsDataLoaded(true);
       })
       .catch(err => {
         if (err?.name !== 'AbortError') {
           console.error("❌ DASHBOARD ERROR:", err);
         }
+        setIsDataLoaded(true);
       });
 
     return () => controller.abort();
@@ -234,6 +238,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
   const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
+
+  if (!isDataLoaded) {
+    return <LoadingScreen lang={lang} isDark={isDark} />;
+  }
 
   return (
     <div className={`h-full relative flex flex-col ${pageBg}`}>
