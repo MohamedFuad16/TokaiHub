@@ -6,9 +6,8 @@ import SharedMenu from './SharedMenu';
 import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
-import { getDashboard } from '../lib/api';
+import { getDashboard, getCachedCourses } from '../lib/api';
 import type { CourseItem, Assignment } from '../lib/types';
-import { LoadingScreen } from './TokaiAuth';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
@@ -72,9 +71,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const navigate = useNavigate();
 
   // Start empty — only populate from API response. allItems is only used for color/metadata merging.
-  const [courseItems, setCourseItems] = useState<CourseItem[]>([]);
+  const [courseItems, setCourseItems] = useState<CourseItem[]>(() => getCachedCourses() || []);
   const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(() => getCachedCourses() !== null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -240,7 +239,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
 
   if (!isDataLoaded) {
-    return <LoadingScreen lang={lang} isDark={isDark} />;
+    return (
+      <div className={`h-full w-full flex items-center justify-center ${pageBg}`}>
+        <div className="w-8 h-8 rounded-full border-[3px] border-brand-yellow border-t-transparent animate-spin" />
+      </div>
+    );
   }
 
   return (

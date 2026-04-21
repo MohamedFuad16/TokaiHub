@@ -218,10 +218,15 @@ export async function getCourseDetails(courseId: string, signal?: AbortSignal): 
   return course;
 }
 
-// ─── Available Courses (for onboarding / edit-profile) ────────────────────────
+// ─── Available Courses (for onboarding / edit-profile / caching) ──────────────
 
 /** In-memory cache — avoids redundant network round-trips within a session. */
 let _coursesCache: CourseItem[] | null = null;
+
+/** Synchronous access to the cache, useful to prevent layout thrashing on mount */
+export function getCachedCourses(): CourseItem[] | null {
+  return _coursesCache;
+}
 
 /**
  * Fetches all available courses from the course catalog Lambda.
