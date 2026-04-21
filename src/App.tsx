@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 import { AnimatePresence, motion } from 'motion/react';
 import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
@@ -58,6 +58,19 @@ preloadRoutes();
 
 export type Language = 'en' | 'jp';
 export type AuthScreen = 'signIn' | 'signUp' | 'federatedOnboarding';
+
+/**
+ * Clears all Cognito/Amplify tokens from localStorage.
+ * Used instead of Amplify's signOut() because it always redirects to
+ * Cognito's hosted logout page when OAuth is configured.
+ */
+function clearCognitoTokens() {
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
+      localStorage.removeItem(key);
+    }
+  });
+}
 
 export interface AppSettings {
   isDarkMode: boolean;
@@ -303,19 +316,15 @@ export default function App() {
 
     async function resolveAuthenticatedUser() {
       try {
-        console.log('[Auth] Attempting getCurrentUser...');
         const user = await getCurrentUser();
-        console.log('[Auth] getCurrentUser succeeded:', user.username, user.signInDetails?.loginId);
 
+        // fetchUserAttributes may fail for federated users lacking the
+        // aws.cognito.signin.user.admin scope — proceed with basic info
         let attrs: Record<string, string> = {};
         try {
-          console.log('[Auth] Attempting fetchUserAttributes...');
           attrs = (await fetchUserAttributes()) as Record<string, string>;
-          console.log('[Auth] fetchUserAttributes succeeded:', JSON.stringify(attrs));
         } catch (attrErr) {
-          console.warn('[Auth] fetchUserAttributes failed:', (attrErr as Error)?.name, (attrErr as Error)?.message);
-          // For federated users, we may not be able to fetch attributes immediately
-          // Proceed with basic info from getCurrentUser
+          console.warn('[Auth] fetchUserAttributes failed:', (attrErr as Error)?.name);
         }
 
         if (cancelled) return;
@@ -340,7 +349,6 @@ export default function App() {
 
         // Federated user without studentId → send to onboarding
         if (!customStudentId || customStudentId.trim() === '' || customStudentId === 'PENDING') {
-          console.log('[Auth] Federated user detected — missing studentId, routing to onboarding');
           setUserProfile({ ...initialProfile, studentId: '' });
           setAuthScreen('federatedOnboarding');
           setIsAuthenticated(false);
@@ -349,7 +357,6 @@ export default function App() {
         }
 
         // Fully set up user → go straight to dashboard
-        console.log('[Auth] Fully set up user, loading dashboard');
         setUserProfile(initialProfile);
         setIsAuthenticated(true);
         setIsLoading(false);
@@ -359,12 +366,10 @@ export default function App() {
           if (cancelled) return;
           setUserProfile(prev => {
             const current = (prev && prev.email) ? prev : initialProfile;
-            const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
-            const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
-            const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
+            const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
+            const rawCum = Number(profileData?.cumulativeGpa);
+            const rawLast = Number(profileData?.lastSemGpa);
             const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
-
-            console.log("App.tsx (checkAuthStatus) - parsed rawCum:", rawCum, "rawLast:", rawLast);
 
             return {
               ...current,
@@ -379,18 +384,11 @@ export default function App() {
 
       } catch (e) {
         const errName = (e as Error)?.name;
-        console.log('[Auth] No active session found:', errName);
         if (cancelled) return;
 
-        // If tokens are corrupted (e.g. from a failed PostConfirmation), clear them locally
+        // If tokens are corrupted, clear them locally and let the user re-login
         if (errName === 'NotAuthorizedException') {
-          console.log('[Auth] Corrupted session detected — clearing local tokens');
-          // Clear Amplify/Cognito tokens from localStorage without triggering a redirect
-          Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
-              localStorage.removeItem(key);
-            }
-          });
+          clearCognitoTokens();
           window.history.replaceState(null, '', '/');
           setIsAuthenticated(false);
           setIsLoading(false);
@@ -443,24 +441,27 @@ export default function App() {
     localStorage.setItem('tokaihub_settings', JSON.stringify(settings));
   }, [settings]);
 
+  // Called after email/password sign-in completes — reuses resolveAuthenticatedUser
+  // which handles both regular and federated users uniformly.
   const handleSignIn = async (_email: string) => {
     setIsLoading(true);
-
+    // resolveAuthenticatedUser is defined inside the useEffect above but we can
+    // trigger a re-check by toggling a dependency. However, since the Cognito
+    // session is already established at this point, we inline a minimal version:
     try {
       const user = await getCurrentUser();
-      const attrs = await fetchUserAttributes();
+      let attrs: Record<string, string> = {};
+      try {
+        attrs = (await fetchUserAttributes()) as Record<string, string>;
+      } catch { /* federated users may lack scopes */ }
 
-      // Restore language from Cognito locale attribute
-      if (attrs.locale) {
-        setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
-      }
+      if (attrs.locale) setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
 
       const customStudentId = attrs['custom:studentId'] as string;
-
       const initialProfile: UserProfile = {
-        name: attrs.name || 'Student',
-        email: attrs.email || user.username,
-        studentId: customStudentId || '4CJE1108',
+        name: attrs.name || attrs.given_name || user.signInDetails?.loginId || 'Student',
+        email: attrs.email || user.signInDetails?.loginId || user.username,
+        studentId: customStudentId || '',
         campus: 'shinagawa',
         selectedCourseIds: [],
         cumulativeGpa: 0,
@@ -468,61 +469,46 @@ export default function App() {
         isVerified: true,
       };
 
-      if (!customStudentId || customStudentId.trim() === '') {
+      if (!customStudentId || customStudentId.trim() === '' || customStudentId === 'PENDING') {
         setUserProfile({ ...initialProfile, studentId: '' });
         setAuthScreen('federatedOnboarding');
         setIsAuthenticated(false);
         setIsLoading(false);
         return;
       }
-      
+
       setUserProfile(initialProfile);
       setIsAuthenticated(true);
 
-      // Fetch fresh data from API after login
       getDashboard().then(data => {
         setUserProfile(prev => {
           const current = (prev && prev.email) ? prev : initialProfile;
-          const profileData = data.profile ?? (data as any).user ?? (data as any).Item ?? (data as any).userProfile ?? (data as any);
-          const rawCum = Number(profileData?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
-          const rawLast = Number(profileData?.lastSemGpa ?? (data as any)?.lastSemGpa);
+          const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
+          const rawCum = Number(profileData?.cumulativeGpa);
+          const rawLast = Number(profileData?.lastSemGpa);
           const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
-
-          console.log("App.tsx (handleSignIn) - parsed rawCum:", rawCum, "rawLast:", rawLast);
-
           return {
             ...current,
-            selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds)) 
-              ? apiCourseIds 
+            selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
+              ? apiCourseIds
               : current.selectedCourseIds,
             cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
             lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
           };
         });
       }).catch(err => console.error('Failed to sync profile after login:', err));
-
     } catch (err) {
-      console.error(err);
+      console.error('[Auth] handleSignIn error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSignOut = useCallback(() => {
-    // Directly clear all Cognito / Amplify tokens without calling signOut().
-    // signOut() with OAuth config ALWAYS redirects to Cognito's hosted logout page,
-    // which requires redirect_uri to be configured. Clearing localStorage is equivalent
-    // for a client-side logout and avoids the redirect entirely.
-    const keysToRemove = Object.keys(localStorage).filter(
-      k => k.startsWith('CognitoIdentityServiceProvider') || k.startsWith('amplify')
-    );
-    keysToRemove.forEach(k => localStorage.removeItem(k));
-
-    // Clear persisted app data so next login starts fresh
+    clearCognitoTokens();
     clearCoursesCache();
     localStorage.removeItem('tokaihub_user_profile');
     localStorage.removeItem('tokaihub_settings');
-    // Reset URL to root
     window.history.replaceState(null, '', '/');
     setIsAuthenticated(false);
     setUserProfile(undefined);

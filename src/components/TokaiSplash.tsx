@@ -83,34 +83,6 @@ const SLIDES = [
 // ─── Mascot rendering ─────────────────────────────────────────────────────────
 
 function Mascot({ slide }: { slide: typeof SLIDES[0] }) {
-  if (slide.stage === 'glass') {
-    // Glass card hides white bg mascot cleanly on dark background
-    return (
-      <div
-        style={{
-          width: '78%',
-          aspectRatio: '1',
-          borderRadius: 36,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        <img
-          src={slide.mascot}
-          alt="mascot"
-          draggable={false}
-          style={{ width: '88%', height: '88%', objectFit: 'contain', mixBlendMode: 'luminosity', opacity: 0.92 }}
-        />
-      </div>
-    );
-  }
-
-  // Direct — transparent PNG or user-removed bg
   return (
     <img
       src={slide.mascot}

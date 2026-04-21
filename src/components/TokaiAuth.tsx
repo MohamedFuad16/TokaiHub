@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, ArrowRight, Mail, Loader2 } from 'lucide-react';
-import { signIn, signInWithRedirect, signOut } from 'aws-amplify/auth';
+import { signIn, signInWithRedirect } from 'aws-amplify/auth';
 import { Language, AppSettings } from '../App';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotCover from '../assets/mascots/mascot_2_2.png';
@@ -364,7 +364,12 @@ export default function TokaiAuth({ onSignIn, onGoToSignUp, lang, setLang, setti
                     await signInWithRedirect({ provider: 'Google' });
                   } catch (e: any) {
                     if (e?.name === 'UserAlreadyAuthenticatedException') {
-                      try { await signOut({ global: false }); } catch {}
+                      // Clear stale session without calling signOut (avoids redirect)
+                      Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('CognitoIdentityServiceProvider') || k.startsWith('amplify')) {
+                          localStorage.removeItem(k);
+                        }
+                      });
                       await signInWithRedirect({ provider: 'Google' });
                     } else {
                       console.error(e);

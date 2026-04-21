@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Check, BookOpen, GraduationCap, Star, Building2, Waves, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { signUp, confirmSignUp, signIn, signOut } from 'aws-amplify/auth';
+import { signUp, confirmSignUp, signIn } from 'aws-amplify/auth';
 import { Language, AppSettings, UserProfile } from '../App';
 import { enrollCourses, fetchAvailableCourses, updateProfile } from '../lib/api';
 import { allItems } from '../data';
@@ -289,9 +289,13 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           confirmationCode: otpCode.trim()
         });
 
-        // ⚠️ CRITICAL FIX: clear any existing session
+        // Clear any existing session without calling signOut (avoids Cognito redirect)
         try {
-          await signOut({ global: false });
+          Object.keys(localStorage).forEach(k => {
+            if (k.startsWith('CognitoIdentityServiceProvider') || k.startsWith('amplify')) {
+              localStorage.removeItem(k);
+            }
+          });
         } catch (e) {
           // ignore if no session exists
         }

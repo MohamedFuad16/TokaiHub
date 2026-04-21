@@ -132,7 +132,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
         // ✅ Normalize ALL possible API shapes — data.profile may be {} (empty), so
         //    we can't rely on ?? alone; instead pick whichever shape has enrolledCourses.
-        const candidates = [data.profile, data.user, data.Item, data] as any[];
+        const candidates = [data.profile, (data as any).user, (data as any).Item, data] as any[];
         const profile = candidates.find(c =>
           c && typeof c === 'object' &&
           (c.enrolledCourses || c.selectedCourseIds || c.email || c.name)

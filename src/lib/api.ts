@@ -190,7 +190,7 @@ export async function getDashboard(signal?: AbortSignal): Promise<DashboardRespo
   ]);
   
   return {
-    profile: profileRes,
+    profile: profileRes as DashboardResponse['profile'],
     enrolledCourseIds: profileRes?.enrolledCourses || profileRes?.selectedCourseIds || [],
     courses: (courses || []).map(normalizeCourse),
     assignments: _mockAssignments,

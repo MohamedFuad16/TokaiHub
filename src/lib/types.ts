@@ -54,18 +54,6 @@ export interface UserProfileAPI {
   isVerified?: boolean;
 }
 
-export interface DashboardResponse {
-  courses?: CourseItem[];
-  assignments?: Assignment[];
-
-  // possible backend shapes
-  profile?: Partial<UserProfileAPI>;
-  user?: Partial<UserProfileAPI>;
-  Item?: Partial<UserProfileAPI>; // DynamoDB
-
-  enrolledCourseIds?: string[];
-}
-
 /** Generic response envelope for future API responses */
 export interface APIResponse<T> {
   data: T;
