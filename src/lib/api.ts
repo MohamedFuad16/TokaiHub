@@ -184,15 +184,19 @@ export interface DashboardResponse {
 
 /** Fetches dashboard summary data: user profile (with GPA/enrolled courses), and course catalog. */
 export async function getDashboard(signal?: AbortSignal): Promise<DashboardResponse> {
-  const [profileRes, courses] = await Promise.all([
-    apiFetch<Record<string, any>>('/user-course?action=profile', { signal }),
-    apiFetch<CourseItem[]>('/user-course?action=courses', { signal })
-  ]);
+  // Use the optimized backend endpoint to fetch both profile and courses in ONE request
+  const data = await apiFetch<any>('/user-course?action=dashboard', { signal });
+  
+  const rawCourses = data.courses || [];
+  const normalizedCourses = rawCourses.map(normalizeCourse);
+
+  // Proactively cache these courses! Now transitions to Schedule or Edit Profile are instant.
+  _coursesCache = normalizedCourses;
   
   return {
-    profile: profileRes as DashboardResponse['profile'],
-    enrolledCourseIds: profileRes?.enrolledCourses || profileRes?.selectedCourseIds || [],
-    courses: (courses || []).map(normalizeCourse),
+    profile: data.profile as DashboardResponse['profile'],
+    enrolledCourseIds: data.profile?.enrolledCourses || data.profile?.selectedCourseIds || [],
+    courses: normalizedCourses,
     assignments: _mockAssignments,
   };
 }
@@ -201,15 +205,14 @@ export async function getDashboard(signal?: AbortSignal): Promise<DashboardRespo
 
 /** Fetches the authenticated user's full schedule. Returns available courses the user can select/filter. */
 export async function getSchedule(signal?: AbortSignal): Promise<CourseItem[]> {
-  const courses = await apiFetch<any[]>('/user-course?action=courses', { signal });
-  return (courses || []).map(normalizeCourse);
+  return await fetchAvailableCourses(signal);
 }
 
 // ─── Course Details ────────────────────────────────────────────────────────────
 
 /** Fetches detailed info for a single course. Looks up within the available courses. */
 export async function getCourseDetails(courseId: string, signal?: AbortSignal): Promise<CourseItem> {
-  const courses = await apiFetch<CourseItem[]>('/user-course?action=courses', { signal });
+  const courses = await fetchAvailableCourses(signal);
   const course = courses.find((c: any) => c.id === courseId || c.courseId === courseId || c.code === courseId);
   if (!course) throw new Error(`Course not found: ${courseId}`);
   return course;
@@ -223,11 +226,11 @@ let _coursesCache: CourseItem[] | null = null;
 /**
  * Fetches all available courses from the course catalog Lambda.
  * Result is cached in memory for the lifetime of the page — subsequent calls
- * (Edit Profile, Credits page, Onboarding step transitions) return instantly.
+ * (Schedule, Course Details, Edit Profile) return instantly.
  */
-export async function fetchAvailableCourses(): Promise<CourseItem[]> {
+export async function fetchAvailableCourses(signal?: AbortSignal): Promise<CourseItem[]> {
   if (_coursesCache) return _coursesCache;
-  const result = await apiFetch<any[]>('/user-course?action=courses');
+  const result = await apiFetch<any[]>('/user-course?action=courses', { signal });
   const normalized = (result || []).map(normalizeCourse);
   _coursesCache = normalized;
   return normalized;

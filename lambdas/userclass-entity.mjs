@@ -39,6 +39,10 @@ export const handler = async (event) => {
             return getAvailableCourses(userId);
         }
 
+        if (method === "GET" && action === "dashboard") {
+            return getDashboardData(userId);
+        }
+
         if (method === "PUT" && action === "updateCourses") {
             return updateCourses(userId, event);
         }
@@ -164,6 +168,112 @@ async function getAvailableCourses(userId) {
     console.log(`[getAvailableCourses] userId=${userId} class=${userClass} total=${result.length} (classgroup=${fromClassGroup.length} + directEnrolled=${fromMissingEnrolled.length})`);
 
     return response(result);
+}
+
+//
+// 🚀 GET DASHBOARD DATA (Combined Profile + Courses)
+//
+async function getDashboardData(userId) {
+    // 1️⃣ Get user profile (same DB query as getProfile)
+    const userRes = await ddb.send(new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: `USER#${userId}`, SK: "PROFILE" }
+    }));
+
+    const user = userRes.Item;
+    if (!user) return response({ error: "User not found" }, 404);
+
+    const userClass = user.class || "A";
+    
+    // All course codes the user is actually enrolled in
+    const enrolledCodes = [
+        ...(user.enrolledCourses || []),
+        ...(user.selectedCourseIds || [])
+    ].filter(Boolean);
+
+    // 2️⃣ Fetch class-specific + ALL classgroup courses in parallel
+    const [classRes, allRes] = await Promise.all([
+        ddb.send(new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: { ":pk": `CLASSGROUP#${userClass}` }
+        })),
+        ddb.send(new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: { ":pk": "CLASSGROUP#ALL" }
+        }))
+    ]);
+
+    const classGroupItems = [
+        ...(classRes.Items || []),
+        ...(allRes.Items || [])
+    ];
+
+    // Codes already covered by the classgroup query
+    const classGroupCodes = new Set(classGroupItems.map(i => i.courseCode).filter(Boolean));
+
+    // 3️⃣ Find enrolled courses NOT in the classgroup results — need direct META fetch
+    const missingCodes = [...new Set(enrolledCodes)].filter(code => !classGroupCodes.has(code));
+
+    // 4️⃣ BatchGet COURSE#META for ALL unique codes (classgroup + missing enrolled)
+    const allCodes = [...new Set([...classGroupCodes, ...missingCodes])];
+
+    let result = [];
+    if (allCodes.length > 0) {
+        // Safe chunking in case allCodes exceeds DynamoDB 100 limit in the future
+        const chunks = [];
+        for (let i = 0; i < allCodes.length; i += 100) {
+            chunks.push(allCodes.slice(i, i + 100));
+        }
+
+        const metaMap = {};
+        for (const chunk of chunks) {
+            const metaRes = await ddb.send(new BatchGetCommand({
+                RequestItems: {
+                    [TABLE_NAME]: {
+                        Keys: chunk.map(code => ({ PK: `COURSE#${code}`, SK: "META" }))
+                    }
+                }
+            }));
+            (metaRes.Responses?.[TABLE_NAME] || []).forEach(m => {
+                metaMap[m.courseCode] = m;
+            });
+        }
+
+        const fromClassGroup = classGroupItems.map(item => {
+            const meta = metaMap[item.courseCode] || {};
+            return {
+                ...item,
+                ...meta,
+                courseCode: item.courseCode,
+                title: meta.courseName || meta.title || item.courseName || item.courseCode,
+            };
+        });
+
+        const fromMissingEnrolled = missingCodes
+            .filter(code => metaMap[code])
+            .map(code => ({
+                ...metaMap[code],
+                courseCode: code,
+                title: metaMap[code].courseName || metaMap[code].title || code,
+            }));
+
+        const seen = new Set();
+        result = [...fromClassGroup, ...fromMissingEnrolled].filter(item => {
+            if (!item.courseCode || seen.has(item.courseCode)) return false;
+            seen.add(item.courseCode);
+            return true;
+        });
+    }
+
+    console.log(`[getDashboardData] userId=${userId} class=${userClass} coursesTotal=${result.length}`);
+
+    // Return the combined payload!
+    return response({
+        profile: user || {},
+        courses: result
+    });
 }
 
 //
