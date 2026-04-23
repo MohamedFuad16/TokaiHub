@@ -8,7 +8,6 @@ import mascot2 from '../assets/mascots/mascot_1_2.png'; // white bg — glass ca
 import mascot3 from '../assets/mascots/mascot_0_2.png'; // user removes bg — direct
 import mascot4 from '../assets/mascots/mascot_2_2.png'; // user removes bg — direct
 
-const STORAGE_KEY = 'tokaihub_splash_seen_v1';
 const BG = '#0C0C0E'; // shared deep black for all slides
 
 // ─── Slide data ───────────────────────────────────────────────────────────────
@@ -107,19 +106,14 @@ interface TokaiSplashProps {
 }
 
 export default function TokaiSplash({ lang, isDark: _isDark, onDone }: TokaiSplashProps) {
-  const seen = !!localStorage.getItem(STORAGE_KEY);
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
   const touchX = useRef(0);
-  const markSeen = useCallback(() => localStorage.setItem(STORAGE_KEY, 'true'), []);
-
-  if (seen) return null;
-
   const slide = SLIDES[idx];
   const isLast = idx === SLIDES.length - 1;
 
   const advance = () => {
-    if (isLast) { markSeen(); onDone(); return; }
+    if (isLast) { onDone(); return; }
     setDir(1); setIdx(i => i + 1);
   };
   const goTo = (i: number) => { setDir(i > idx ? 1 : -1); setIdx(i); };
@@ -160,7 +154,7 @@ export default function TokaiSplash({ lang, isDark: _isDark, onDone }: TokaiSpla
 
         {!isLast && (
           <button
-            onClick={() => { markSeen(); onDone(); }}
+            onClick={() => onDone()}
             className="font-bold text-[11px] uppercase tracking-[0.14em] px-4 py-2"
             style={{ borderRadius: 9999, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.40)' }}
           >

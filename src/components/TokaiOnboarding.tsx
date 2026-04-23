@@ -6,6 +6,7 @@ import { Language, AppSettings, UserProfile } from '../App';
 import { enrollCourses, fetchAvailableCourses, updateProfile } from '../lib/api';
 import { allItems } from '../data';
 import type { CourseItem } from '../lib/types';
+import TokaiSplash from './TokaiSplash';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
 interface OnboardingProps {
@@ -55,6 +56,10 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
 
   // Step 3 — OTP
   const [otpCode, setOtpCode] = useState('');
+
+  // Step 4 — Splash
+  const [showSplash, setShowSplash] = useState(false);
+  const [completedProfile, setCompletedProfile] = useState<UserProfile | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -319,7 +324,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           // Non-fatal — user still proceeds; they can re-select later
         }
 
-        onComplete({
+        setCompletedProfile({
           name: name.trim(),
           email: email.trim(),
           studentId: studentId.toUpperCase(),
@@ -328,6 +333,7 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         });
+        setShowSplash(true);
 
       } catch (err: unknown) {
         console.error(err);
@@ -355,6 +361,16 @@ export default function TokaiOnboarding({ onComplete, onBack, lang, setLang, set
     }`;
 
   const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
+
+  if (showSplash && completedProfile) {
+    return (
+      <TokaiSplash
+        lang={lang}
+        isDark={isDark}
+        onDone={() => onComplete(completedProfile)}
+      />
+    );
+  }
 
   // Full-screen loading overlay shown while creating account (step 3 submitting)
   if (isSubmitting && step === 3) {

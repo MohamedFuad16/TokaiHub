@@ -156,7 +156,7 @@ export default function TokaiClass({ lang, setLang, settings, userProfile }: Scr
           {filteredItems.map((item) => {
             const enrolled = isEnrolled(item);
             // Derive a per-card accent colour from the item's color token
-            const cardBg = '#4a5040'; // olive-slate base (neutral, works for all subjects)
+            const cardBg = '#1A1D24'; // sleek dark slate
             return (
               <motion.div
                 key={item.id}
@@ -184,7 +184,7 @@ export default function TokaiClass({ lang, setLang, settings, userProfile }: Scr
                   />
                   {/* Gradient blending image into card background */}
                   <div
-                    className="absolute inset-0 bg-gradient-to-t from-[#4a5040] via-[#4a5040]/70 via-30% to-transparent pointer-events-none"
+                    className="absolute inset-0 bg-gradient-to-t from-[#1A1D24] via-[#1A1D24]/80 via-40% to-transparent pointer-events-none"
                   />
 
                   {/* Enrolled badge */}

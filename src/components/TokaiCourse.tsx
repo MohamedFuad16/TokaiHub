@@ -94,12 +94,12 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
              <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
              <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-yellow'} opacity-90`}>{percentage}%</span>
           </div>
-          {/* Neon Progress Track */}
-          <div className="relative h-[22px] w-full bg-[#1b331c] rounded-full">
+          {/* Premium Progress Track */}
+          <div className="relative h-[22px] w-full bg-[#1e293b] rounded-full overflow-hidden shadow-inner border border-white/5">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${percentage}%` }}
-              className="absolute top-0 left-0 h-full bg-[#27d545] rounded-full shadow-[0_0_24px_rgba(39,213,69,0.5)]"
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
               transition={{ type: 'spring', stiffness: 50, damping: 15 }}
             />
           </div>
@@ -119,23 +119,22 @@ const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: st
                 onClick={() => toggleAttendance(dateStr)}
                 className={`flex-shrink-0 w-[68px] h-[68px] rounded-[20px] flex flex-col items-center justify-center gap-1 transition-all snap-start relative active:scale-95
                   ${isAttended
-                      ? 'bg-[#27d545] shadow-[0_0_20px_rgba(39,213,69,0.45)]'
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-blue-400/30'
                       : isToday
-                          ? 'bg-[#2c2c2e] shadow-[0_0_0_2px_#27d545]'
+                          ? 'bg-[#2c2c2e] shadow-[0_0_0_2px_#3b82f6]'
                           : 'bg-[#2c2c2e] shadow-[0_4px_12px_rgba(0,0,0,0.3)]'}
                 `}
               >
                 <span className={`text-[9px] uppercase font-bold tracking-widest
-                  ${isAttended ? 'text-[#0a1f0b]' : isToday ? 'text-[#27d545]' : 'text-white/40'}`}>
+                  ${isAttended ? 'text-white' : isToday ? 'text-blue-400' : 'text-white/40'}`}>
                   {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
                 </span>
-                <span className={`text-xl font-bold tracking-tighter leading-none
-                  ${isAttended ? 'text-[#0a1f0b]' : 'text-white'}`}>
+                <span className={`text-xl font-bold tracking-tighter leading-none text-white`}>
                   {date.getDate()}
                 </span>
-                {isAttended && <CheckCircle className="w-4 h-4 text-[#0a1f0b] mt-0.5" />}
-                {isToday && !isAttended && <div className="w-1.5 h-1.5 rounded-full bg-[#27d545]" />}
-                {isToday && <div className="absolute -top-2.5 px-2 py-0.5 bg-[#27d545] text-[#0a1f0b] text-[7px] font-black rounded-full uppercase tracking-wider">{lang === 'en' ? 'TODAY' : '今日'}</div>}
+                {isAttended && <CheckCircle className="w-4 h-4 text-white mt-0.5 opacity-90" />}
+                {isToday && !isAttended && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />}
+                {isToday && <div className="absolute -top-2.5 px-2 py-0.5 bg-blue-500 text-white text-[7px] font-black rounded-full uppercase tracking-wider shadow-sm">{lang === 'en' ? 'TODAY' : '今日'}</div>}
               </button>
             );
           })}
@@ -422,8 +421,8 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                             {item.percentage}%
                           </span>
                         </div>
-                        {/* Neon Progress Track */}
-                        <div className="relative h-[22px] w-full bg-[#1b331c] rounded-full">
+                        {/* Premium Progress Track */}
+                        <div className="relative h-[22px] w-full bg-[#1e293b] rounded-full overflow-hidden shadow-inner border border-white/5">
                           <motion.div
                             initial={{ width: 0 }}
                             whileInView={{ width: `${item.percentage}%` }}
@@ -434,7 +433,7 @@ const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenPr
                               damping: 20,
                               delay: 0.1 + (idx * 0.1)
                             }}
-                            className="absolute top-0 left-0 h-full bg-[#27d545] rounded-full shadow-[0_0_24px_rgba(39,213,69,0.5)]"
+                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
                           />
                         </div>
                       </div>

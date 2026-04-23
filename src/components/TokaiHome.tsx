@@ -7,7 +7,7 @@ import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
 import { allItems, getClassesForDate } from '../data';
 import { getDashboard, getCachedCourses } from '../lib/api';
-import type { CourseItem, Assignment } from '../lib/types';
+import type { CourseItem } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
@@ -46,16 +46,8 @@ const t = {
     gpa: "累積 GPA",
     credits: "履修単位数 (5セメ)",
     onTrack: "順調",
-    deadlines: "直近の課題",
-    dueIn: "残り",
-    days: "日"
   }
 };
-
-const deadlines = [
-  { id: 1, title: { en: 'VR Project Draft', jp: 'VRプロジェクト草案' }, course: { en: 'CG & Virtual Reality', jp: 'CGとバーチャルリアリティ' }, daysLeft: 2, color: 'bg-brand-yellow' },
-  { id: 2, title: { en: 'Cloud Architecture Essay', jp: 'クラウドアーキテクチャレポート' }, course: { en: 'Cloud Computing', jp: 'クラウドコンピューティング' }, daysLeft: 5, color: 'bg-brand-pink' },
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -72,7 +64,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
 
   // Start empty — only populate from API response. allItems is only used for color/metadata merging.
   const [courseItems, setCourseItems] = useState<CourseItem[]>(() => getCachedCourses() || []);
-  const [assignments, setAssignments] = useState<Assignment[]>(deadlines as unknown as Assignment[]);
   const [isDataLoaded, setIsDataLoaded] = useState(() => getCachedCourses() !== null);
 
   useEffect(() => {
@@ -326,36 +317,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </div>
           </motion.div>
 
-          {/* Two-column layout for Deadlines + News on desktop */}
-          <div className="lg:grid lg:grid-cols-2 lg:gap-6 px-4 sm:px-6 mt-8">
-            {/* Deadlines Section */}
-            <motion.div variants={itemVariants} className="mb-6 lg:mb-0">
-              <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                <AlertCircle className="w-4 h-4 text-brand-yellow" />
-                {t[lang].deadlines}
-              </h2>
-              <div className="space-y-3">
-                {assignments.map(assignment => (
-                  <motion.div
-                    key={assignment.id}
-                    onClick={() => setTimeout(() => navigate('/assignments'), 150)}
-                    whileHover={{ y: -2, scale: 1.005 }}
-                    whileTap={{ scale: 0.99 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-between gap-3 cursor-pointer shadow-sm`}
-                  >
-                    <div className="min-w-0">
-                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{assignment.title[lang]}</h3>
-                      <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{assignment.course[lang]}</p>
-                    </div>
-                    <div className={`px-3 py-1.5 rounded-lg ${assignment.color} text-brand-black font-semibold text-xs shadow-sm shrink-0`}>
-                      {t[lang].dueIn} {assignment.daysLeft} {t[lang].days}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
+          {/* Two-column layout for News on desktop */}
+          <div className="lg:max-w-2xl lg:mx-auto px-4 sm:px-6 mt-8">
             {/* Campus News Section */}
             <motion.div variants={itemVariants}>
               <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>

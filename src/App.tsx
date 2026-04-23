@@ -21,8 +21,6 @@ const lazyHome = () => import('./components/TokaiHome');
 const lazyCourse = () => import('./components/TokaiCourse');
 const lazySchedule = () => import('./components/TokaiSchedule');
 const lazySettings = () => import('./components/TokaiSettings');
-const lazyAssignments = () => import('./components/TokaiAssignments');
-const lazyAssignmentDetail = () => import('./components/TokaiAssignmentDetail');
 const lazyEditProfile = () => import('./components/TokaiEditProfile');
 const lazyCredits = () => import('./components/TokaiCredits');
 const lazyClass = () => import('./components/TokaiClass');
@@ -32,8 +30,6 @@ const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
 const TokaiSchedule = React.lazy(lazySchedule);
 const TokaiSettings = React.lazy(lazySettings);
-const TokaiAssignments = React.lazy(lazyAssignments);
-const TokaiAssignmentDetail = React.lazy(lazyAssignmentDetail);
 const TokaiEditProfile = React.lazy(lazyEditProfile);
 const TokaiCredits = React.lazy(lazyCredits);
 const TokaiClass = React.lazy(lazyClass);
@@ -45,8 +41,6 @@ export function preloadRoutes() {
   lazyCourse().catch(() => {});
   lazySchedule().catch(() => {});
   lazySettings().catch(() => {});
-  lazyAssignments().catch(() => {});
-  lazyAssignmentDetail().catch(() => {});
   lazyEditProfile().catch(() => {});
   lazyCredits().catch(() => {});
   lazyClass().catch(() => {});
@@ -110,7 +104,6 @@ const sidebarNav = [
   { path: '/', icon: Home, labelEn: 'Home', labelJp: 'ホーム' },
   { path: '/schedule', icon: Calendar, labelEn: 'Schedule', labelJp: 'スケジュール' },
   { path: '/class', icon: ClipboardList, labelEn: 'Classes', labelJp: '授業' },
-  { path: '/assignments', icon: ClipboardList, labelEn: 'Assignments', labelJp: '課題' },
   { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定' },
 ];
 
@@ -245,8 +238,6 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
                 <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
                 <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
-                <Route path="/assignments" element={<TokaiAssignments {...screenProps} />} />
-                <Route path="/assignments/:id" element={<TokaiAssignmentDetail {...screenProps} />} />
                 <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
                 <Route path="/credits" element={<TokaiCredits {...screenProps} />} />
                 <Route path="/class" element={<TokaiClass {...screenProps} />} />
@@ -276,7 +267,6 @@ export default function App() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('signIn');
-  const [splashDone, setSplashDone] = useState(() => !!localStorage.getItem('tokaihub_splash_seen_v1'));
   const [userProfile, setUserProfile] = useState<UserProfile | undefined>(() => {
     try {
       const stored = localStorage.getItem('tokaihub_user_profile');
@@ -562,17 +552,6 @@ export default function App() {
   }
 
   if (!isAuthenticated && !settings.devSkipAuth) {
-    // Show splash first (only once), then auth
-    if (!splashDone) {
-      return (
-        <TokaiSplash
-          lang={lang}
-          isDark={isDark}
-          onDone={() => setSplashDone(true)}
-        />
-      );
-    }
-
     return (
       <div className={`h-[100dvh] w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
         <AnimatePresence mode="wait">

@@ -6,6 +6,7 @@ import { Language, AppSettings, UserProfile } from '../App';
 import { enrollCourses, fetchAvailableCourses, updateProfile } from '../lib/api';
 import { allItems } from '../data';
 import type { CourseItem } from '../lib/types';
+import TokaiSplash from './TokaiSplash';
 import mascotVerify from '../assets/mascots/mascot_1_1.png';
 
 interface FederatedOnboardingProps {
@@ -39,6 +40,9 @@ export default function TokaiFederatedOnboarding({ onComplete, lang, setLang, se
   // Step 2
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([]);
+
+  const [showSplash, setShowSplash] = useState(false);
+  const [completedProfile, setCompletedProfile] = useState<Partial<UserProfile> | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -208,13 +212,14 @@ export default function TokaiFederatedOnboarding({ onComplete, lang, setLang, se
           console.error('federated onboarding profile update failed:', profileErr);
         }
 
-        onComplete({
+        setCompletedProfile({
           studentId: studentId.toUpperCase(),
           campus,
           selectedCourseIds,
           cumulativeGpa: parseFloat(cumulativeGpa),
           lastSemGpa: parseFloat(lastSemGpa),
         });
+        setShowSplash(true);
 
       } catch (err: unknown) {
         setBackendError(err instanceof Error ? err.message : 'Error completing setup.');
@@ -236,6 +241,16 @@ export default function TokaiFederatedOnboarding({ onComplete, lang, setLang, se
 
   const inputCls = `w-full rounded-2xl px-4 py-4 font-medium outline-none focus:ring-2 focus:ring-brand-yellow transition-all text-base ${isDark ? 'bg-gray-800 text-white placeholder-gray-600' : 'bg-white text-brand-black placeholder-gray-400 shadow-sm'}`;
   const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
+
+  if (showSplash && completedProfile) {
+    return (
+      <TokaiSplash
+        lang={lang}
+        isDark={isDark}
+        onDone={() => onComplete(completedProfile as UserProfile)}
+      />
+    );
+  }
 
   if (isSubmitting) {
     return (
