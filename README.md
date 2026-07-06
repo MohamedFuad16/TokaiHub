@@ -9,6 +9,8 @@
 [![AWS Amplify](https://img.shields.io/badge/AWS_Amplify-FF9900?style=for-the-badge&logo=aws-amplify&logoColor=white)](https://aws.amazon.com/amplify/)
 [![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-mohamedfuad16.github.io/TokaiHub-2EA44F?style=for-the-badge&logo=github&logoColor=white)](https://mohamedfuad16.github.io/TokaiHub/)
+
 </div>
 
 ---
@@ -16,6 +18,8 @@
 ## 📖 Overview
 
 **TokaiHub** is engineered to consolidate academic workflows, course tracking, and campus networking into a single, beautifully animated application. Built entirely as a modern Progressive Web App (PWA), TokaiHub feels like a native mobile app but runs directly from the browser with zero installations required.
+
+**🔗 Live:** <https://mohamedfuad16.github.io/TokaiHub/>
 
 ## 🏗️ Architecture & Security
 
@@ -34,15 +38,16 @@ Through `aws-amplify`, our custom authentication engine interacts intelligently 
 - [x] **Interactive Onboarding UI:** A sleek, multi-step campus, course, and GPA collection wizard heavily polished with layout animations (`motion/react`).
 - [x] **Custom Auth Workflows:** Replaced traditional AWS hosted websites with completely custom Login forms natively integrated with `aws-amplify`.
 - [x] **Cognito OTP Integrations:** Registration dispatches SES-backed OTP verification codes, prompting an interactive step 3 "Check your email" loop entirely constructed from scratch inside the app.
+- [x] **AWS Lambda Backend:** A serverless API layer of Lambda functions handles schedule fetching, dashboard aggregation, course browsing/detail, course enrollment, and profile updates, with Cognito `pre-signup` / `post-confirmation` and `custom-message` triggers wiring the auth lifecycle.
+- [x] **DynamoDB Persistence:** Student profiles, course catalog, enrollment, and schedule data are persisted in DynamoDB (single-table `userclass-entity` model) — replacing the earlier local stubbed state.
+- [x] **Admin Console:** A gated `/admin/database` view backed by an `admin-database` Lambda for inspecting and managing backend records.
 - [x] **Mascot Pre-wiring:** Custom Fox Mascot character ready and integrated (currently hidden, primed for future UI upgrades).
 
 ## 🚀 Roadmap (Pending Integrations)
 
 Our cloud infrastructure expands further over the coming sprints. The following pipeline is pending:
-- [ ] **AWS Lambda Connectivity:** Serverless functions to handle student schedule validations, database fetching, and heavy data computations.
-- [ ] **Route 53 DNS Configuration:** Migrating from `.github.io` to our heavily protected production TLD namespace.
 - [ ] **AWS S3 Cloud Storage:** Allowing users to upload assignments, avatar pictures, and class materials seamlessly.
-- [ ] **DynamoDB User Profiles:** Evolving our current local stubbed states to full persistence leveraging AWS databases.
+- [ ] **Route 53 DNS Configuration:** Migrating from `.github.io` to a protected production TLD namespace.
 
 ---
 
