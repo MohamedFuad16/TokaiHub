@@ -1,0 +1,51 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    pad: 40
+    center: true
+  }
+}
+direction: down
+
+title: |text TokaiHub — architecture |
+
+client: "React PWA (GitHub Pages)" {
+  app: "App.tsx (routes, flags)"
+  screens: "Tokai* screens"
+  api: "lib/api.ts (+ mocks)"
+  aws: "lib/awsConfig.ts (Amplify)"
+  catalog: "data.ts (schedule truth)"
+}
+
+cognito: "AWS Cognito" {
+  pool: "User pool (studentId username, email alias)"
+  triggers: "pre-signup · post-confirmation · custom-message"
+}
+
+gateway: "API Gateway (JWT authorizer)"
+
+lambdas: "Lambdas (manual deploy)" {
+  read: "get-dashboard · get-schedule · get-course(-detail)"
+  write: "enroll-courses · update-profile"
+  admin: "admin-database"
+  entity: "userclass-entity helpers"
+}
+
+storage: "Data" {
+  ddb: "DynamoDB (tokaihub-users · single-table)"
+  ses: "SES (OTP mail)"
+}
+
+client.app -> client.screens
+client.screens -> client.api
+client.screens -> client.catalog: merge over
+client.aws -> cognito.pool: custom auth UI
+client.api -> gateway: JWT
+gateway -> lambdas.read
+gateway -> lambdas.write
+gateway -> lambdas.admin
+lambdas.read -> storage.ddb
+lambdas.write -> storage.ddb
+lambdas.entity -> storage.ddb
+cognito.triggers -> storage.ses: OTP
+cognito.triggers -> storage.ddb: seed user
