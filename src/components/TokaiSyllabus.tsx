@@ -3,16 +3,15 @@ import { Search, ChevronRight, ChevronDown, SlidersHorizontal, X } from 'lucide-
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Loading, Empty, EASE, TAP } from './ScreenHeader';
+import PageShell, { Loading, LoadError, Empty, EASE, TAP } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
-import { tidy } from '../lib/tipsAdapters';
+import { tidy, termLabel } from '../lib/tipsAdapters';
 import { useCourseCategories } from '../lib/courseCategories';
 import { SectionChip } from './CreditsNeeded';
+import type { TipsOption, TipsProfile, TipsSyllabusOptions, TipsSyllabusResult, TipsTimetable } from '../lib/types';
 
 // TIPS returns the offering term as one kanji even in English mode.
 const TERM_EN: Record<string, string> = { 春: 'Spring', 夏: 'Summer', 秋: 'Fall', 冬: 'Winter' };
-import type { TipsOption, TipsProfile, TipsSyllabusOptions, TipsSyllabusResult, TipsTimetable } from '../lib/types';
-import { termLabel } from '../lib/tipsAdapters';
 
 const t = {
   en: {
@@ -199,7 +198,7 @@ export default function TokaiSyllabus(props: ScreenProps) {
 
       {!hasQuery && <Empty text={tx.hint} isDark={isDark} />}
       {hasQuery && results.loading && !results.data && <Loading text={tx.loading} isDark={isDark} />}
-      {results.error && <Empty text={results.error.message} isDark={isDark} />}
+      {hasQuery && results.error && !results.data && <LoadError error={results.error} isDark={isDark} lang={lang} onRetry={results.refresh} />}
       {hasQuery && results.data?.tooMany && <p className="text-sm font-bold text-red-500 mb-3">{tx.tooMany}</p>}
       {hasQuery && results.data && !results.data.tooMany && results.data.results.length === 0 && <Empty text={tx.none} isDark={isDark} />}
 

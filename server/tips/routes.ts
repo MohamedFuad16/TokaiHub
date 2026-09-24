@@ -149,26 +149,12 @@ const FEATURES: Record<string, Feature> = {
     },
   },
 
-  // Opening a post marks it read in TIPS, the same as reading it there.
+  // Opening a post marks it read in TIPS, the same as reading it there. v3: attachments carry
+  // their TIPS index and the title lost its " [genre]" suffix (older cached copies have neither).
   bulletin: {
     ttl: 7 * 24 * 60 * MIN,
-    key: q => `bulletin:${q.id}`,
-    run: async q => {
-      const [type, genre, seq] = (q.id ?? '').split('-');
-      const c = await getClient();
-      const p = await parser('bulletins');
-      const home = await c.startFlow('KJW0001100-flow');
-      for (const eventId of [type === '3' ? 'displayKojin' : 'displayOshirase', type === '3' ? 'displayOshirase' : 'displayKojin']) {
-        let list = await c.event(home, eventId);
-        if (list.$('form[name="PagingForm"]').length) list = await c.submitForm(list, 'form[name="PagingForm"]', { _displayCount: '200', _eventId_paging: 'DISPLAY' });
-        const a = list.$('a[href*="seqNo="]').filter((_, e) => {
-          const s = new URLSearchParams((list.$(e).attr('href') ?? '').split('?')[1]);
-          return s.get('seqNo') === seq && s.get('keijitype') === type && s.get('genrecd') === genre;
-        }).first();
-        if (a.length) return p.parseDetail((await c.get(new URL(a.attr('href')!, list.url).toString())).html);
-      }
-      throw notFound('post not found');
-    },
+    key: q => `bulletin:v3:${q.id}`,
+    run: async q => (await parser('bulletins')).parseDetail((await bulletinPage(await getClient(), q.id ?? '')).html),
   },
 
   reports: {
@@ -239,21 +225,19 @@ const FEATURES: Record<string, Feature> = {
     },
   },
 
+  // v2: fields carry their TIPS group and attached files (older cached copies have neither).
   syllabus: {
     ttl: 7 * 24 * 60 * MIN,
-    key: q => `syllabus:${q.year}:${q.code}`,
+    key: q => `syllabus:v2:${q.year}:${q.code}`,
     run: async q => {
       const c = await getClient();
       const year = q.year ?? String(new Date().getFullYear());
-      const list = await c.submitForm(await c.startFlow('SBW3701300-flow'), 'form[name=InputForm]', { _eventId: 'byCode', nendo: year, jikanwaricd: q.code });
-      const jscd = q.jscd ?? /refer\('\d+','(\w+)'/.exec(list.html)?.[1];
-      if (!jscd) throw notFound(`no syllabus for ${q.code} in ${year}`);
       const p = await parser('syllabus');
+      const detail = await syllabusPages(c, year, q.code ?? '', q.jscd);
       // Japanese-taught courses publish ja_JP (and maybe en_US); English-taught courses may
       // publish only en_US, where ja_JP answers "No Data Found". Both carry bilingual labels.
-      const load = async (locale: string) => p.parseDetail((await c.event(list, 'input', { nendo: year, jikanwariShozokuCode: jscd, jikanwaricd: q.code, locale })).html);
-      const ja = await load('ja_JP');
-      const en = q.lang === 'en' || !ja.code ? await load('en_US') : null;
+      const ja = p.parseDetail((await detail('ja_JP')).html);
+      const en = q.lang === 'en' || !ja.code ? p.parseDetail((await detail('en_US')).html) : null;
       const base = ja.code ? ja : en;
       if (!base?.code) throw notFound(`no syllabus for ${q.code} in ${year}`);
       const useEn = !!en?.sections.length && (q.lang === 'en' || !ja.sections.length);
@@ -356,6 +340,33 @@ async function curriculumPage(c: typeof ClientMod, q: Q) {
   return c.submitForm(list, 'form[name=SearchForm]', { _eventId: 'curriculumSearch', kamokuDKbncd: q.d, kamokuMShozokucd: q.s, kamokuMKbncd: q.m, kamokuMKbnnm: q.name ?? '' });
 }
 
+/**
+ * Opens a course's syllabus search result and returns a loader for its detail page in one
+ * content locale. Every call fires the detail event from the same result page.
+ */
+async function syllabusPages(c: typeof ClientMod, year: string, code: string, jscd?: string) {
+  const list = await c.submitForm(await c.startFlow('SBW3701300-flow'), 'form[name=InputForm]', { _eventId: 'byCode', nendo: year, jikanwaricd: code });
+  const shozoku = jscd ?? /refer\('\d+','(\w+)'/.exec(list.html)?.[1];
+  if (!shozoku) throw notFound(`no syllabus for ${code} in ${year}`);
+  return (locale: string) => c.event(list, 'input', { nendo: year, jikanwariShozokuCode: shozoku, jikanwaricd: code, locale });
+}
+
+/** A bulletin's detail page, found by id ("type-genre-seq") in the personal or notice list. */
+async function bulletinPage(c: typeof ClientMod, id: string) {
+  const [type, genre, seq] = id.split('-');
+  const home = await c.startFlow('KJW0001100-flow');
+  for (const eventId of [type === '3' ? 'displayKojin' : 'displayOshirase', type === '3' ? 'displayOshirase' : 'displayKojin']) {
+    let list = await c.event(home, eventId);
+    if (list.$('form[name="PagingForm"]').length) list = await c.submitForm(list, 'form[name="PagingForm"]', { _displayCount: '200', _eventId_paging: 'DISPLAY' });
+    const a = list.$('a[href*="seqNo="]').filter((_, e) => {
+      const s = new URLSearchParams((list.$(e).attr('href') ?? '').split('?')[1]);
+      return s.get('seqNo') === seq && s.get('keijitype') === type && s.get('genrecd') === genre;
+    }).first();
+    if (a.length) return c.get(new URL(a.attr('href')!, list.url).toString());
+  }
+  throw notFound('post not found');
+}
+
 async function registrationSearch(c: typeof ClientMod, q: Q) {
   // From a curriculum course: its timetable sections (TIPS's "時間割へ").
   if (q.kamoku) return c.submitForm(await curriculumPage(c, q), 'form[name=SearchForm]', { kamokuCd: q.kamoku });
@@ -430,9 +441,47 @@ export async function act(action: string, body: Record<string, string | boolean>
   return result;
 }
 
-/** Streams a cabinet file (SDW-filerefer-flow) through the signed-in browser session. */
+const badFile = () => Object.assign(new Error('bad file id'), { status: 400 });
+
+/**
+ * TIPS sends syllabus files as octet-stream attachments, so a phone downloads a rubric instead
+ * of showing it. PDFs are sent as application/pdf, inline, and open in the browser's viewer.
+ */
+function viewable(f: { type: string; disposition: string; bytes: Buffer }) {
+  let name = /filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(f.disposition)?.[1] ?? '';
+  try { name = decodeURIComponent(name); } catch { /* keep the raw name */ }
+  if (!/\.pdf$/i.test(name)) return f;
+  return { ...f, type: 'application/pdf', disposition: f.disposition.replace(/^\s*attachment/i, 'inline') };
+}
+
+/**
+ * Streams a TIPS file through the signed-in browser session: a cabinet file (SDW-filerefer-flow),
+ * a file attached to a syllabus field (kind=syllabus), or a bulletin attachment (kind=bulletin).
+ * The last two only exist as links inside their detail page's flow, so the page is opened first.
+ */
 export async function file(q: Q) {
-  if (!/^\d+$/.test(q.fileId ?? '') || !/^\d+$/.test(q.folderId ?? '')) throw Object.assign(new Error('bad file id'), { status: 400 });
   const { runFeature } = await import('./session');
+  if (q.kind === 'syllabus') {
+    if (!/^\d{4}$/.test(q.year ?? '') || !/^[A-Za-z0-9]{3,12}$/.test(q.code ?? '') || !/^\d{1,4}$/.test(q.column ?? '') || !/^\d{1,3}$/.test(q.renban ?? '')) throw badFile();
+    const locale = q.locale === 'en_US' ? 'en_US' : 'ja_JP';
+    return runFeature('ja_JP', async () => {
+      const c = await getClient();
+      const page = await (await syllabusPages(c, q.year, q.code.toUpperCase()))(locale);
+      const href = (await parser('syllabus')).fileHref(page.html, q.column, q.renban);
+      if (!href) throw notFound('file not found on the syllabus');
+      return viewable(await c.getBinary(new URL(href, page.url).toString()));
+    }, 5);
+  }
+  if (q.kind === 'bulletin') {
+    if (!/^\d+-\w+-\d+$/.test(q.id ?? '') || !/^\d{1,3}$/.test(q.index ?? '')) throw badFile();
+    return runFeature('ja_JP', async () => {
+      const c = await getClient();
+      const page = await bulletinPage(c, q.id);
+      const href = (await parser('bulletins')).attachmentHref(page.html, q.index);
+      if (!href) throw notFound('attachment not found on the post');
+      return viewable(await c.getBinary(new URL(href, page.url).toString()));
+    }, 5);
+  }
+  if (!/^\d+$/.test(q.fileId ?? '') || !/^\d+$/.test(q.folderId ?? '')) throw badFile();
   return runFeature('ja_JP', async () => (await getClient()).getBinary(`/campusweb/campussquare.do?_flowId=SDW-filerefer-flow&fileId=${q.fileId}&folderId=${q.folderId}`), 5);
 }

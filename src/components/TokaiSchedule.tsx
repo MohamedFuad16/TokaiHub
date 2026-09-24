@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -9,7 +9,8 @@ import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf } from '../lib/tipsAdapters';
 import { useClassCalendar } from '../lib/useCalendar';
 import RegistrationPlanner from './RegistrationPlanner';
-import { CONTAINER, Pill, RefreshButton, TAP, EASE } from './ScreenHeader';
+import { CONTAINER, Pill, RefreshButton, LoadError, TAP, EASE } from './ScreenHeader';
+import { DayClassCard } from './DayClassCard';
 import type { Term } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
@@ -19,9 +20,8 @@ const t = {
     weekly: "Weekly",
     monthly: "Monthly",
     noClasses: "No classes on this day.",
-    noClassesWeek: "No classes this week.",
     classesOn: (d: Date) => `Classes on ${d.toLocaleString('en-US', { month: 'long' })} ${d.getDate()}`,
-    cancelled: "Cancelled", makeup: "Make-up", roomChange: "Room change",
+    loading: "Loading your timetable from TIPS…",
     noCourses: "No registered courses for this term.",
     spring: "Spring",
     regOpen: (d: string) => `Registration is open until ${d}. Pick this term's classes below; only courses TIPS lets you take are listed.`,
@@ -32,9 +32,8 @@ const t = {
     weekly: "週別",
     monthly: "月別",
     noClasses: "この日の授業はありません。",
-    noClassesWeek: "今週の授業はありません。",
     classesOn: (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日の授業`,
-    cancelled: "休講", makeup: "補講", roomChange: "教室変更",
+    loading: "TIPSから時間割を読み込み中…",
     noCourses: "この学期の履修登録はありません。",
     spring: "春学期",
     regOpen: (d: string) => `履修登録期間中です（${d}まで）。下の時間割から今学期の科目を選べます。表示されるのはTIPSで履修できる科目のみです。`,
@@ -55,7 +54,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiSchedule({ lang, setLang, settings, userProfile }: ScreenProps) {
+export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -111,10 +110,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     setMonthlySelected(date);
   }, []);
 
-  const monthlySelectedClasses = useMemo(() => {
-    if (!monthlySelected) return [];
-    return cal.index.on(calendarSelectedDate, scheduleItems);
-  }, [calendarSelectedDate, scheduleItems, cal.index]);
+  const monthlySelectedClasses = useMemo(() => cal.index.on(calendarSelectedDate, scheduleItems), [calendarSelectedDate, scheduleItems, cal.index]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -176,7 +172,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             {lang === 'en' ? 'Follow TIPS' : 'TIPSに合わせる'}
           </button>
         )}
-        <span className={`ml-auto text-[11px] font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{termLabel(term, termYear, lang)}</span>
+        {tt.timetable && <span className={`ml-auto text-[11px] font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{termLabel(term, termYear, lang)}</span>}
       </div>
 
       {/* Registration open for the term being viewed: plan and register right here. */}
@@ -194,7 +190,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
         <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-4xl w-full mx-auto min-h-0">
 
           {/* ─── NO COURSES REGISTERED (monthly only; weekly shows the empty grid) ─── */}
-          {view === 'monthly' && selectedCourseIds.length === 0 && !tt.loading && (
+          {view === 'monthly' && selectedCourseIds.length === 0 && !!tt.timetable && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
               <div className="w-24 h-24 relative scale-[1.15] drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center">
                 <img
@@ -206,6 +202,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
             </motion.div>
           )}
+
+          {!tt.timetable && (tt.error
+            ? <motion.div variants={itemVariants}><LoadError error={tt.error} isDark lang={lang} onRetry={tt.refresh} /></motion.div>
+            : <motion.p variants={itemVariants} role="status" className="text-shimmer text-sm font-medium text-white/60 py-6 text-center">{t[lang].loading}</motion.p>)}
 
           {/* ─── WEEKLY TIMETABLE VIEW ─── */}
           {view === 'weekly' && !!tt.timetable && (
@@ -296,26 +296,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                   >
                     {monthlySelectedClasses.length > 0 ? (
                       monthlySelectedClasses.map(({ item: cls, status }) => (
-                        <motion.div
-                          key={cls.id}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                          className={`p-4 rounded-[28px] ${cls.color || 'bg-white/10'} ${cls.color ? 'text-brand-black' : 'text-white'} flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.5)] border border-black/5 hover:translate-y-[-2px] mb-3`}
-                          tabIndex={0}
-                        >
-                          <div className={`w-12 h-12 ${cls.color ? 'bg-black/15' : 'bg-white/10'} rounded-[14px] flex items-center justify-center font-bold text-sm shrink-0`}>
-                            {(cls.time ?? '').split(' ')[0] || `P${cls.periods?.[0] ?? '?'}`}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-base leading-tight truncate">{cls.title?.[lang]}</div>
-                            <div className="text-sm font-medium opacity-60 truncate mt-0.5">{cls.location?.[lang]}</div>
-                            {status && status !== 'normal' && (
-                              <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 text-white">
-                                {status === 'makeup' ? t[lang].makeup : status === 'roomChange' ? t[lang].roomChange : t[lang].cancelled}
-                              </span>
-                            )}
-                          </div>
-                        </motion.div>
+                        <DayClassCard key={cls.id} item={cls} status={status} lang={lang} onOpen={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)} />
                       ))
                     ) : (
                       <div className="text-white/40 text-sm font-medium text-center py-4">

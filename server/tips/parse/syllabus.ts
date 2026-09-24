@@ -1,5 +1,5 @@
 /** シラバス参照 (SBW3701300): search results and the bilingual detail page. */
-import { load, clean, bi, num, rowsOf, isNoDataRow } from './util';
+import { load, clean, bi, num, cellText, isNoDataRow } from './util';
 
 export function parseResults(html: string) {
   const $ = load(html);
@@ -35,26 +35,42 @@ export function parseOptions(html: string) {
   };
 }
 
+/** A file the teacher attached to a syllabus field (rubric, handout). TIPS serves it through the
+ * detail page's own flow: downloadFile with the field's column id and a running number. */
+export interface SyllabusFile { name: string; column: string; renban: string }
+export interface SyllabusSection { label: { jp: string; en: string }; group: { jp: string; en: string } | null; value: string; files: SyllabusFile[] }
+
+const FILE_LINK = 'a[href*="_eventId=downloadFile"]';
+const HEADER_FIELDS = ['時間割年度', '時間割学期', '時間割番号', '科目名', '曜日・時限', '授業形態', '単位算定基準', '代表教員', '単位数', '教員名', '教員所属名', 'No.'];
+
 export function parseDetail(html: string) {
   const $ = load(html);
-  // Every section is a th.syllabus-prin label next to its value cell. Nested tables repeat
-  // labels from the summary rows, so keep the innermost (most specific) value per label.
-  const fields: { label: { jp: string; en: string }; value: string }[] = [];
+  // Every field is a th.syllabus-prin label next to its value cell. Group labels (基本事項,
+  // 成績評価基準・方法, ...) hold a nested table of fields; each field keeps its group, because
+  // one label can appear in two groups (地域志向: a yes/no flag and a content field).
+  const fields: SyllabusSection[] = [];
   const seen = new Set<string>();
   $('th.syllabus-prin').each((_, th) => {
     const td = $(th).next('td');
     if (!td.length || td.find('table').length) return;
     const label = bi($(th).text());
-    if (seen.has(label.jp)) return;
-    seen.add(label.jp);
-    const value = td.html()?.replace(/<br\s*\/?>/gi, '\n') ?? '';
-    fields.push({ label, value: load(`<div>${value}</div>`)('div').text().split('\n').map(clean).filter(Boolean).join('\n') });
+    const groupTh = $(th).closest('table').parent('td').prev('th.syllabus-prin');
+    const group = groupTh.length ? bi(groupTh.text()) : null;
+    const key = `${group?.jp ?? ''}|${label.jp}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const files = td.find(FILE_LINK).toArray().flatMap(a => {
+      const q = new URLSearchParams(($(a).attr('href') ?? '').split('?')[1] ?? '');
+      const column = q.get('columnId'), renban = q.get('renban');
+      return column && renban ? [{ name: clean($(a).text()), column, renban }] : [];
+    });
+    fields.push({ label, group, value: cellText($, td, FILE_LINK), files });
   });
   const get = (jp: string) => fields.find(f => f.label.jp === jp)?.value ?? '';
   const schedTable = $('table.syllabus-normal').filter((_, t) => clean($(t).find('th').first().text()) === 'No.').first();
   const schedule = schedTable.find('tr').slice(1).toArray().map(tr => {
-    const c = $(tr).children('td').toArray().map(td => load(`<div>${($(td).html() ?? '').replace(/<br\s*\/?>/gi, '\n')}</div>`)('div').text().split('\n').map(clean).filter(Boolean).join('\n'));
-    return { no: num(c[0]), when: c[1], topic: c[2], method: c[3], prep: c[4] };
+    const c = $(tr).children('td').toArray().map(td => cellText($, td));
+    return { no: num(c[0]), when: c[1] ?? '', topic: c[2] ?? '', method: c[3] ?? '', prep: c[4] ?? '' };
   });
   const instructors = $('td.syllabus-top-info').toArray().map(td => clean($(td).text()));
   const title = bi(get('科目名'));
@@ -63,7 +79,18 @@ export function parseDetail(html: string) {
     dayPeriod: get('曜日・時限'), delivery: bi(get('授業形態')), creditType: get('単位算定基準'),
     mainInstructor: bi(get('代表教員')), credits: num(get('単位数')),
     instructors: instructors.filter((_, i) => i % 2 === 0).map((n, i) => ({ name: bi(n), affiliation: bi(instructors[i * 2 + 1] ?? '') })),
-    sections: fields.filter(f => !['時間割年度', '時間割学期', '時間割番号', '科目名', '曜日・時限', '授業形態', '単位算定基準', '開講クラス', '代表教員', '単位数', '教員名', '教員所属名', 'No.'].includes(f.label.jp)),
+    // 開講クラス stays: it is empty for most courses, and the app hides empty fields.
+    sections: fields.filter(f => !HEADER_FIELDS.includes(f.label.jp)),
     schedule,
   };
+}
+
+/** Href of an attached file on a detail page (null when the page no longer lists it). */
+export function fileHref(html: string, column: string, renban: string) {
+  const $ = load(html);
+  const a = $(FILE_LINK).filter((_, x) => {
+    const q = new URLSearchParams(($(x).attr('href') ?? '').split('?')[1] ?? '');
+    return q.get('columnId') === column && q.get('renban') === renban;
+  }).first();
+  return a.attr('href') ?? null;
 }

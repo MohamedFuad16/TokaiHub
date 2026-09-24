@@ -39,7 +39,7 @@ const TokaiRegistration = React.lazy(lazyRegistration);
 const TokaiCabinet = React.lazy(lazyCabinet);
 
 // Preload all route components after initial paint
-export function preloadRoutes() {
+function preloadRoutes() {
   [lazyHome, lazyCourse, lazySchedule, lazySettings, lazyGrades, lazyClass, lazyAttendance, lazyBulletins, lazyTasks, lazySyllabus, lazyRegistration, lazyCabinet]
     .forEach(l => l().catch(() => {}));
 }
@@ -150,7 +150,7 @@ function UpdatedPill({ lang, isDark }: { lang: Language; isDark: boolean }) {
       {show && (
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
           style={{ top: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
-          className={`fixed left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'}`}>
+          className={`fixed left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 whitespace-nowrap ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'}`}>
           <RefreshCw className="w-3.5 h-3.5" />{lang === 'en' ? 'Updated from TIPS' : 'TIPSの最新情報に更新しました'}
         </motion.div>
       )}

@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Check, BookOpenText, ArrowRight } from 'lucide-react';
+import { Check, BookOpenText, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Pill, Empty, Skeleton, EASE, TAP } from './ScreenHeader';
+import PageShell, { Pill, Empty, Skeleton, LoadError, SearchField, EASE, TAP } from './ScreenHeader';
 import { useTimetable } from '../lib/useTerm';
-import { termLabel, academicYearOf } from '../lib/tipsAdapters';
+import { termLabel, academicYearOf, slotLabel } from '../lib/tipsAdapters';
 import type { Term } from '../lib/types';
 
 const t = {
@@ -33,7 +33,6 @@ export default function TokaiClass(props: ScreenProps) {
   const term: Term = tt.timetable?.term ?? '1';
   const year = tt.timetable?.year ?? academicYearOf(new Date());
   const days = tt.timetable?.grid.days ?? [];
-  const periods = tt.timetable?.grid.periods ?? [];
 
   const items = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -41,11 +40,8 @@ export default function TokaiClass(props: ScreenProps) {
   }, [tt.items, q, lang]);
 
   return (
-    <PageShell {...props} title={tx.title} subtitle={termLabel(term, year, lang)} onRefresh={tt.refresh} refreshing={tt.loading}>
-      <div className={`flex items-center rounded-2xl px-4 py-3 mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <Search className={`w-5 h-5 mr-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder={tx.search} className="bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
-      </div>
+    <PageShell {...props} title={tx.title} subtitle={tt.timetable ? termLabel(term, year, lang) : undefined} onRefresh={tt.refresh} refreshing={tt.loading}>
+      <SearchField value={q} onChange={setQ} placeholder={tx.search} isDark={isDark} />
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {(['1', '2'] as Term[]).map(tm => (
@@ -61,6 +57,7 @@ export default function TokaiClass(props: ScreenProps) {
           {[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-[340px] rounded-[28px]" />)}
         </div>
       )}
+      {!tt.timetable && !tt.loading && tt.error && <LoadError error={tt.error} isDark={isDark} lang={lang} onRetry={tt.refresh} />}
       {!tt.loading && tt.timetable && items.length === 0 && (
         tt.timetable.registrationOpen && tt.timetable.term === tt.currentTerm ? (
           <button onClick={() => navigate('/registration')} className={`w-full flex items-center gap-3 p-5 rounded-3xl bg-green-500/10 text-left font-bold text-sm active:scale-[0.99] transition-transform ${isDark ? 'text-green-400' : 'text-green-700'}`}>
@@ -72,7 +69,7 @@ export default function TokaiClass(props: ScreenProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr gap-5">
         <AnimatePresence mode="popLayout">
         {items.map((item, i) => {
-          const slot = [days[(item.dayOfWeek ?? 1) - 1], item.periods?.map(p => periods[p - 1] ?? p).join('・')].filter(Boolean).join(' ');
+          const slot = slotLabel(days[(item.dayOfWeek ?? 1) - 1], item.periods, lang);
           return (
             <motion.article
               key={item.id}

@@ -5,7 +5,11 @@
  * marks the ids that appear on the unread page.
  */
 import * as cheerio from 'cheerio';
-import { load, clean, rowsOf } from './util';
+import { load, clean, keepLinkTargets } from './util';
+
+/** Some titles repeat the genre as a " [genre]" suffix. */
+const withoutGenre = (title: string, genre: string) =>
+  genre ? title.replace(new RegExp(`\\s*\\[${genre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]$`), '') : title;
 
 const idOf = (href: string) => {
   const q = new URLSearchParams(href.split('?')[1] ?? '');
@@ -39,8 +43,7 @@ export function parseList(html: string, category: 'notice' | 'personal') {
     const genre = clean(td.eq(0).text());
     return {
       id, category, genre,
-      // Some titles repeat the genre as a " [genre]" suffix.
-      title: clean(a.text()).replace(new RegExp(`\\s*\\[${genre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]$`), ''),
+      title: withoutGenre(clean(a.text()), genre),
       status: clean(td.eq(3).text()),
       period: clean(td.eq(4).text()),
       postedAt: posted,
@@ -52,18 +55,30 @@ export function parseList(html: string, category: 'notice' | 'personal') {
 export function parseDetail(html: string) {
   const $ = load(html);
   const meta = $('table.keiji-normal').first().find('td').toArray().map(td => clean($(td).text()));
-  const body = cheerio.load(`<div>${($('div.keiji-naiyo').first().html() ?? '').replace(/<br\s*\/?>/gi, '\n')}</div>`)('div').text()
+  const naiyo = keepLinkTargets($, $('div.keiji-naiyo').first().clone());
+  const body = cheerio.load(`<div>${(naiyo.html() ?? '').replace(/<br\s*\/?>/gi, '\n')}</div>`)('div').text()
     .split('\n').map(l => clean(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const pick = (re: RegExp) => meta.find(m => re.test(m))?.replace(re, '').replace(/^[／/:：\s]+/, '') ?? null;
+  const genre = clean($('span.keiji-t-genre').first().text()).replace(/^\[|\]$/g, '');
   return {
-    title: clean($('span.keiji-title').first().text()),
-    genre: clean($('span.keiji-t-genre').first().text()).replace(/^\[|\]$/g, ''),
+    // Same " [genre]" suffix clean-up as the list.
+    title: withoutGenre(clean($('span.keiji-title').first().text()), genre),
+    genre,
     body,
     poster: meta[0] ?? '',
     contact: pick(/^(連絡先|Contact(?: Information)?)/i),
     postedAt: pick(/^(掲載日時|Posting Date(?: and Time)?)/i),
-    attachments: $('a[href*="_eventId=download"]').toArray().map(a => clean($(a).text())),
+    // index: TIPS's own number for the file, which the bridge uses to download it.
+    attachments: $('a[href*="_eventId=download"]').toArray().map((a, i) => ({
+      name: clean($(a).text()),
+      index: new URLSearchParams(($(a).attr('href') ?? '').split('?')[1] ?? '').get('index') ?? String(i),
+    })),
   };
 }
 
-export { rowsOf };
+/** Href of the index-th attachment on a detail page. */
+export function attachmentHref(html: string, index: string) {
+  const $ = load(html);
+  const a = $('a[href*="_eventId=download"]').filter((_, x) => new URLSearchParams(($(x).attr('href') ?? '').split('?')[1] ?? '').get('index') === index).first();
+  return a.attr('href') ?? null;
+}

@@ -1,5 +1,5 @@
 /** 自己判定 (HTW0001000): graduation requirement check (JP/EN). Rows use rowspans. */
-import { load, clean, num, rowsOf } from './util';
+import { load, clean, num } from './util';
 
 const ROMAN = /^(I|II|III|IV|V|VI|VII|VIII)$/; // NFKC folds Ⅳ to IV
 const isNum = (s: string) => /^-?\d+(\.\d+)?$/.test(s);

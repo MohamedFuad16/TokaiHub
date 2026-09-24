@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Loading, Fresh, rise } from './ScreenHeader';
+import PageShell, { Card, Loading, LoadError, Fresh, rise } from './ScreenHeader';
 import { motion } from 'motion/react';
 import RegistrationPlanner from './RegistrationPlanner';
 import { useTips } from '../lib/useTips';
@@ -30,7 +30,7 @@ export default function TokaiRegistration(props: ScreenProps) {
 
   return (
     <PageShell {...props} title={tx.title} subtitle={termLabel(data?.term, data?.year, lang)} onRefresh={tt.refresh} refreshing={tt.loading}>
-      {!data && <Loading text={tx.loading} isDark={isDark} />}
+      {!data && (tt.error ? <LoadError error={tt.error} isDark={isDark} lang={lang} onRetry={tt.refresh} /> : <Loading text={tx.loading} isDark={isDark} />)}
       {data && (
         <div className="space-y-5">
           {/* Phone: deadline and credits side by side, last update full width (dates no longer clip). */}

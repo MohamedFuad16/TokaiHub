@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, FolderOpen } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -9,50 +9,57 @@ import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf, pct } from '../lib/tipsAdapters';
 import { useClassCalendar } from '../lib/useCalendar';
-import type { TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation } from '../lib/types';
+import type { CourseItem, TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation, TipsGrades } from '../lib/types';
 import { FileRow } from './TokaiCabinet';
-import { Fresh, CONTAINER, TAP, EASE, RefreshButton, Skeleton } from './ScreenHeader';
-import type { TipsGrades } from '../lib/types';
+import { Fresh, CONTAINER, TAP, EASE, RefreshButton, Skeleton, LoadError } from './ScreenHeader';
+import { DayClassCard } from './DayClassCard';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
 const t = {
   en: {
-    all: "All",
-    classes: "Classes",
-    events: "Events",
-    clubs: "Clubs",
-    allActivities: "All Activities",
-    todays: "Today's",
     schedule: "Schedule",
     classesToday: "Classes Today",
-    noItems: "No items found for this category.",
+    noItems: "No classes on this day.",
     noCourses: "No registered courses for this term yet.",
     otherInfo: "Bulletins",
     gpa: "Cumulative GPA",
-    credits: "Credits (5th Sem)",
-    onTrack: "On Track",
-    deadlines: "Upcoming Deadlines",
-    dueIn: "Due in",
-    days: "days"
+    weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
   },
   jp: {
-    all: "すべて",
-    classes: "授業",
-    events: "イベント",
-    clubs: "クラブ",
-    allActivities: "すべてのアクティビティ",
-    todays: "今日の",
     schedule: "スケジュール",
     classesToday: "今日の授業",
-    noItems: "このカテゴリのアイテムはありません。",
+    noItems: "この日の授業はありません。",
     noCourses: "この学期の履修登録はまだありません。",
     otherInfo: "掲示",
     gpa: "累積 GPA",
-    credits: "履修単位数 (5セメ)",
-    onTrack: "順調",
+    weekdays: ['日', '月', '火', '水', '木', '金', '土'],
   }
 };
+
+/** "All posts →" style link to a full screen, next to a section title. */
+function MoreLink({ onClick, isDark, children }: { onClick: () => void; isDark: boolean; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className={`h-10 shrink-0 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+      {children}
+    </button>
+  );
+}
+
+/** The day's classes in a sheet, or the mascot when there are none. */
+function ClassList({ classes, lang, empty, onOpen }: { classes: { item: CourseItem; status?: TipsChange['status'] }[]; lang: 'en' | 'jp'; empty: string; onOpen: (id: string) => void }) {
+  if (!classes.length) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
+          <img src={mascotIdle} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+        </div>
+        <p className="text-sm font-medium opacity-60">{empty}</p>
+      </div>
+    );
+  }
+  return <>{classes.map(({ item, status }) => <DayClassCard key={item.id} item={item} status={status} lang={lang} onOpen={() => onOpen(item.id)} />)}</>;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -128,8 +135,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   // Real class dates: attendance sessions (past terms) or TIPS's class schedule (current term).
   const todayCal = useClassCalendar(new Date());
   const sheetCal = useClassCalendar(currentMonth);
-  const todayClasses = useMemo(() => todayCal.index.on(new Date(), courseItems).map(x => x.item), [todayCal.index, courseItems]);
-  const calendarClasses = useMemo(() => sheetCal.index.on(selectedDate, courseItems).map(x => x.item), [sheetCal.index, selectedDate, courseItems]);
+  const todayClasses = useMemo(() => todayCal.index.on(new Date(), courseItems), [todayCal.index, courseItems]);
+  const calendarClasses = useMemo(() => sheetCal.index.on(selectedDate, courseItems), [sheetCal.index, selectedDate, courseItems]);
+  // A short pause lets the tap feedback show before the route changes.
+  const openCourse = (id: string) => setTimeout(() => navigate(`/course/${id}`), 150);
+  const emptyDay = selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems;
 
   const isDark = settings.isDarkMode;
   const todayLabel = useMemo(() => new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }), [lang]);
@@ -208,19 +218,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           {/* At-a-glance: GPA, credits toward graduation, attendance this term */}
           <motion.div variants={itemVariants} className={`${CONTAINER} mt-8 grid grid-cols-3 gap-2.5 sm:gap-3`}>
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}>
-              <div className="flex items-center gap-1.5 mb-3"><GraduationCap className="w-4 h-4 text-brand-yellow" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span></div>
+              <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><GraduationCap className="w-4 h-4 shrink-0 text-brand-yellow" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white"><Fresh value={cumGpa}>{cumGpa ? cumGpa.toFixed(2) : '—'}</Fresh></div>
               <div className="text-[10px] font-bold text-gray-500 mt-1">{t[lang].gpa}</div>
             </motion.div>
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <div className="flex items-center gap-1.5 mb-3"><Target className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Credits' : '単位'}</span></div>
+              <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><Target className={`w-4 h-4 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Credits' : '単位'}</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={creditsEarned}>{creditsEarned}</Fresh>{creditsNeeded !== null && <span className={`text-sm font-semibold ${textMuted}`}> / {creditsNeeded}</span>}</div>
               <div className={`mt-2 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}><div className={`h-full rounded-full ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min(pct(creditsEarned, creditsNeeded), 100)}%` }} /></div>
             </motion.div>
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/attendance')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <div className="flex items-center gap-1.5 mb-3"><UserCheck className={`w-4 h-4 ${isDark ? 'text-brand-green' : 'text-green-600'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
+              <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><UserCheck className={`w-4 h-4 shrink-0 ${isDark ? 'text-brand-green' : 'text-green-600'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={attendanceRate ?? -1}>{attendanceRate === null ? '—' : `${attendanceRate}%`}</Fresh></div>
-              <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{termLabel(term, termYear, lang)}</div>
+              <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{tt.timetable ? termLabel(term, termYear, lang) : '\u00a0'}</div>
             </motion.div>
           </motion.div>
 
@@ -241,16 +251,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           {/* Weekly Schedule Section */}
           <motion.div variants={itemVariants} className={`${CONTAINER} mt-10`}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-xl font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <h2 className={`text-lg font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Calendar className="w-5 h-5 text-brand-yellow" />
                 {lang === 'en' ? "Weekly Schedule" : "週間スケジュール"}
               </h2>
-              <button
-                onClick={() => navigate('/schedule')}
-                className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              >
-                {lang === 'en' ? "Full View →" : "詳細を表示 →"}
-              </button>
+              <MoreLink onClick={() => navigate('/schedule')} isDark={isDark}>{lang === 'en' ? 'Full view →' : '詳細を表示 →'}</MoreLink>
             </div>
 
             {tt.timetable?.registrationOpen && tt.timetable.term === tt.currentTerm && (
@@ -264,6 +269,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 <ChevronRight className="w-4 h-4 shrink-0" />
               </button>
             )}
+
+            {!tt.timetable && tt.error && <div className="mb-4"><LoadError error={tt.error} isDark={isDark} lang={lang} onRetry={tt.refresh} /></div>}
 
             {tt.isFallback && (
               <p className={`text-xs font-semibold mb-3 ${textMuted}`}>
@@ -300,8 +307,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           <div className={`${CONTAINER} mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8`}>
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
-                <button onClick={() => navigate('/bulletins')} className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{lang === 'en' ? 'All posts →' : 'すべて →'}</button>
+                <h2 className={`text-lg font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Megaphone className="w-5 h-5 text-brand-yellow" />{t[lang].otherInfo}</h2>
+                <MoreLink onClick={() => navigate('/bulletins')} isDark={isDark}>{lang === 'en' ? 'All posts →' : 'すべて →'}</MoreLink>
               </div>
               <div className="space-y-3">
                 {latestPosts.map((post, i) => (
@@ -319,7 +326,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                       {i % 2 ? <Megaphone className="w-5 h-5 text-brand-black" /> : <Bell className="w-5 h-5 text-brand-black" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{post.title}</h3>
+                      <h3 className={`font-semibold text-sm leading-snug line-clamp-2 ${isDark ? 'text-white' : 'text-brand-black'}`}>{post.title}</h3>
                       <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{post.genre} · {post.postedAt}</p>
                     </div>
                     <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
@@ -327,18 +334,20 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 ))}
                 {!latestPosts.length && (bulletins.loading
                   ? [0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-[72px] rounded-2xl" />)
+                  : bulletins.error && !bulletins.data ? <LoadError error={bulletins.error} isDark={isDark} lang={lang} onRetry={bulletins.refresh} />
                   : <p className={`text-sm font-medium ${textMuted}`}>{lang === 'en' ? 'No bulletins.' : '掲示はありません。'}</p>)}
               </div>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Cabinet · recently added' : 'キャビネット・新着資料'}</h2>
-                <button onClick={() => navigate('/cabinet')} className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{lang === 'en' ? 'All files →' : 'すべて →'}</button>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className={`min-w-0 text-lg font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><FolderOpen className="w-5 h-5 shrink-0 text-brand-yellow" /><span className="min-w-0 [word-break:keep-all]">{lang === 'en' ? 'Recently added files' : 'キャビネット・新着資料'}</span></h2>
+                <MoreLink onClick={() => navigate('/cabinet')} isDark={isDark}>{lang === 'en' ? 'All files →' : 'すべて →'}</MoreLink>
               </div>
               <div className={`rounded-2xl p-1 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 {recentFiles.map((f, i) => <FileRow key={`${f.name}-${i}`} f={f} isDark={isDark} lang={lang} />)}
                 {!recentFiles.length && (cabinet.loading
                   ? <div className="space-y-1 p-1">{[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-14 rounded-xl" />)}</div>
+                  : cabinet.error && !cabinet.data ? <LoadError error={cabinet.error} isDark={isDark} lang={lang} onRetry={cabinet.refresh} />
                   : <p className={`p-3 text-sm font-medium ${textMuted}`}>{lang === 'en' ? 'No files.' : '資料はありません。'}</p>)}
               </div>
             </motion.div>
@@ -409,36 +418,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-8">
-                {todayClasses.map(cls => (
-                  <motion.div
-                    key={cls.id}
-                    whileTap={{ scale: 0.98 }}
-                    className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
-                    onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                  >
-                    <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                      {(cls.time ?? '').split(' ')[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-lg leading-tight truncate">{cls.title?.[lang]}</div>
-                      <div className="text-sm font-medium opacity-80 truncate">{cls.location?.[lang]}</div>
-                    </div>
-                  </motion.div>
-                ))}
-                {todayClasses.length === 0 && (
-                  <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
-                      <img
-                        src={mascotIdle}
-                        alt="No classes"
-                        className="w-full h-full object-contain mix-blend-multiply opacity-100"
-                      />
-                    </div>
-                    <p className={`text-sm font-medium ${textMuted}`}>
-                      {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
-                    </p>
-                  </div>
-                )}
+                <ClassList classes={todayClasses} lang={lang} empty={emptyDay} onOpen={openCourse} />
               </div>
             </motion.div>
           </>
@@ -468,7 +448,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 <h2 className="text-2xl font-bold">{lang === 'en' ? 'Calendar' : 'カレンダー'}</h2>
                 <button
                   onClick={() => setIsCalendarSheetOpen(false)}
-                  aria-label="Close calendar"
+                  aria-label={lang === 'en' ? 'Close calendar' : 'カレンダーを閉じる'}
                   className={`w-10 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full flex items-center justify-center transition-transform active:scale-95`}
                 >
                   <X className="w-5 h-5" />
@@ -480,8 +460,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                   <div className="flex justify-between items-center mb-4">
                     <button
                       onClick={handlePrevMonth}
-                      aria-label="Previous month"
-                      className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                      aria-label={lang === 'en' ? 'Previous month' : '前の月'}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -492,14 +472,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     </div>
                     <button
                       onClick={handleNextMonth}
-                      aria-label="Next month"
-                      className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+                      aria-label={lang === 'en' ? 'Next month' : '次の月'}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
                   <div className="grid grid-cols-7 gap-2 text-center mb-2">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                    {t[lang].weekdays.map((d, i) => (
                       <div key={i} className={`text-xs font-semibold ${textMuted}`}>{d}</div>
                     ))}
                   </div>
@@ -512,7 +492,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                         <button
                           key={i}
                           onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
-                          aria-label={`${dateNum} ${currentMonth.toLocaleString('en-US', { month: 'long' })}`}
+                          aria-label={new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum).toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'long', day: 'numeric' })}
                           aria-pressed={isSelected}
                           className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${isSelected
                             ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
@@ -542,36 +522,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                       transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
-                      {calendarClasses.map(cls => (
-                        <motion.div
-                          key={cls.id}
-                          whileTap={{ scale: 0.98 }}
-                          className={`p-5 rounded-[32px] ${cls.color} text-brand-black flex gap-4 items-center cursor-pointer transition-all shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_0_0_1px_rgba(255,255,255,0.4)] border border-black/5 hover:translate-y-[-2px]`}
-                          onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
-                        >
-                          <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                            {(cls.time ?? '').split(' ')[0]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-lg leading-tight truncate">{cls.title?.[lang]}</div>
-                            <div className="text-sm font-medium opacity-80 truncate">{cls.location?.[lang]}</div>
-                          </div>
-                        </motion.div>
-                      ))}
-                      {calendarClasses.length === 0 && (
-                        <div className="flex flex-col items-center gap-4 py-8 text-center">
-                          <div className="w-20 h-20 rounded-full overflow-hidden bg-white shadow-inner">
-                            <img
-                              src={mascotIdle}
-                              alt="No classes"
-                              className="w-full h-full object-contain mix-blend-multiply opacity-100"
-                            />
-                          </div>
-                          <p className={`text-sm font-medium ${textMuted}`}>
-                            {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
-                          </p>
-                        </div>
-                      )}
+                      <ClassList classes={calendarClasses} lang={lang} empty={emptyDay} onOpen={openCourse} />
                     </motion.div>
                   </AnimatePresence>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ChevronRight, Bell, Moon, Shield, LogOut,
   Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound, Cloud,
@@ -305,8 +305,8 @@ export default function TokaiSettings(props: SettingsProps) {
               {(lang === 'en' ? userProfile?.givenName : userProfile?.nameJp)?.charAt(0) ?? 'T'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="font-bold text-lg truncate">{(lang === 'en' ? userProfile?.name : userProfile?.nameJp) ?? 'TokaiHub User'}</h2>
+              <div className="flex items-start gap-2 mb-0.5">
+                <h2 className="min-w-0 font-bold text-lg leading-snug break-words">{(lang === 'en' ? userProfile?.name : userProfile?.nameJp) ?? 'TokaiHub User'}</h2>
                 <AnimatePresence>
                   {!!userProfile && (
                     <motion.div
@@ -315,7 +315,7 @@ export default function TokaiSettings(props: SettingsProps) {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                      className="bg-blue-500 rounded-full p-0.5 flex items-center justify-center shrink-0"
+                      className="mt-1 bg-blue-500 rounded-full p-0.5 flex items-center justify-center shrink-0"
                     >
                       <BadgeCheck className="w-3.5 h-3.5 text-white" />
                     </motion.div>

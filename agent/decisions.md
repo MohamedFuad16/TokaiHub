@@ -197,3 +197,21 @@ surplus.
 **Consequences:** Works for any student whose TIPS pages follow this layout; a course outside
 the student's curriculum gets no chip (it may still count as "other department" credits in V,
 which the Hub does not guess). Title matching can miss renamed equivalents.
+
+---
+
+## ADR-0011 · 2026-09-24 · TIPS files and links go through one path each
+**Status:** Accepted (branch `tips-wrapper`)
+**Context:** Syllabus rubrics ("共通ルーブリック.pdf") and bulletin attachments showed as plain
+text: TIPS serves them only as links inside the detail page's Web Flow (`downloadFile&columnId=
+&renban=`, `download&index=`), so a stored URL expires with the flow key. URLs and e-mails in
+TIPS text were plain text too, handled differently per screen.
+**Decision:** Parsers return files as stable references (column + renban, or post id + index).
+The bridge's `file()` re-opens the page in the student's session and streams the file
+(`/tips-api/file?kind=syllabus|bulletin`); off the Mac the app asks `/file-ticket` for a
+one-minute single-use link, the same as cabinet files. `/file-ticket` accepts the two new kinds
+with the same patterns `file()` re-checks. Parsers keep a link's address in the text when the
+link text hides it; the app linkifies in one place (`linkify` + `Linked`/`RichText`).
+**Consequences:** Opening a file costs 2–4 TIPS page loads (and re-marks a bulletin as read,
+which it already is). Cache keys were versioned (`syllabus:v2`, `bulletin:v3`) so old copies
+without file references are not served.

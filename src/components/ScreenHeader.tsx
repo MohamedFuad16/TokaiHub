@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronLeft, Menu, RefreshCw } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronLeft, Menu, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SharedMenu from './SharedMenu';
@@ -101,7 +101,8 @@ export const Card: React.FC<{ isDark: boolean; className?: string; children: Rea
 export function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3">
-      <h2 className="font-bold text-lg flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-brand-yellow" />{children}</h2>
+      {/* items-start + a dot at the first line's middle: long titles wrap without the dot drifting. */}
+      <h2 className="font-bold text-lg leading-snug flex items-start gap-2 min-w-0 [word-break:keep-all] [overflow-wrap:anywhere]"><span className="mt-[0.55em] w-2 h-2 rounded-full bg-brand-yellow shrink-0" /><span className="min-w-0 flex items-center gap-2">{children}</span></h2>
       {right}
     </div>
   );
@@ -163,6 +164,39 @@ export function Loading({ text, isDark, rows = 3 }: { text: string; isDark: bool
         </div>
       )}
     </motion.div>
+  );
+}
+
+/**
+ * A TIPS request failed and nothing is cached to show instead. Keeps the page usable: says what
+ * happened in the UI language, shows the bridge's reason small, and offers a retry.
+ */
+export function LoadError({ error, isDark, lang, onRetry }: { error: Error; isDark: boolean; lang: Language; onRetry?: () => void }) {
+  return (
+    <motion.div role="alert" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: EASE }}
+      className={`p-5 rounded-3xl flex items-start gap-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-500" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold">{lang === 'en' ? 'Could not load this from TIPS.' : 'TIPSから読み込めませんでした。'}</p>
+        <p className={`mt-1 text-xs font-medium break-words [overflow-wrap:anywhere] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{error.message}</p>
+        {onRetry && (
+          <motion.button whileTap={TAP} onClick={onRetry} className={`mt-3 h-10 px-4 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>
+            <RefreshCw className="w-3.5 h-3.5" />{lang === 'en' ? 'Try again' : '再試行'}
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/** The one search box style used by every list screen. */
+export function SearchField({ value, onChange, placeholder, isDark, className = 'mb-4' }: { value: string; onChange: (v: string) => void; placeholder: string; isDark: boolean; className?: string }) {
+  return (
+    <label className={`flex items-center h-12 rounded-2xl px-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${className}`}>
+      <Search className={`w-5 h-5 mr-3 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} enterKeyHint="search"
+        className="min-w-0 bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
+    </label>
   );
 }
 

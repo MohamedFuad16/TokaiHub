@@ -10,9 +10,34 @@ the owner's Mac Mini under launchd (`scripts/hub.sh`): local listener 8791, publ
 8792 behind Cloudflare tunnel tokaihub-api.mohamedfuad.com, passkey unlock, TIPS session
 sealed on disk. DNS for mohamedfuad.com on Cloudflare since 2026-09-24 (registrar IONOS).
 Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), real-device
-passkey test. No automated tests beyond the passkey/access probes noted below.
+passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on synthetic HTML); lint:
+`npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-24 (twelfth pass) — syllabus completeness, links, error states, lint + tests;
+  uncommitted** (by: Claude, UI/syllabus worker). Syllabus parser keeps each field's TIPS group
+  (a label can sit in two groups: 地域志向 flag and content, the second was silently dropped),
+  keeps blank lines and link addresses, and returns attached files (rubrics) separately; cache
+  key `syllabus:v2`. Attached files and bulletin attachments open through the bridge
+  (`/tips-api/file?kind=syllabus|bulletin`, one-minute tickets on the phone; PDFs served inline);
+  bulletin detail drops the " [genre]" title suffix (`bulletin:v3`). One `linkify` in
+  `syllabusText.ts`, rendered by `Linked`/`RichText`/`FileLink` in SyllabusText.tsx: URLs and
+  e-mails are blue links (new tab, noopener) in syllabus fields, bulletin bodies and contacts,
+  cabinet summaries and reports. Course page: Syllabus tab grouped by TIPS group (materials split
+  out of grading), one-line values as a fact list in the UI language (有(Yes) → Yes/有), rubric
+  links under Grading, compact "Thu 1・2" slot, tabs fit 375px. `reflow` no longer merges
+  intentionally short lines (office lists, numbered items, address lines). Shared `LoadError`
+  (message + retry) replaces endless skeletons on 10 screens when TIPS fails with nothing cached;
+  shared `SearchField`, `DayClassCard`, `slotLabel`. Home stat tiles no longer squeeze the
+  Attendance icon to 2px; Settings name wraps. Removed dead TokaiSplash.tsx, src/lib/index.ts,
+  util `kv`, unused exports/imports. Tooling: ESLint flat config (`npm run eslint`), Vitest
+  (`npm test`, 46 tests, synthetic HTML only). Bridge restarted 3× (14:20, 14:33, 14:42 JST).
+  Verified: live fetch of TTX025/TTX015/TTX050/918004 through the bridge (3 rubrics found,
+  918004 has none), rubric 818 KB PDF served inline, tickets single-use (403 on reuse), public
+  listener 401 without token; refresh=1 seen for every feature; error state on 9 screens with a
+  simulated 502; no horizontal overflow or squashed icon at 375px on 11 routes. NOT verified:
+  opening a file on the real iPhone (ticket path tested on the local listener only), motion by
+  eye (Browser pane was hidden for part of the pass).
 - **2026-09-24 (eleventh pass) — graduation categories, grading chart, planner, sidebar** (by:
   Claude). New bridge feature `course-categories` (graduation check + curriculum lists: remaining
   per section, section per course; G<n> ↔ section n, cross-checked by name; ~11–19 s, cached 12 h,

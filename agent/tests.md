@@ -1,24 +1,23 @@
 # Tests
 
-**Current state: no automated test suite.** Quality gates today:
-
 ```bash
-npm run lint                      # tsc --noEmit — the only type gate (vite build skips types)
-npm run build                     # vite production build
-for f in lambdas/*.mjs; do node --check "$f"; done   # lambda syntax check
+npm run lint      # tsc --noEmit (vite build does not typecheck)
+npm run eslint    # ESLint flat config: typescript-eslint + react-hooks (rules-of-hooks = error)
+npm test          # Vitest, Node environment (vitest.config.ts, vitest.setup.ts)
+npm run build     # vite production build
 ```
 
-Manual verification checklist for UI changes:
-- Dev server (`npm run dev`, port 3000) with `settings.devSkipAuth = true` + api.ts
-  mocks for offline screens.
-- Both languages (EN/JP), both themes, mobile viewport (it's a PWA — test ~390px).
-- Dashboard merge: enrolled courses appear on the weekly timetable with correct
-  day/period from `data.ts`.
+Unit tests (46 on 2026-09-24):
+- `src/lib/syllabusText.test.ts`: reflow, linkify, pickLang, gradingWeights, withoutWeightLines.
+- `src/lib/courseCategories.test.ts`: normTitle, allocate (IV electives overflow to V, required
+  stays in IV, beyond-requirement flags).
+- `src/lib/tipsAdapters.test.ts`: slotLabel, tidy.
+- `server/tips/parse/syllabus.test.ts`: syllabus detail (groups, files, link addresses, blank
+  lines, schedule), cellText, bulletin detail (attachments with index, genre suffix).
 
-Lambda changes: exercise via the deployed API (manual console deploy) — there is no
-local AWS emulation in this repo. Verified 2026-07-08: lint clean, build green, all 11
-lambdas parse.
+Rules: the repo is public. Parser tests use small SYNTHETIC HTML shaped like TIPS pages; never
+commit real TIPS HTML, names, student IDs or grades. Raw pages for debugging stay in
+`~/.tokaihub/fixtures` or a temp dir outside the repo.
 
-Wanted next (candidates when tests are introduced): vitest + testing-library for the
-TokaiHome merge logic (highest-risk pure logic — extractable), and node --test for
-`userclass-entity.mjs` helpers.
+Manual checks for UI changes: dev server (`tokaihub-web`, port 3000, proxies /tips-api to the
+bridge), EN and JP, light and dark, 375px and desktop; no horizontal scroll at 375px.

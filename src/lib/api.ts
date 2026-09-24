@@ -127,18 +127,27 @@ export const getFeature = <T>(feature: string, params?: FeatureParams, opts: { r
 export const runAction = <T>(action: 'register' | 'drop', body: Record<string, string>) =>
   call<T>(`/action/${action}`, { method: 'POST', body: JSON.stringify({ ...body, confirm: true }), timeoutMs: 120_000 });
 
-/** URL that downloads a TIPS cabinet file through the bridge (external files keep their own URL). */
-export const cabinetFileUrl = (f: { url?: string; fileId?: string; folderId?: string }) =>
-  f.url ?? `${BASE}/file?fileId=${f.fileId}&folderId=${f.folderId}`;
+/**
+ * A TIPS file the bridge can stream: a cabinet file (fileId + folderId), a file attached to a
+ * syllabus field, or a bulletin attachment. Cabinet entries that point outside TIPS carry `url`.
+ */
+export type TipsFileRef =
+  | { url?: string; fileId?: string; folderId?: string }
+  | { kind: 'syllabus'; year: string; code: string; column: string; renban: string; locale: 'ja_JP' | 'en_US' }
+  | { kind: 'bulletin'; id: string; index: string };
+
+/** URL that downloads a TIPS file through the bridge (external files keep their own URL). */
+export const tipsFileUrl = (f: TipsFileRef) =>
+  'kind' in f ? `${BASE}/file${qs(f)}` : f.url ?? `${BASE}/file?fileId=${f.fileId}&folderId=${f.folderId}`;
 
 /**
- * Opens a cabinet file from a click. Off the Mac a plain link cannot carry the device token,
+ * Opens a TIPS file from a click. Off the Mac a plain link cannot carry the device token,
  * so the tab opens first (keeps the click's popup permission) and then loads a one-minute link.
  */
-export function openCabinetFile(f: { url?: string; fileId?: string; folderId?: string }) {
-  if (f.url || IS_LOCAL) { window.open(cabinetFileUrl(f), '_blank', 'noopener'); return; }
+export function openTipsFile(f: TipsFileRef) {
+  if (('url' in f && f.url) || IS_LOCAL) { window.open(tipsFileUrl(f), '_blank', 'noopener'); return; }
   const tab = window.open('', '_blank');
-  call<{ ticket: string }>('/file-ticket', { method: 'POST', body: JSON.stringify({ fileId: f.fileId, folderId: f.folderId }), timeoutMs: 15_000 })
+  call<{ ticket: string }>('/file-ticket', { method: 'POST', body: JSON.stringify(f), timeoutMs: 15_000 })
     .then(({ ticket }) => { if (tab) tab.location.href = `${BASE}/file?ticket=${encodeURIComponent(ticket)}`; })
     .catch(() => tab?.close());
 }

@@ -76,3 +76,16 @@
   so the 30-minute idle timeout does not hit.
 - **cloudflared over IPv6 drops on this network** ("sendmsg: no route to host" to the edge).
   `~/.cloudflared/tokaihub.yml` sets `edge-ip-version: "4"`.
+- **Syllabus labels repeat across groups** (2026-09-24). 地域志向による学修内容 is both a yes/no
+  flag under 基本事項 and a content field under 科目の目的・学修内容. The parser deduped by label, so
+  the content field was dropped. It now dedupes by group + label. TIPS also files 履修上の注意点,
+  教科書 and 参考図書 under 成績評価基準・方法; the app regroups them as materials.
+- **Screens without cached data stayed on a skeleton forever when TIPS failed** (2026-09-24).
+  Most screens rendered `!data && <Loading/>` and ignored `error`. They now show `LoadError`
+  with a retry. Checked with a simulated 502 on 9 screens.
+- **Home stat tile squeezed its icon to 2 px** (2026-09-24): "ATTENDANCE" in uppercase
+  tracking-widest is wider than a third of 375px, and the icon had no `shrink-0`. Icons now sit
+  above the label below `sm`.
+- **No @types/react in the repo**: JSX is untyped, so `tsc` does not check component props, and
+  a function component declared with a typed props object rejects `key`. Components that are
+  mapped with keys are declared as `React.FC` (as elsewhere in the codebase).

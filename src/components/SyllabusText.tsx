@@ -1,25 +1,65 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { Paperclip, ExternalLink } from 'lucide-react';
 import { EASE } from './ScreenHeader';
-import { reflow } from '../lib/syllabusText';
+import { reflow, linkify } from '../lib/syllabusText';
+import { openTipsFile, tipsFileUrl, type TipsFileRef } from '../lib/api';
 
-/** Syllabus prose with wrapped lines joined into paragraphs and ・ lines as a list. */
-export function RichText({ text, isDark, size = 'text-[15px]' }: { text: string; isDark: boolean; size?: string }) {
+/** Link colours for TIPS text; long addresses wrap anywhere so a phone never scrolls sideways. */
+const linkClass = (isDark: boolean) =>
+  `font-semibold underline-offset-2 hover:underline [overflow-wrap:anywhere] ${isDark ? 'text-blue-400' : 'text-blue-600'}`;
+
+/** Text with every web address and e-mail address as a link that opens in a new tab. */
+export function Linked({ text, isDark }: { text: string; isDark: boolean }) {
+  return (
+    <>
+      {linkify(text).map((p, i) => p.kind === 'text'
+        ? <React.Fragment key={i}>{p.text}</React.Fragment>
+        : <a key={i} href={p.href} target="_blank" rel="noopener noreferrer" className={linkClass(isDark)}>{p.text}</a>)}
+    </>
+  );
+}
+
+/**
+ * TIPS prose. By default wrapped lines are joined into paragraphs and ・ lines become a list
+ * (syllabus fields); `keepLines` keeps the author's line breaks (bulletin posts). Addresses are
+ * links either way.
+ */
+export function RichText({ text, isDark, size = 'text-[15px]', keepLines = false }: { text: string; isDark: boolean; size?: string; keepLines?: boolean }) {
   const color = isDark ? 'text-gray-300' : 'text-gray-700';
+  if (keepLines) {
+    return <div className={`${size} leading-relaxed ${color} whitespace-pre-line break-words [overflow-wrap:anywhere]`}><Linked text={text} isDark={isDark} /></div>;
+  }
   return (
     <div className={`${size} leading-relaxed ${color} space-y-2.5 break-words [overflow-wrap:anywhere]`}>
       {reflow(text).map((b, i) => b.kind === 'p'
-        ? <p key={i}>{b.text}</p>
+        ? <p key={i}><Linked text={b.text} isDark={isDark} /></p>
         : (
           <ul key={i} className="space-y-1.5">
             {b.items.map((it, j) => (
-              <li key={j} className="flex gap-2.5"><span className="mt-[0.6em] w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" /><span className="min-w-0">{it}</span></li>
+              <li key={j} className="flex gap-2.5"><span className="mt-[0.6em] w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" /><span className="min-w-0"><Linked text={it} isDark={isDark} /></span></li>
             ))}
           </ul>
         ))}
     </div>
   );
 }
+
+/**
+ * A TIPS file (rubric, handout, bulletin attachment) as a link. The bridge fetches it with the
+ * TIPS session; off the Mac the tab gets a one-minute link (openTipsFile).
+ */
+export const FileLink: React.FC<{ name: string; file: TipsFileRef; isDark: boolean }> = ({ name, file, isDark }) => {
+  const external = 'url' in file && !!file.url;
+  const Icon = external ? ExternalLink : Paperclip;
+  return (
+    <a href={tipsFileUrl(file)} target="_blank" rel="noopener noreferrer" onClick={e => { e.preventDefault(); openTipsFile(file); }}
+      className={`flex items-center gap-2.5 min-h-10 px-3 py-2 rounded-xl text-sm transition-colors ${isDark ? 'bg-gray-700/60 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 border border-gray-200'}`}>
+      <Icon className={`w-4 h-4 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+      <span className={`min-w-0 ${linkClass(isDark)}`}>{name}</span>
+    </a>
+  );
+};
 
 const COLORS = ['#F5C518', '#3B82F6', '#10B981', '#F43F5E', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
 

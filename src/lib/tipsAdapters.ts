@@ -6,7 +6,6 @@
 import { PERIOD_TIMES } from '../config/periods';
 import type { CourseItem, LocalizedString, Term, TipsAttendanceCourse, TipsChange, TipsProfile, TipsTimetable, TipsTimetableCourse } from './types';
 
-export { PERIOD_TIMES };
 
 export function academicYearOf(date: Date) {
   return date.getMonth() < 3 ? date.getFullYear() - 1 : date.getFullYear();
@@ -20,7 +19,7 @@ function hash(s: string) {
   return h;
 }
 export const colorFor = (code: string) => PALETTE[hash(code) % PALETTE.length];
-export const artworkFor = (code: string) => ARTWORK[hash(code) % ARTWORK.length];
+const artworkFor = (code: string) => ARTWORK[hash(code) % ARTWORK.length];
 
 const SMALL = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
 const ROMAN = /^(i|ii|iii|iv|v|vi|vii|viii|ix|x)$/i;
@@ -41,7 +40,7 @@ export function tidy(s: string) {
   }).join('');
 }
 
-export function periodTime(periods: number[]) {
+function periodTime(periods: number[]) {
   const sorted = [...periods].sort((a, b) => a - b);
   const start = PERIOD_TIMES[sorted[0]]?.[0];
   const end = PERIOD_TIMES[sorted[sorted.length - 1]]?.[1];
@@ -49,7 +48,7 @@ export function periodTime(periods: number[]) {
 }
 
 /** TIPS already answered in the UI language, so jp and en carry the same string. */
-export function toCourseItem(c: TipsTimetableCourse): CourseItem {
+function toCourseItem(c: TipsTimetableCourse): CourseItem {
   const same = (s: string) => ({ jp: tidy(s), en: tidy(s) });
   return {
     id: c.code,
@@ -103,6 +102,14 @@ export function classDateIndex(year: number, term: Term, attendance?: TipsAttend
     },
   };
 }
+
+/**
+ * A class's day and periods in a few characters, so it fits a chip on a phone: "Thu 1・2" /
+ * "木 1・2限". `day` is TIPS's grid header for that day ("Thursday" / "木曜日").
+ */
+export const slotLabel = (day: string | undefined, periods: number[] | undefined, lang: 'en' | 'jp') =>
+  [day ? (lang === 'en' ? day.slice(0, 3) : day.charAt(0)) : '', periods?.length ? `${periods.join('・')}${lang === 'en' ? '' : '限'}` : '']
+    .filter(Boolean).join(' ');
 
 export const termLabel = (term: Term | null | undefined, year: number | null | undefined, lang: 'en' | 'jp') =>
   term ? (lang === 'en' ? `${year ?? ''} ${term === '1' ? 'Spring' : 'Fall'} Semester` : `${year ?? ''}年度 ${term === '1' ? '春学期' : '秋学期'}`) : '';

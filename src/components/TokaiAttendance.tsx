@@ -3,10 +3,10 @@ import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Pill, Select, Skeleton, Empty, Fresh, since, EASE } from './ScreenHeader';
+import PageShell, { Card, Pill, Select, Skeleton, Empty, LoadError, Fresh, since, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { termLabel, academicYearOf, colorFor, tidy } from '../lib/tipsAdapters';
+import { termLabel, academicYearOf, colorFor, slotLabel, tidy } from '../lib/tipsAdapters';
 import type { AttendanceStatus, Term, TipsAttendanceCourse } from '../lib/types';
 
 const t = {
@@ -52,7 +52,7 @@ export default function TokaiAttendance(props: ScreenProps) {
   const days = tt.timetable?.grid.days ?? [];
 
   return (
-    <PageShell {...props} title={tx.title} subtitle={[termLabel(term, year, lang), since(att.cachedAt, lang)].filter(Boolean).join(' · ')} onRefresh={att.refresh} refreshing={att.loading}>
+    <PageShell {...props} title={tx.title} subtitle={[tt.timetable ? termLabel(term, year, lang) : '', since(att.cachedAt, lang)].filter(Boolean).join(' · ') || undefined} onRefresh={() => (tt.timetable ? att.refresh() : tt.refresh())} refreshing={att.loading || tt.loading}>
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {(['1', '2'] as Term[]).map(tm => <Pill key={tm} layoutId="attendance-term" active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>)}
         <span className="flex-1" />
@@ -63,7 +63,10 @@ export default function TokaiAttendance(props: ScreenProps) {
       </div>
 
       {tt.timetable && tt.items.length === 0 && <Empty text={tx.none} isDark={isDark} />}
-      {tt.items.length > 0 && !att.data && (
+      {!att.data && (att.error ?? (!tt.timetable ? tt.error : null)) && (
+        <LoadError error={(att.error ?? tt.error)!} isDark={isDark} lang={lang} onRetry={() => (tt.timetable ? att.refresh() : tt.refresh())} />
+      )}
+      {(tt.items.length > 0 || (!tt.timetable && !tt.error)) && !att.data && !att.error && (
         <div role="status" aria-live="polite">
           <p className={`text-shimmer text-sm font-medium mb-3 ${muted}`}>{tx.loading}</p>
           <div className="grid grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
@@ -98,8 +101,8 @@ export default function TokaiAttendance(props: ScreenProps) {
                     <div className={`w-1.5 self-stretch rounded-full ${colorFor(c.code)}`} />
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-[15px] leading-snug line-clamp-2">{item?.title[lang] ?? tidy(c.title)}</div>
-                      <div className={`text-xs font-medium mt-0.5 truncate ${muted}`}>
-                        {[c.code, item ? `${days[(item.dayOfWeek ?? 1) - 1] ?? ''} ${item.periods?.join('・')}` : c.slotText, tidy(c.teacher ?? '')].filter(Boolean).join(' · ')}
+                      <div className={`text-xs font-medium mt-0.5 break-words ${muted}`}>
+                        {[c.code, item ? slotLabel(days[(item.dayOfWeek ?? 1) - 1], item.periods, lang) : c.slotText, tidy(c.teacher ?? '')].filter(Boolean).join(' · ')}
                       </div>
                     </div>
                     <div className="text-right shrink-0">

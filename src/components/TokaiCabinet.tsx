@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Folder, FolderOpen, FileText, ExternalLink, Download, Search, ChevronRight } from 'lucide-react';
+import { Folder, FolderOpen, FileText, ExternalLink, Download, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Loading, Empty, since, EASE } from './ScreenHeader';
+import PageShell, { Loading, LoadError, Empty, SearchField, since, EASE } from './ScreenHeader';
+import { Linked } from './SyllabusText';
 import { useTips } from '../lib/useTips';
-import { cabinetFileUrl, openCabinetFile } from '../lib/api';
+import { tipsFileUrl, openTipsFile } from '../lib/api';
 import type { TipsCabinetFile, TipsCabinetFolder } from '../lib/types';
 
 const t = {
@@ -14,17 +15,29 @@ const t = {
 
 const countFiles = (f: TipsCabinetFolder): number => f.files.length + f.children.reduce((a, c) => a + countFiles(c), 0);
 
+/**
+ * One file. The name is the link, stretched over the whole row; addresses in the summary are
+ * links of their own above it (a link cannot sit inside another link).
+ */
 export const FileRow: React.FC<{ f: TipsCabinetFile; isDark: boolean; lang: 'en' | 'jp' }> = ({ f, isDark, lang }) => {
   const muted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const ref = { url: f.url, fileId: f.fileId, folderId: f.folderId };
   return (
-    <a href={cabinetFileUrl(f)} target="_blank" rel="noreferrer" onClick={e => { e.preventDefault(); openCabinetFile(f); }} className={`flex items-start gap-3 p-3 rounded-2xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
+    <div className={`relative flex items-start gap-3 p-3 rounded-2xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
       <FileText className="w-4 h-4 mt-0.5 shrink-0 text-brand-yellow" />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold leading-snug">{f.name}</div>
-        <div className={`text-[11px] font-medium mt-0.5 ${muted}`}>{[f.date, f.summary].filter(Boolean).join(' · ')}</div>
+        <a href={tipsFileUrl(ref)} target="_blank" rel="noopener noreferrer" onClick={e => { e.preventDefault(); openTipsFile(ref); }}
+          className="block text-sm font-semibold leading-snug break-words [overflow-wrap:anywhere] outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-brand-yellow">
+          {f.name}
+        </a>
+        {(f.date || f.summary) && (
+          <div className={`relative z-10 w-fit max-w-full text-[11px] font-medium mt-0.5 break-words [overflow-wrap:anywhere] ${muted}`}>
+            {f.date}{f.date && f.summary ? ' · ' : ''}{f.summary && <Linked text={f.summary} isDark={isDark} />}
+          </div>
+        )}
       </div>
       {f.url ? <ExternalLink className={`w-4 h-4 shrink-0 ${muted}`} aria-label={t[lang].external} /> : <Download className={`w-4 h-4 shrink-0 ${muted}`} />}
-    </a>
+    </div>
   );
 };
 
@@ -39,7 +52,7 @@ const FolderNode: React.FC<{ f: TipsCabinetFolder; depth: number; isDark: boolea
         <ChevronRight className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''} ${muted}`} />
         {isOpen ? <FolderOpen className="w-5 h-5 shrink-0 text-brand-yellow" /> : <Folder className="w-5 h-5 shrink-0 text-brand-yellow" />}
         <div className="flex-1 min-w-0">
-          <div className={`font-bold leading-snug ${depth === 0 ? 'text-[15px]' : 'text-sm'}`}>{f.name}</div>
+          <div className={`font-bold leading-snug break-words [overflow-wrap:anywhere] ${depth === 0 ? 'text-[15px]' : 'text-sm'}`}>{f.name}</div>
           {(f.summary || f.owner) && <div className={`text-[11px] font-medium truncate ${muted}`}>{[f.owner, f.summary].filter(Boolean).join(' · ')}</div>}
         </div>
         <span className={`text-[11px] font-bold shrink-0 ${muted}`}>{t[lang].files(n)}</span>
@@ -78,11 +91,8 @@ export default function TokaiCabinet(props: ScreenProps) {
 
   return (
     <PageShell {...props} title={tx.title} subtitle={since(cab.cachedAt, lang) || undefined} onRefresh={cab.refresh} refreshing={cab.loading}>
-      <div className={`flex items-center rounded-2xl px-4 h-12 mb-5 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <Search className={`w-5 h-5 mr-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder={tx.search} className="bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
-      </div>
-      {!cab.data && <Loading text={tx.loading} isDark={isDark} />}
+      <SearchField value={q} onChange={setQ} placeholder={tx.search} isDark={isDark} />
+      {!cab.data && (cab.error ? <LoadError error={cab.error} isDark={isDark} lang={lang} onRetry={cab.refresh} /> : <Loading text={tx.loading} isDark={isDark} />)}
       {cab.data && folders.length === 0 && <Empty text={tx.none} isDark={isDark} />}
       <div className="space-y-3">
         {folders.map((f, i) => (

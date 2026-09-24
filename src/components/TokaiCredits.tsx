@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { GraduationCap, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, SectionTitle, Pill, Loading, Skeleton, Fresh, EASE } from './ScreenHeader';
+import PageShell, { Card, SectionTitle, Pill, Loading, LoadError, Skeleton, Fresh, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { pct, termLabel, tidy } from '../lib/tipsAdapters';
 import type { TipsGrades, TipsGraduation } from '../lib/types';
@@ -50,7 +50,8 @@ export default function TokaiCredits(props: ScreenProps) {
 
   return (
     <PageShell {...props} title={tx.title} subtitle={g?.asOf ? tx.asOf(g.asOf) : undefined} onRefresh={() => { grades.refresh(); graduation.refresh(); }} refreshing={grades.loading || graduation.loading}>
-      {!g && (
+      {!g && grades.error && <LoadError error={grades.error} isDark={isDark} lang={lang} onRetry={grades.refresh} />}
+      {!g && !grades.error && (
         <>
           <Loading text={tx.loading} isDark={isDark} rows={0} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -137,7 +138,7 @@ export default function TokaiCredits(props: ScreenProps) {
                     if (!items.length) return null;
                     return (
                       <div key={group.section}>
-                        <div className="text-sm font-bold mb-2">{group.section}. {group.name}</div>
+                        <div className="text-sm font-bold mb-2 break-words">{group.section}. {group.name}</div>
                         <div className="space-y-3">
                           {items.map(item => {
                             const p = Math.min(pct(item.earned, item.required), 100);
@@ -145,7 +146,7 @@ export default function TokaiCredits(props: ScreenProps) {
                             return (
                               <div key={item.name}>
                                 <div className="flex justify-between mb-1 gap-3">
-                                  <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{item.name}</span>
+                                  <span className={`min-w-0 text-xs font-medium break-words ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{item.name}</span>
                                   <span className={`text-xs font-bold shrink-0 ${done ? 'text-green-600' : ''}`}>{item.earned}/{item.required}</span>
                                 </div>
                                 <div className={`h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>

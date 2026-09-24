@@ -175,7 +175,19 @@ app.post('/tips-api/action/:action', async (req, res) => {
 
 /** A one-minute, single-use link for a cabinet file, so the phone can open it in a new tab. */
 app.post('/tips-api/file-ticket', (req, res) => {
-  const { fileId, folderId } = req.body ?? {};
+  const b = req.body ?? {};
+  const str = (k: string) => String(b[k] ?? '');
+  // Syllabus and bulletin attachments are addressed by their page; routes.file() checks the
+  // same patterns again before anything reaches TIPS.
+  if (b.kind === 'syllabus') {
+    if (!/^\d{4}$/.test(str('year')) || !/^[A-Za-z0-9]{3,12}$/.test(str('code')) || !/^\d{1,4}$/.test(str('column')) || !/^\d{1,3}$/.test(str('renban'))) return res.status(400).json({ error: 'bad file id' });
+    return res.json({ ticket: auth.fileTicket({ kind: 'syllabus', year: str('year'), code: str('code'), column: str('column'), renban: str('renban'), locale: str('locale') === 'en_US' ? 'en_US' : 'ja_JP' }) });
+  }
+  if (b.kind === 'bulletin') {
+    if (!/^\d+-\w+-\d+$/.test(str('id')) || !/^\d{1,3}$/.test(str('index'))) return res.status(400).json({ error: 'bad file id' });
+    return res.json({ ticket: auth.fileTicket({ kind: 'bulletin', id: str('id'), index: str('index') }) });
+  }
+  const { fileId, folderId } = b;
   if (!/^\d+$/.test(String(fileId)) || !/^\d+$/.test(String(folderId))) return res.status(400).json({ error: 'bad file id' });
   res.json({ ticket: auth.fileTicket({ fileId: String(fileId), folderId: String(folderId) }) });
 });

@@ -115,7 +115,9 @@ export interface TipsBulletins {
 }
 
 export interface TipsBulletinDetail {
-  title: string; genre: string; body: string; poster: string; contact: string | null; postedAt: string | null; attachments: string[];
+  title: string; genre: string; body: string; poster: string; contact: string | null; postedAt: string | null;
+  /** Copies cached before attachments carried their TIPS index hold plain names. */
+  attachments: ({ name: string; index: string } | string)[];
 }
 
 export interface TipsReport {
@@ -141,7 +143,8 @@ export interface TipsSyllabus {
   year: number | null; semester: LocalizedJpEn; code: string; title: LocalizedJpEn; dayPeriod: string;
   delivery: LocalizedJpEn; creditType: string; mainInstructor: LocalizedJpEn; credits: number | null;
   instructors: { name: LocalizedJpEn; affiliation: LocalizedJpEn }[];
-  sections: { label: LocalizedJpEn; value: string }[];
+  /** group and files are missing from copies cached before the bridge read them. */
+  sections: { label: LocalizedJpEn; value: string; group?: LocalizedJpEn | null; files?: { name: string; column: string; renban: string }[] }[];
   schedule: { no: number | null; when: string; topic: string; method: string; prep: string }[];
   /** Language the section texts are written in (English only when the teacher published it). */
   contentLang: 'jp' | 'en';

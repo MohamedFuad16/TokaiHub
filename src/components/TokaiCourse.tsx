@@ -3,13 +3,13 @@ import { Clock, MapPin, Award, CalendarDays, User, CheckCircle2, CircleSlash, La
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Loading, Empty, Skeleton, EASE } from './ScreenHeader';
+import PageShell, { Card, Loading, LoadError, Empty, Skeleton, SectionTitle, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { academicYearOf, tidy } from '../lib/tipsAdapters';
-import { RichText, GradingChart } from './SyllabusText';
+import { academicYearOf, slotLabel, tidy } from '../lib/tipsAdapters';
+import { RichText, GradingChart, FileLink } from './SyllabusText';
 import { SectionChip } from './CreditsNeeded';
-import { gradingWeights, withoutWeightLines } from '../lib/syllabusText';
+import { gradingWeights, withoutWeightLines, pickLang } from '../lib/syllabusText';
 import { useCourseCategories } from '../lib/courseCategories';
 import type { AttendanceStatus, TipsAttendanceCourse, TipsSyllabus } from '../lib/types';
 
@@ -20,7 +20,8 @@ const t = {
     keywords: 'Keywords', instructors: 'Instructors', rate: 'Attendance rate', attended: 'Attended', absent: 'Absent', other: 'Other',
     noAttendance: 'No attendance record for this course in the selected term.', noSyllabus: 'The syllabus for this course is not available on TIPS.',
     loading: 'Loading from TIPS…', jpOnly: 'The instructor published this syllabus in Japanese only.', prep: 'Preparation & review', method: 'Method',
-    more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.',
+    more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.', files: 'Attached files',
+    materials: 'Materials and notes', otherGroup: 'Other details',
     legend: { present: 'Present', absent: 'Absent', notice: 'Notice of absence', accommodation: 'Accommodation', cancelled: 'Cancelled', unrecorded: 'Not recorded', late: 'Late', early: 'Left early', other: 'Other' },
   },
   jp: {
@@ -29,7 +30,8 @@ const t = {
     keywords: 'キーワード', instructors: '担当教員', rate: '出席率', attended: '出席', absent: '欠席', other: 'その他',
     noAttendance: '選択中の学期にこの科目の出欠記録はありません。', noSyllabus: 'この科目のシラバスはTIPSにありません。',
     loading: 'TIPSから読み込み中…', jpOnly: '', prep: '予習・復習', method: '学習方法',
-    more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。',
+    more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。', files: '添付ファイル',
+    materials: '教材・履修上の注意', otherGroup: 'その他の項目',
     legend: { present: '出席', absent: '欠席', notice: '欠席届', accommodation: '合理的配慮', cancelled: '休講', unrecorded: '未登録', late: '遅刻', early: '早退', other: 'その他' },
   },
 };
@@ -41,6 +43,14 @@ const STATUS_STYLE: Record<AttendanceStatus, string> = {
 };
 
 type Tab = 'overview' | 'attendance' | 'plan' | 'details';
+type Section = TipsSyllabus['sections'][number];
+
+// Shown on the Overview tab, so the Syllabus tab leaves them out.
+const OVERVIEW = new Set(['科目の要旨・概要', '成績評価の基準・方法', '科目キーワード']);
+// TIPS files these under 成績評価基準・方法; they are about materials and preparation.
+const MATERIALS = new Set(['履修上の注意点', 'シラバス配付方法・授業資料の概要', '教科書', '参考図書・その他の教材']);
+// A value such as 有(Yes) or 専門共通科目 is listed as a fact; a sentence gets a card of its own.
+const isShort = (s: Section) => s.value.length <= 24 && !/[\n。．.]/.test(s.value) && !s.files?.length;
 
 // Five lines of 15px text at leading-relaxed (1.625).
 const CLAMPED = '7.625rem';
@@ -60,6 +70,20 @@ function Expandable({ text, isDark, more, less, size }: { text: string; isDark: 
       <button onClick={() => setOpen(o => !o)} aria-expanded={open} className={`mt-1 h-10 text-xs font-bold flex items-center gap-1 ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />{open ? less : more}
       </button>
+    </div>
+  );
+}
+
+/** Files attached to a syllabus field (rubrics, handouts), fetched through the bridge. */
+function Files({ files, syl, isDark, label }: { files: Section['files']; syl: TipsSyllabus; isDark: boolean; label: string }) {
+  if (!files?.length || !syl.year) return null;
+  const locale = syl.contentLang === 'en' ? 'en_US' : 'ja_JP';
+  return (
+    <div className="mt-4">
+      <div className={`text-[11px] font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{label}</div>
+      <div className="space-y-1.5">
+        {files.map(f => <FileLink key={`${f.column}-${f.renban}`} name={f.name} isDark={isDark} file={{ kind: 'syllabus', year: String(syl.year), code: syl.code, column: f.column, renban: f.renban, locale }} />)}
+      </div>
     </div>
   );
 }
@@ -92,11 +116,18 @@ export default function TokaiCourse(props: ScreenProps) {
   const periods = tt.timetable?.grid.periods ?? [];
   // Syllabus gives "月/Mon 2"; keep the half for the UI language.
   const sylWhen = syl?.dayPeriod?.replace(/([^/\s]+)\/([A-Za-z]+)/g, (_, jp: string, en: string) => (lang === 'en' ? en : jp));
-  const when = course ? `${days[(course.dayOfWeek ?? 1) - 1] ?? ''} ${course.periods?.map(p => periods[p - 1] ?? p).join('・')}` : sylWhen;
+  const when = course?.periods?.length ? slotLabel(days[(course.dayOfWeek ?? 1) - 1], course.periods, lang) : sylWhen;
   const keywords = (section('科目キーワード') ?? '').split(/[、,，]/).map(s => s.trim()).filter(Boolean);
-  const detailSections = useMemo(() => {
-    const shown = new Set(['科目の要旨・概要', '成績評価の基準・方法', '科目キーワード']);
-    return (syl?.sections ?? []).filter(s => !shown.has(s.label.jp) && s.value);
+  // Syllabus tab: the fields not on Overview, in TIPS's groups (materials split out of grading).
+  const detailGroups = useMemo(() => {
+    const groups: { key: string; title: { jp: string; en: string }; sections: Section[] }[] = [];
+    for (const s of syl?.sections ?? []) {
+      if (OVERVIEW.has(s.label.jp) || (!s.value && !s.files?.length)) continue;
+      const title = MATERIALS.has(s.label.jp) ? { jp: t.jp.materials, en: t.en.materials } : s.group ?? { jp: t.jp.otherGroup, en: t.en.otherGroup };
+      const g = groups.find(x => x.key === title.jp) ?? groups[groups.push({ key: title.jp, title, sections: [] }) - 1];
+      g.sections.push(s);
+    }
+    return groups;
   }, [syl]);
 
   const recorded = (record?.attended ?? 0) + (record?.absent ?? 0);
@@ -112,7 +143,7 @@ export default function TokaiCourse(props: ScreenProps) {
     { id: 'overview', label: tx.overview, show: true },
     { id: 'attendance', label: tx.attendance, show: !!course },
     { id: 'plan', label: tx.plan, show: !!syl?.schedule.length },
-    { id: 'details', label: tx.details, show: detailSections.length > 0 },
+    { id: 'details', label: tx.details, show: detailGroups.length > 0 },
   ];
 
   const facts = [
@@ -123,7 +154,8 @@ export default function TokaiCourse(props: ScreenProps) {
   ].filter(f => f.value);
 
   const exp = { isDark, more: tx.more, less: tx.less };
-  const gradingText = section('成績評価の基準・方法');
+  const gradingSection = syl?.sections.find(s => s.label.jp === '成績評価の基準・方法');
+  const gradingText = gradingSection?.value;
   const weights = useMemo(() => (gradingText ? gradingWeights(gradingText) : null), [gradingText]);
   const grad = useCourseCategories();
   const cat = grad.sectionFor(course?.title.jp) ?? grad.sectionFor(syl?.title.jp) ?? grad.sectionFor(syl?.title.en) ?? grad.sectionFor(course?.title.en);
@@ -138,7 +170,11 @@ export default function TokaiCourse(props: ScreenProps) {
           <Skeleton isDark={isDark} className="mt-5 h-40 rounded-3xl" />
         </>
       )}
-      {!course && !syl && !syllabus.loading && syllabus.error && <Empty text={tx.noSyllabus} isDark={isDark} />}
+      {!course && !syl && !syllabus.loading && syllabus.error && (
+        (syllabus.error as Error & { status?: number }).status === 404
+          ? <Empty text={tx.noSyllabus} isDark={isDark} />
+          : <LoadError error={syllabus.error} isDark={isDark} lang={lang} onRetry={syllabus.refresh} />
+      )}
 
       {(course || syl) && (
         <>
@@ -151,12 +187,10 @@ export default function TokaiCourse(props: ScreenProps) {
                 : <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15 flex items-center gap-1"><CircleSlash className="w-3.5 h-3.5" />{tx.notRegistered}</span>}
               {cat?.section && <SectionChip section={cat.section} needed={grad.needed.has(cat.section)} done={grad.done.has(cat.section)} category={cat.category} isDark lang={lang} />}
               {syl?.delivery?.[lang] && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{syl.delivery[lang]}</span>}
-              {syl?.creditType && (
-                // TIPS gives "講義科目 Lectures": show the half in the UI language.
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{(lang === 'en' ? syl.creditType.match(/[A-Za-z].*$/)?.[0] : syl.creditType.split(/\s+[A-Za-z]/)[0]) || syl.creditType}</span>
-              )}
+              {/* TIPS gives "講義科目 Lectures": show the half in the UI language. */}
+              {syl?.creditType && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{pickLang(syl.creditType, lang)}</span>}
             </div>
-            <h2 className="relative text-[26px] sm:text-[34px] font-bold leading-tight tracking-tight">{title}</h2>
+            <h2 className="relative text-[26px] sm:text-[34px] font-bold leading-tight tracking-tight break-words [overflow-wrap:anywhere]">{title}</h2>
             {teacher && <p className="relative mt-2 text-sm text-white/70 flex items-center gap-2"><User className="w-4 h-4" />{teacher}</p>}
             {facts.length > 0 && (
               <div className="relative mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -174,7 +208,7 @@ export default function TokaiCourse(props: ScreenProps) {
           <div role="tablist" className={`mt-6 mb-5 flex gap-1 p-1 rounded-full overflow-x-auto no-scrollbar ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             {tabs.filter(x => x.show).map(x => (
               <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
-                className={`relative isolate flex-1 min-w-fit h-10 px-4 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'text-white' : 'text-brand-black') : muted}`}>
+                className={`relative isolate flex-1 min-w-fit h-10 px-2 sm:px-4 rounded-full text-[13px] sm:text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'text-white' : 'text-brand-black') : muted}`}>
                 {/* The selected tab's background slides to the new tab. */}
                 {tab === x.id && <motion.span layoutId="course-tab" transition={{ type: 'spring', stiffness: 500, damping: 40 }} className={`absolute inset-0 -z-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white shadow-sm'}`} />}
                 {x.label}
@@ -189,6 +223,11 @@ export default function TokaiCourse(props: ScreenProps) {
 
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18, ease: EASE }}>
+              {tab === 'overview' && !syl && !syllabus.loading && syllabus.error && (
+                (syllabus.error as Error & { status?: number }).status === 404
+                  ? <Empty text={tx.noSyllabus} isDark={isDark} />
+                  : <LoadError error={syllabus.error} isDark={isDark} lang={lang} onRetry={syllabus.refresh} />
+              )}
               {tab === 'overview' && syl && (
                 // items-start: the summary card keeps its own height instead of stretching to the side column.
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
@@ -201,11 +240,12 @@ export default function TokaiCourse(props: ScreenProps) {
                       <h3 className="font-bold mb-3">{tx.grading}</h3>
                       {weights && <div className="mb-4"><GradingChart parts={weights} isDark={isDark} lang={lang} /></div>}
                       {(() => { const rest = weights && gradingText ? withoutWeightLines(gradingText) : gradingText; return rest || !weights ? <Expandable text={rest || tx.notListed} size={weights ? 'text-[13px]' : undefined} {...exp} /> : null; })()}
+                      <Files files={gradingSection?.files} syl={syl} isDark={isDark} label={tx.files} />
                     </Card>
                     {keywords.length > 0 && (
                       <Card isDark={isDark} className="p-5">
                         <h3 className="font-bold mb-3">{tx.keywords}</h3>
-                        <div className="flex flex-wrap gap-1.5">{keywords.map(k => <span key={k} className={`px-3 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{k}</span>)}</div>
+                        <div className="flex flex-wrap gap-1.5">{keywords.map(k => <span key={k} className={`max-w-full px-3 py-1 rounded-full text-xs font-semibold [overflow-wrap:anywhere] ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{k}</span>)}</div>
                       </Card>
                     )}
                     {syl.instructors.length > 0 && (
@@ -221,8 +261,10 @@ export default function TokaiCourse(props: ScreenProps) {
               )}
 
               {tab === 'attendance' && (
-                !record ? (attendance.loading ? <Loading text={tx.loading} isDark={isDark} /> : <Empty text={tx.noAttendance} isDark={isDark} />) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                !record ? (attendance.loading ? <Loading text={tx.loading} isDark={isDark} />
+                  : attendance.error && !attendance.data ? <LoadError error={attendance.error} isDark={isDark} lang={lang} onRetry={attendance.refresh} />
+                  : <Empty text={tx.noAttendance} isDark={isDark} />) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                     <Card isDark={isDark} className="p-6 flex flex-col items-center justify-center text-center">
                       <div className="relative w-36 h-36">
                         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
@@ -292,14 +334,42 @@ export default function TokaiCourse(props: ScreenProps) {
                 </ol>
               )}
 
-              {tab === 'details' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {detailSections.map(s => (
-                    <Card key={s.label.jp} isDark={isDark} className={`p-5 ${s.value.length > 300 ? 'md:col-span-2' : ''}`}>
-                      <h3 className={`text-xs font-bold uppercase tracking-wider mb-2 ${muted}`}>{s.label[lang] || s.label.jp}</h3>
-                      <Expandable text={s.value} {...exp} />
-                    </Card>
-                  ))}
+              {tab === 'details' && syl && (
+                <div className="space-y-8">
+                  {detailGroups.map(g => {
+                    // Consecutive one-line values share a card; everything keeps TIPS's order.
+                    const runs: Section[][] = [];
+                    for (const s of g.sections) {
+                      const last = runs[runs.length - 1];
+                      if (isShort(s) && last && isShort(last[0])) last.push(s); else runs.push([s]);
+                    }
+                    return (
+                      <section key={g.key}>
+                        <SectionTitle>{g.title[lang] || g.title.jp}</SectionTitle>
+                        {/* items-start: a short card keeps its height next to a long one. */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                          {runs.map(run => isShort(run[0]) ? (
+                            <Card key={run[0].label.jp} isDark={isDark} className="p-5">
+                              <dl className="space-y-3">
+                                {run.map(s => (
+                                  <div key={s.label.jp} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                                    <dt className={`text-xs font-bold [word-break:keep-all] ${muted}`}>{s.label[lang] || s.label.jp}</dt>
+                                    <dd className="text-sm font-semibold [overflow-wrap:anywhere]">{pickLang(s.value, lang)}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            </Card>
+                          ) : (
+                            <Card key={run[0].label.jp} isDark={isDark} className={`p-5 min-w-0 ${run[0].value.length > 300 ? 'md:col-span-2' : ''}`}>
+                              <h3 className={`text-xs font-bold mb-2 [word-break:keep-all] ${muted}`}>{run[0].label[lang] || run[0].label.jp}</h3>
+                              {run[0].value && <Expandable text={run[0].value} {...exp} />}
+                              <Files files={run[0].files} syl={syl} isDark={isDark} label={tx.files} />
+                            </Card>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>

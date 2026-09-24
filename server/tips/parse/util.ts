@@ -8,26 +8,11 @@ export const clean = (s: string | undefined | null) =>
   (s ?? '').normalize('NFKC').replace(/[\s　]+/g, ' ').trim();
 
 export const num = (s: string | undefined | null) => {
-  const t = clean(s).replace(/[^\d.\-]/g, '');
+  const t = clean(s).replace(/[^\d.-]/g, '');
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 };
-
-/** Reads label → value pairs from th/td (or head-classed td) tables into a map. */
-export function kv($: $, scope: cheerio.Cheerio<any>, headSel = 'th'): Record<string, string> {
-  const out: Record<string, string> = {};
-  scope.find('tr').each((_, tr) => {
-    const cells = $(tr).children('th,td').toArray();
-    for (let i = 0; i < cells.length - 1; i++) {
-      if ($(cells[i]).is(headSel)) {
-        const k = clean($(cells[i]).text());
-        if (k && !$(cells[i + 1]).is(headSel)) out[k] = clean($(cells[i + 1]).text());
-      }
-    }
-  });
-  return out;
-}
 
 /** Splits "日本語／English" labels used across TIPS. */
 export function bi(s: string): { jp: string; en: string } {
@@ -39,6 +24,33 @@ export function bi(s: string): { jp: string; en: string } {
 export function lines($: $, el: any): string[] {
   const h = ($(el).html() ?? '').replace(/<br\s*\/?>/gi, '\n');
   return cheerio.load(`<div>${h}</div>`)('div').text().split('\n').map(clean).filter(Boolean);
+}
+
+/**
+ * Writes the address after a link whose text does not show it ("こちら" → "こちら (https://…)"),
+ * so the address survives the conversion to plain text and the app can link it. Mutates `node`.
+ */
+export function keepLinkTargets($: $, node: cheerio.Cheerio<any>) {
+  node.find('a[href]').each((_, a) => {
+    const href = ($(a).attr('href') ?? '').trim();
+    const target = /^mailto:/i.test(href) ? href.slice(7).split('?')[0] : /^https?:\/\//i.test(href) ? href : '';
+    const text = clean($(a).text());
+    if (target && !text.includes(target)) $(a).append(text ? ` (${target})` : target);
+  });
+  return node;
+}
+
+/**
+ * Plain text of a rich cell: <br> and block ends become line breaks, one blank line is kept
+ * between paragraphs, and link addresses are kept (keepLinkTargets). `drop` removes matching
+ * elements first (e.g. file links that are returned separately).
+ */
+export function cellText($: $, el: any, drop?: string): string {
+  const node = keepLinkTargets($, $(el).clone());
+  if (drop) node.find(drop).remove();
+  // Source newlines are layout, not content: TIPS marks real breaks with <br>.
+  const h = (node.html() ?? '').replace(/[\r\n]+/g, ' ').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n');
+  return cheerio.load(`<div>${h}</div>`)('div').text().split('\n').map(clean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export const DAY_JP: Record<string, number> = { 日: 0, 月: 1, 火: 2, 水: 3, 木: 4, 金: 5, 土: 6 };
