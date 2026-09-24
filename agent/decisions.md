@@ -179,3 +179,21 @@ your Mac" until the owner does. Anyone holding an unlocked enrolled phone has th
 access for up to 30 days per token; `scripts/hub.sh devices-reset` revokes all. The public
 listener's rules rely on requests arriving on port 8792, so nothing but cloudflared may be
 pointed at it.
+
+---
+
+## ADR-0010 · 2026-09-24 · Graduation categories from the student's own TIPS pages
+**Status:** Accepted (branch `tips-wrapper`)
+**Context:** The owner wants to see which graduation section (区分 I–VI) each course counts
+toward and what is still needed, for any student, without hardcoding. TIPS has no field that
+maps a timetable course to a section; the syllabus has no required/elective flag.
+**Decision:** Join three pages of the signed-in student: the graduation check (lines with
+required/earned/in progress), the curriculum category list (G1…), and each category's course
+list. Sections map to categories by name, then by TIPS's ordering (G<n> = section n). Courses
+match across pages by normalised title in both languages (the curriculum uses subject codes,
+the timetable uses timetable codes). Plans allocate by the candidate's 必修/選択 field to the
+matching graduation line, overflowing to the section whose line names the source section's
+surplus.
+**Consequences:** Works for any student whose TIPS pages follow this layout; a course outside
+the student's curriculum gets no chip (it may still count as "other department" credits in V,
+which the Hub does not guess). Title matching can miss renamed equivalents.

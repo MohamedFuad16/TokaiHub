@@ -13,6 +13,34 @@ Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), real-devi
 passkey test. No automated tests beyond the passkey/access probes noted below.
 
 ## Recent changes
+- **2026-09-24 (eleventh pass) — graduation categories, grading chart, planner, sidebar** (by:
+  Claude). New bridge feature `course-categories` (graduation check + curriculum lists: remaining
+  per section, section per course; G<n> ↔ section n, cross-checked by name; ~11–19 s, cached 12 h,
+  queue priority -1). Registration: "Credits to graduate" panel with live plan subtraction; plan
+  credits follow the graduation lines by requirement type (必修/選択) and overflow to the
+  section whose line takes the surplus (IV electives → V, as TIPS counts them). Section chips on
+  planner cards, curriculum categories and syllabus results, plus "only what I still need"
+  filters. Course page: grading donut (only when weights sum to ~100%), syllabus text reflowed
+  (wrapped lines joined, ・ as lists). Bridge queue now prioritised (actions 10, files 5, reads 0,
+  bg=1 chips -1, keep-alive -2); delivery chips load when visible. Desktop sidebar collapses to an
+  icon rail (⌘B, remembered). Includes the UI sub-agent's pass (see its entry). Verified in the
+  browser at 375px and desktop: panel numbers match TIPS (IV 10, V 7 left), planned elective
+  lands in V, grading chart for 918004 (30/40/30), syllabus filter, collapsed rail icons centred.
+  Owner registered TTX015, TTX005, TTX025 from the phone during this pass (log lines).
+- **2026-09-24 (eleventh pass) — UI polish, motion, sync fixes; uncommitted** (by: Claude, UI worker).
+  Shared frame: skeleton shimmer instead of spinners (`Loading`, `Skeleton`), `Pill` 40px with a
+  sliding active background (`layoutId`), shared `Select`, `RefreshButton`, `TAP`/`rise` presets,
+  `MotionConfig reducedMotion="user"` in main.tsx, route transition fade+rise (240 ms in, 140 ms out).
+  Screens: Home gets a refresh-all button, container width, visible empty timetable cells, 40px
+  links; Schedule gets a refresh button and sliding Weekly/Monthly thumb; Settings uses PageShell;
+  Registration stat cards no longer clip on 375px; Attendance rows glide on re-sort; Bulletins
+  filters fit one row + selects; Course tabs slide and long text expands smoothly; dark-mode
+  contrast for green/red banners and delivery chips. useTips: the spinner no longer stops early
+  when a refresh overlaps a background load; an older response can no longer overwrite newer data;
+  an unmounted hook run no longer calls `mode=cache`. Verified: tsc + build pass; refresh=1 fires
+  on 10 data screens (network log; the new Syllabus results refresh was not clicked); no horizontal overflow and no tap target under 40px at
+  375px except the grid "Drop" chip. NOT verified: motion timing by eye (the Browser pane was
+  hidden, rAF ran at 2/s), the sign-in/lock screen (not reachable while signed in).
 - **2026-09-24 (tenth pass) — "Load failed" on the phone fixed** (by: Claude). Causes: TIPS
   idle-timeout page not recognised as expired (see errors.md), silent re-auth stuck on TIPS "/"
   403 and a cookie redirect loop, and IPv6 tunnel drops. Fixes in client.ts/session.ts, 20-min

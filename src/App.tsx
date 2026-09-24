@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Clock, Plus, RefreshCw } from 'lucide-react';
+import { Clock, Plus, RefreshCw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
 import TokaiSignIn, { LoadingScreen } from './components/TokaiSignIn';
@@ -114,6 +114,20 @@ function SessionPill({ session, lang, isDark, onExtend }: { session: TipsStatus 
   );
 }
 
+/** Shown for the split second a route's code is still loading: the page frame, not a spinner. */
+function RouteSkeleton({ isDark }: { isDark: boolean }) {
+  const block = isDark ? 'skeleton-dark' : 'skeleton';
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 'calc(1.75rem + env(safe-area-inset-top, 0px))' }} aria-hidden>
+      <div className={`h-9 w-44 rounded-xl ${block}`} />
+      <div className={`mt-8 h-12 rounded-2xl ${block}`} />
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map(i => <div key={i} className={`h-28 rounded-3xl ${block}`} />)}
+      </div>
+    </div>
+  );
+}
+
 interface MainAppContentProps {
   screenProps: ScreenProps;
   lang: Language;
@@ -135,7 +149,8 @@ function UpdatedPill({ lang, isDark }: { lang: Language; isDark: boolean }) {
     <AnimatePresence>
       {show && (
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'}`}>
+          style={{ top: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+          className={`fixed left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'}`}>
           <RefreshCw className="w-3.5 h-3.5" />{lang === 'en' ? 'Updated from TIPS' : 'TIPSの最新情報に更新しました'}
         </motion.div>
       )}
@@ -143,101 +158,162 @@ function UpdatedPill({ lang, isDark }: { lang: Language; isDark: boolean }) {
   );
 }
 
+/** Desktop sidebar can fold to an icon rail; the choice is kept on this device. */
+function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('tokaihub_sidebar_collapsed') === '1'; } catch { return false; }
+  });
+  const toggle = useCallback(() => setCollapsed(c => {
+    try { localStorage.setItem('tokaihub_sidebar_collapsed', c ? '0' : '1'); } catch { /* private mode */ }
+    return !c;
+  }), []);
+  // ⌘B / Ctrl+B, the usual sidebar shortcut in editors and mail apps.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); toggle(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggle]);
+  return [collapsed, toggle] as const;
+}
+
+const FADE = { initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.18, delay: 0.08 } }, exit: { opacity: 0, transition: { duration: 0.1 } } };
+
 function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: MainAppContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
+  const muted = isDark ? 'text-gray-500' : 'text-gray-400';
+  const toggleLabel = collapsed ? (lang === 'en' ? 'Expand sidebar (⌘B)' : 'サイドバーを開く (⌘B)') : (lang === 'en' ? 'Collapse sidebar (⌘B)' : 'サイドバーを閉じる (⌘B)');
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
       <UpdatedPill lang={lang} isDark={isDark} />
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-1">
-            <div className={`font-bold text-2xl leading-none tracking-tighter ${isDark ? 'text-white' : 'text-brand-black'}`}>
-              TOKAI<br /><span className="text-brand-yellow">HUB</span>
-            </div>
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 88 : 296 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 40 }}
+        className={`hidden lg:flex flex-col shrink-0 h-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}
+      >
+        <div className={collapsed ? 'px-3 pt-6 pb-3 flex flex-col items-center gap-3' : 'p-7 pb-4'}>
+          <div className={`flex items-center ${collapsed ? 'flex-col gap-3' : 'gap-1'}`}>
+            <AnimatePresence initial={false}>
+              {!collapsed && (
+                <motion.div key="word" {...FADE} className={`font-bold text-2xl leading-none tracking-tighter whitespace-nowrap ${isDark ? 'text-white' : 'text-brand-black'}`}>
+                  TOKAI<br /><span className="text-brand-yellow">HUB</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <img src={mascotLogo} alt="Tokai Mascot" className="w-auto h-12 object-contain ml-1 drop-shadow-sm hover:rotate-6 hover:scale-105 transition-all cursor-pointer" />
+            <motion.button whileTap={{ scale: 0.92 }} onClick={toggleCollapsed} aria-label={toggleLabel} title={toggleLabel} aria-expanded={!collapsed}
+              className={`${collapsed ? '' : 'ml-auto'} w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-400 hover:bg-gray-100 hover:text-brand-black'}`}>
+              {collapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </motion.button>
           </div>
-          <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}</p>
+          <AnimatePresence initial={false}>
+            {!collapsed && <motion.p key="ver" {...FADE} className={`text-xs font-medium mt-3 whitespace-nowrap ${muted}`}>{lang === 'en' ? 'Student Hub v1.0' : '学生ポータル v1.0'}</motion.p>}
+          </AnimatePresence>
           {userProfile && (
-            <div className={`mt-4 flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <div title={collapsed ? `${lang === 'en' ? userProfile.name : userProfile.nameJp} · ${userProfile.studentId}` : undefined}
+              className={`flex items-center gap-3 rounded-2xl ${collapsed ? '' : `mt-4 p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}`}>
               <div className="w-9 h-9 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-sm text-brand-black shrink-0">
                 {(lang === 'en' ? userProfile.givenName : userProfile.nameJp).charAt(0)}
               </div>
-              <div className="min-w-0">
-                <div className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? userProfile.name : userProfile.nameJp}</div>
-                <div className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{userProfile.studentId}</div>
-              </div>
+              {!collapsed && (
+                <motion.div {...FADE} className="min-w-0">
+                  <div className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? userProfile.name : userProfile.nameJp}</div>
+                  <div className={`text-xs font-medium ${muted}`}>{userProfile.studentId}</div>
+                </motion.div>
+              )}
             </div>
           )}
-          <SessionPill session={screenProps.session ?? null} lang={lang} isDark={isDark} onExtend={screenProps.onExtendSession!} />
+          {!collapsed && <SessionPill session={screenProps.session ?? null} lang={lang} isDark={isDark} onExtend={screenProps.onExtendSession!} />}
         </div>
 
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <nav className={`flex-1 py-4 space-y-1 overflow-y-auto overflow-x-hidden no-scrollbar ${collapsed ? 'px-3' : 'px-4'}`}>
           {NAV_ITEMS.map(item => {
             const Icon = item.icon;
+            const label = lang === 'en' ? item.labelEn : item.labelJp;
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
-              <button
+              <motion.button
                 key={item.path}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${isActive
-                  ? isDark
-                    ? 'bg-brand-yellow text-brand-black shadow-lg shadow-yellow-500/20'
-                    : 'bg-brand-black text-white shadow-lg shadow-black/20'
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={collapsed ? label : undefined}
+                title={collapsed ? label : undefined}
+                className={`relative isolate w-full h-11 flex items-center gap-4 rounded-2xl font-semibold text-[15px] whitespace-nowrap transition-colors duration-200 ${collapsed ? 'justify-center px-0' : 'px-5'} ${isActive
+                  ? isDark ? 'text-brand-black' : 'text-white'
                   : isDark
                     ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     : 'text-gray-500 hover:bg-gray-100 hover:text-brand-black'
                   }`}
               >
-                <Icon className="w-5 h-5" />
-                {lang === 'en' ? item.labelEn : item.labelJp}
-              </button>
+                {/* One highlight that slides to the active item instead of jumping. */}
+                {isActive && (
+                  <motion.span
+                    layoutId="sidebar-active"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                    className={`absolute inset-0 -z-10 rounded-2xl ${isDark ? 'bg-brand-yellow shadow-lg shadow-yellow-500/20' : 'bg-brand-black shadow-lg shadow-black/20'}`}
+                  />
+                )}
+                <Icon className="w-5 h-5 shrink-0" />
+                <AnimatePresence initial={false}>{!collapsed && <motion.span key="l" {...FADE}>{label}</motion.span>}</AnimatePresence>
+              </motion.button>
             );
           })}
         </nav>
 
-        <div className={`p-6 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'} space-y-4`}>
-          <div>
-            <div className={`text-xs font-bold mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Language / 言語</div>
-            <div className="flex gap-2">
-              {(['en', 'jp'] as Language[]).map(l => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${lang === l
-                    ? isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'
-                    : isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                >
-                  {l.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className={`text-[9px] font-bold tracking-wide text-center ${isDark ? 'text-gray-700' : 'text-gray-300'}`}>
-            © 2026 Mohamed Fuad™
-          </p>
+        <div className={`border-t ${isDark ? 'border-gray-800' : 'border-gray-200'} ${collapsed ? 'p-3 flex justify-center' : 'p-6 space-y-4'}`}>
+          {collapsed ? (
+            <button onClick={() => setLang(lang === 'en' ? 'jp' : 'en')} aria-label="Language / 言語" title="Language / 言語"
+              className={`w-11 h-11 rounded-xl font-bold text-sm transition-colors ${isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'}`}>
+              {lang.toUpperCase()}
+            </button>
+          ) : (
+            <>
+              <div>
+                <div className={`text-xs font-bold mb-3 whitespace-nowrap ${muted}`}>Language / 言語</div>
+                <div className="flex gap-2">
+                  {(['en', 'jp'] as Language[]).map(l => (
+                    <button
+                      key={l}
+                      onClick={() => setLang(l)}
+                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${lang === l
+                        ? isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'
+                        : isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className={`text-[9px] font-bold tracking-wide text-center whitespace-nowrap ${isDark ? 'text-gray-700' : 'text-gray-300'}`}>
+                © 2026 Mohamed Fuad™
+              </p>
+            </>
+          )}
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Content */}
-      <main className={`flex-1 h-full relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
-        <AnimatePresence mode="wait">
+      <main
+        className={`flex-1 min-w-0 h-full relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
+      >
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } }}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
             className="absolute inset-0"
-            style={{ willChange: 'opacity' }}
+            // Side insets keep content clear of the notch when an iPhone is held sideways.
+            style={{ willChange: 'opacity, transform', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}
           >
-            <Suspense fallback={
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full border-[3px] border-brand-yellow border-t-transparent animate-spin" />
-              </div>
-            }>
+            <Suspense fallback={<RouteSkeleton isDark={isDark} />}>
               <Routes location={location}>
                 <Route path="/" element={<TokaiHome {...screenProps} />} />
                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />

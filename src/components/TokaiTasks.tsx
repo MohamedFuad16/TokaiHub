@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, CalendarClock, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, SectionTitle, Loading, Empty, since } from './ScreenHeader';
+import PageShell, { Card, SectionTitle, Loading, Empty, since, rise } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf } from '../lib/tipsAdapters';
@@ -38,10 +38,10 @@ export default function TokaiTasks(props: ScreenProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <section>
           <SectionTitle><FileText className="w-4 h-4" />{tx.reports}</SectionTitle>
-          {!reports.data ? <Loading text={tx.loading} isDark={isDark} /> : allReports.length === 0 ? <Empty text={tx.noReports} isDark={isDark} /> : (
+          {!reports.data ? <Loading text={tx.loading} isDark={isDark} rows={2} /> : allReports.length === 0 ? <Empty text={tx.noReports} isDark={isDark} /> : (
             <div className="space-y-2">
               {allReports.map((r, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+                <motion.div key={`${r.title}-${i}`} {...rise(i)}>
                   <Card isDark={isDark} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -56,17 +56,18 @@ export default function TokaiTasks(props: ScreenProps) {
               ))}
             </div>
           )}
-          <a href="https://tips.u-tokai.ac.jp/campusweb/campussquare.do?_flowId=RMW0001000-flow" target="_blank" rel="noreferrer" className={`mt-3 inline-flex items-center gap-1.5 text-xs font-bold ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
+          <a href="https://tips.u-tokai.ac.jp/campusweb/campussquare.do?_flowId=RMW0001000-flow" target="_blank" rel="noreferrer" className={`mt-2 h-10 inline-flex items-center gap-1.5 text-xs font-bold ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
             <ExternalLink className="w-3.5 h-3.5" />{tx.submit}
           </a>
         </section>
 
         <section>
           <SectionTitle right={<span className={`text-xs font-semibold ${muted}`}>{termLabel(term, year, lang)}</span>}><CalendarClock className="w-4 h-4" />{tx.exams}</SectionTitle>
-          {!exams.data ? <Loading text={tx.loading} isDark={isDark} /> : exams.data.length === 0 ? <Empty text={tx.noExams} isDark={isDark} /> : (
+          {!exams.data ? <Loading text={tx.loading} isDark={isDark} rows={2} /> : exams.data.length === 0 ? <Empty text={tx.noExams} isDark={isDark} /> : (
             <div className="space-y-2">
               {exams.data.map((e, i) => (
-                <Card key={i} isDark={isDark} className="flex gap-4 p-4">
+                <motion.div key={`${e.date}-${e.period}-${i}`} {...rise(i)}>
+                <Card isDark={isDark} className="flex gap-4 p-4">
                   <div className="w-16 shrink-0 text-center">
                     <div className="text-sm font-bold">{e.date}</div>
                     <div className={`text-[10px] font-bold ${muted}`}>{e.weekday} {e.period}</div>
@@ -78,6 +79,7 @@ export default function TokaiTasks(props: ScreenProps) {
                     {e.notes && <div className="text-xs mt-1 font-semibold">{e.notes}</div>}
                   </div>
                 </Card>
+                </motion.div>
               ))}
             </div>
           )}

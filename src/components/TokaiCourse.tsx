@@ -3,10 +3,14 @@ import { Clock, MapPin, Award, CalendarDays, User, CheckCircle2, CircleSlash, La
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Loading, Empty } from './ScreenHeader';
+import PageShell, { Card, Loading, Empty, Skeleton, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
 import { academicYearOf, tidy } from '../lib/tipsAdapters';
+import { RichText, GradingChart } from './SyllabusText';
+import { SectionChip } from './CreditsNeeded';
+import { gradingWeights, withoutWeightLines } from '../lib/syllabusText';
+import { useCourseCategories } from '../lib/courseCategories';
 import type { AttendanceStatus, TipsAttendanceCourse, TipsSyllabus } from '../lib/types';
 
 const t = {
@@ -38,17 +42,24 @@ const STATUS_STYLE: Record<AttendanceStatus, string> = {
 
 type Tab = 'overview' | 'attendance' | 'plan' | 'details';
 
-function Expandable({ text, isDark, more, less }: { text: string; isDark: boolean; more: string; less: string }) {
+// Five lines of 15px text at leading-relaxed (1.625).
+const CLAMPED = '7.625rem';
+
+function Expandable({ text, isDark, more, less, size }: { text: string; isDark: boolean; more: string; less: string; size?: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > 280;
+  const para = <RichText text={text} isDark={isDark} size={size} />;
+  if (!long) return para;
   return (
     <div>
-      <p className={`text-[15px] leading-relaxed whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-700'} ${long && !open ? 'line-clamp-5' : ''}`}>{text}</p>
-      {long && (
-        <button onClick={() => setOpen(o => !o)} className={`mt-2 text-xs font-bold flex items-center gap-1 ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />{open ? less : more}
-        </button>
-      )}
+      {/* Height animates between five lines and the full text; a fade marks the cut. */}
+      <motion.div initial={false} animate={{ height: open ? 'auto' : CLAMPED }} transition={{ duration: 0.3, ease: EASE }} className="relative overflow-hidden">
+        {para}
+        <motion.div initial={false} animate={{ opacity: open ? 0 : 1 }} className={`pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t ${isDark ? 'from-gray-800' : 'from-gray-50'} to-transparent`} />
+      </motion.div>
+      <button onClick={() => setOpen(o => !o)} aria-expanded={open} className={`mt-1 h-10 text-xs font-bold flex items-center gap-1 ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />{open ? less : more}
+      </button>
     </div>
   );
 }
@@ -112,21 +123,33 @@ export default function TokaiCourse(props: ScreenProps) {
   ].filter(f => f.value);
 
   const exp = { isDark, more: tx.more, less: tx.less };
+  const gradingText = section('成績評価の基準・方法');
+  const weights = useMemo(() => (gradingText ? gradingWeights(gradingText) : null), [gradingText]);
+  const grad = useCourseCategories();
+  const cat = grad.sectionFor(course?.title.jp) ?? grad.sectionFor(syl?.title.jp) ?? grad.sectionFor(syl?.title.en) ?? grad.sectionFor(course?.title.en);
 
   return (
     <PageShell {...props} title={code} subtitle={syl?.semester?.[lang] || undefined} back onRefresh={() => { syllabus.refresh(); attendance.refresh(); }} refreshing={syllabus.loading || attendance.loading}>
-      {!course && !syl && (syllabus.loading || tt.loading) && <Loading text={tx.loading} isDark={isDark} />}
+      {!course && !syl && (syllabus.loading || tt.loading) && (
+        <>
+          <Loading text={tx.loading} isDark={isDark} rows={0} />
+          <Skeleton isDark={isDark} className="h-56 rounded-[32px]" />
+          <Skeleton isDark={isDark} className="mt-6 h-12 rounded-full" />
+          <Skeleton isDark={isDark} className="mt-5 h-40 rounded-3xl" />
+        </>
+      )}
       {!course && !syl && !syllabus.loading && syllabus.error && <Empty text={tx.noSyllabus} isDark={isDark} />}
 
       {(course || syl) && (
         <>
           {/* Summary card */}
-          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[32px] bg-brand-black text-white p-6 sm:p-8">
+          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="relative overflow-hidden rounded-[32px] bg-brand-black text-white p-6 sm:p-8">
             <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-brand-yellow/10" />
             <div className="relative flex flex-wrap items-center gap-2 mb-4">
               {course
                 ? <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-400 text-brand-black flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{tx.registered}</span>
                 : <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15 flex items-center gap-1"><CircleSlash className="w-3.5 h-3.5" />{tx.notRegistered}</span>}
+              {cat?.section && <SectionChip section={cat.section} needed={grad.needed.has(cat.section)} done={grad.done.has(cat.section)} category={cat.category} isDark lang={lang} />}
               {syl?.delivery?.[lang] && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{syl.delivery[lang]}</span>}
               {syl?.creditType && (
                 // TIPS gives "講義科目 Lectures": show the half in the UI language.
@@ -140,7 +163,7 @@ export default function TokaiCourse(props: ScreenProps) {
                 {facts.map(f => (
                   <div key={f.label} className="rounded-2xl bg-white/10 px-4 py-3 min-w-0">
                     <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/60"><f.icon className="w-3.5 h-3.5 text-brand-yellow" />{f.label}</div>
-                    <div className="mt-1 text-sm font-bold truncate">{f.value}</div>
+                    <div className="mt-1 text-sm font-bold line-clamp-2 break-words">{f.value}</div>
                   </div>
                 ))}
               </div>
@@ -151,7 +174,9 @@ export default function TokaiCourse(props: ScreenProps) {
           <div role="tablist" className={`mt-6 mb-5 flex gap-1 p-1 rounded-full overflow-x-auto no-scrollbar ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             {tabs.filter(x => x.show).map(x => (
               <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
-                className={`flex-1 min-w-fit px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'bg-gray-700 text-white' : 'bg-white text-brand-black shadow-sm') : muted}`}>
+                className={`relative isolate flex-1 min-w-fit h-10 px-4 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'text-white' : 'text-brand-black') : muted}`}>
+                {/* The selected tab's background slides to the new tab. */}
+                {tab === x.id && <motion.span layoutId="course-tab" transition={{ type: 'spring', stiffness: 500, damping: 40 }} className={`absolute inset-0 -z-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white shadow-sm'}`} />}
                 {x.label}
               </button>
             ))}
@@ -163,7 +188,7 @@ export default function TokaiCourse(props: ScreenProps) {
           {syllabus.loading && !syl && tab !== 'attendance' && <Loading text={tx.loading} isDark={isDark} />}
 
           <AnimatePresence mode="wait">
-            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18, ease: EASE }}>
               {tab === 'overview' && syl && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <Card isDark={isDark} className="p-5 sm:p-6 lg:col-span-2">
@@ -173,7 +198,8 @@ export default function TokaiCourse(props: ScreenProps) {
                   <div className="space-y-4">
                     <Card isDark={isDark} className="p-5">
                       <h3 className="font-bold mb-3">{tx.grading}</h3>
-                      <Expandable text={section('成績評価の基準・方法') || tx.notListed} {...exp} />
+                      {weights && <div className="mb-4"><GradingChart parts={weights} isDark={isDark} lang={lang} /></div>}
+                      {(() => { const rest = weights && gradingText ? withoutWeightLines(gradingText) : gradingText; return rest || !weights ? <Expandable text={rest || tx.notListed} size={weights ? 'text-[13px]' : undefined} {...exp} /> : null; })()}
                     </Card>
                     {keywords.length > 0 && (
                       <Card isDark={isDark} className="p-5">
@@ -256,9 +282,9 @@ export default function TokaiCourse(props: ScreenProps) {
                       </div>
                       <Card isDark={isDark} className="flex-1 p-4 mb-2">
                         <div className={`text-[11px] font-bold ${muted}`}>{row.when}</div>
-                        <div className="font-bold text-[15px] mt-0.5">{row.topic}</div>
-                        {row.method && <details className="mt-2"><summary className={`text-xs font-bold cursor-pointer ${muted}`}>{tx.method}</summary><p className={`mt-1 text-sm whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{row.method}</p></details>}
-                        {row.prep && <details className="mt-1"><summary className={`text-xs font-bold cursor-pointer ${muted}`}>{tx.prep}</summary><p className={`mt-1 text-sm whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{row.prep}</p></details>}
+                        <div className="font-bold text-[15px] mt-0.5 [&_p]:font-bold [&_li]:font-semibold"><RichText text={row.topic} isDark={isDark} size="text-[15px]" /></div>
+                        {row.method && <details className="mt-2"><summary className={`min-h-10 flex items-center text-xs font-bold cursor-pointer ${muted}`}>{tx.method}</summary><div className="mt-1"><RichText text={row.method} isDark={isDark} size="text-sm" /></div></details>}
+                        {row.prep && <details className="mt-1"><summary className={`min-h-10 flex items-center text-xs font-bold cursor-pointer ${muted}`}>{tx.prep}</summary><div className="mt-1"><RichText text={row.prep} isDark={isDark} size="text-sm" /></div></details>}
                       </Card>
                     </li>
                   ))}

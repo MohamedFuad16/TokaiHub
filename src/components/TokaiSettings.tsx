@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut,
+  ChevronRight, Bell, Moon, Shield, LogOut,
   Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound, Cloud,
 } from 'lucide-react';
 import { IS_LOCAL, createSetupCode, listDevices, removeDevice, removeSession, type HubDevice } from '../lib/api';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import PageShell from './ScreenHeader';
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
     setConfirming(null);
     try { setDevices(await act()); } catch { /* signing out this device locks it */ }
   };
-  const btn = (armed: boolean) => `shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${armed ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`;
+  const btn = (armed: boolean) => `shrink-0 h-10 min-w-10 px-2.5 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${armed ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`;
 
   return (
     <div className={`mt-4 pt-4 border-t ${borderClass}`}>
@@ -242,9 +243,8 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TokaiSettings({
-  lang, settings, setSettings, userProfile, onSignOut, session, onExtendSession,
-}: SettingsProps) {
+export default function TokaiSettings(props: SettingsProps) {
+  const { lang, settings, setSettings, userProfile, onSignOut, session, onExtendSession } = props;
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
   const [setupCode, setSetupCode] = useState<string | null>(null);
@@ -294,26 +294,10 @@ export default function TokaiSettings({
     }, 800);
   };
 
+  // Same page frame as every other screen: menu button on phones, title, scrolling body.
   return (
-    <div className="h-full relative flex flex-col">
-
-      {/* Page header */}
-      <header
-        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
-        className="flex justify-between items-center p-4 sm:p-6 shrink-0 max-w-3xl w-full mx-auto"
-      >
-        <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight">{tx.settings}</h1>
-        <button
-          onClick={() => navigate('/')}
-          aria-label="Go back"
-          className={`w-12 h-12 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} active:scale-95`}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-      </header>
-
-      <div className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto overflow-x-hidden">
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-3xl w-full mx-auto">
+    <PageShell {...props} title={tx.settings}>
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-3xl w-full">
 
           {/* ── Profile card ──────────────────────────────────────────────── */}
           <motion.div variants={itemVariants} className={`flex items-center gap-4 ${bgClass} p-4 sm:p-5 rounded-3xl`}>
@@ -357,7 +341,8 @@ export default function TokaiSettings({
             <motion.div
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              className={`p-5 rounded-3xl shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-brand-black'} border`}
+              onClick={() => navigate('/grades')}
+              className={`p-5 rounded-3xl shadow-sm cursor-pointer ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-brand-black'} border`}
             >
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="w-4 h-4 text-brand-yellow" />
@@ -697,7 +682,7 @@ export default function TokaiSettings({
           <motion.button
             variants={itemVariants}
             onClick={() => onSignOut?.(true)}
-            className={`w-full ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} py-2 text-xs font-bold flex items-center justify-center gap-1.5`}
+            className={`w-full ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} h-10 text-xs font-bold flex items-center justify-center gap-1.5`}
           >
             <Trash2 className="w-3.5 h-3.5" />
             {tx.clearAndLogout}
@@ -714,14 +699,13 @@ export default function TokaiSettings({
 
           {/* Version footer */}
           <motion.div variants={itemVariants} className="text-center pb-8 space-y-1">
-            <p className={`text-xs font-bold ${isDark ? 'text-gray-700' : 'text-gray-400'}`}>TokaiHub v1.0 PWA</p>
-            <p className={`text-[10px] font-bold tracking-wide ${isDark ? 'text-gray-800' : 'text-gray-300'}`}>
+            <p className={`text-xs font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>TokaiHub v1.0 PWA</p>
+            <p className={`text-[10px] font-bold tracking-wide ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
               © 2026 Mohamed Fuad™ — All rights reserved
             </p>
           </motion.div>
 
         </motion.div>
-      </div>
-    </div>
+    </PageShell>
   );
 }

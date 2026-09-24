@@ -46,11 +46,29 @@ export const setSessionLocale = (l: Locale | null) => { sessionLocale = l; };
 /** Locale the running feature wants, and a lock so features never interleave. */
 let wanted: Locale = 'ja_JP';
 export const getWantedLocale = () => wanted;
-let featureChain: Promise<unknown> = Promise.resolve();
-export function runFeature<T>(locale: Locale, fn: () => Promise<T>): Promise<T> {
-  const run = featureChain.then(() => { wanted = locale; return fn(); }, () => { wanted = locale; return fn(); });
-  featureChain = run.catch(() => {});
-  return run;
+/**
+ * Features run one at a time (TIPS keeps one flow position per session), highest priority
+ * first, first-come within a priority. Register/drop jump ahead of reads; background lookups
+ * (a syllabus fetched only for a chip, the keep-alive) wait behind anything the student asked for.
+ */
+type Job = { priority: number; locale: Locale; fn: () => Promise<unknown>; resolve: (v: unknown) => void; reject: (e: unknown) => void };
+const jobs: Job[] = [];
+let busy = false;
+export function runFeature<T>(locale: Locale, fn: () => Promise<T>, priority = 0): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const at = jobs.findIndex(j => j.priority < priority);
+    jobs.splice(at < 0 ? jobs.length : at, 0, { priority, locale, fn, resolve: resolve as (v: unknown) => void, reject });
+    void pump();
+  });
+}
+async function pump() {
+  if (busy) return;
+  const job = jobs.shift();
+  if (!job) return;
+  busy = true;
+  wanted = job.locale;
+  try { job.resolve(await job.fn()); } catch (e) { job.reject(e); }
+  finally { busy = false; void pump(); }
 }
 
 const isPortal = (u: URL) => u.hostname === 'tips.u-tokai.ac.jp' && u.pathname.endsWith('/portal.do');

@@ -9,7 +9,7 @@ import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf } from '../lib/tipsAdapters';
 import { useClassCalendar } from '../lib/useCalendar';
 import RegistrationPlanner from './RegistrationPlanner';
-import { CONTAINER } from './ScreenHeader';
+import { CONTAINER, Pill, RefreshButton, TAP, EASE } from './ScreenHeader';
 import type { Term } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
@@ -18,7 +18,7 @@ const t = {
     schedule: "Schedule",
     weekly: "Weekly",
     monthly: "Monthly",
-    noClasses: "No classes today.",
+    noClasses: "No classes on this day.",
     noClassesWeek: "No classes this week.",
     classesOn: (d: Date) => `Classes on ${d.toLocaleString('en-US', { month: 'long' })} ${d.getDate()}`,
     cancelled: "Cancelled", makeup: "Make-up", roomChange: "Room change",
@@ -31,7 +31,7 @@ const t = {
     schedule: "スケジュール",
     weekly: "週別",
     monthly: "月別",
-    noClasses: "今日の授業はありません。",
+    noClasses: "この日の授業はありません。",
     noClassesWeek: "今週の授業はありません。",
     classesOn: (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日の授業`,
     cancelled: "休講", makeup: "補講", roomChange: "教室変更",
@@ -67,6 +67,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   }, [setSearchParams]);
   const tt = useTimetable();
   const scheduleItems = tt.items;
+  const refreshLabel = lang === 'en' ? 'Refresh from TIPS' : 'TIPSから更新';
   const selectedCourseIds = scheduleItems.map(c => c.id);
   const term: Term = tt.timetable?.term ?? '1';
   const termYear = tt.timetable?.year ?? academicYearOf(new Date());
@@ -89,6 +90,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const year = monthYear.getFullYear();
 
   const cal = useClassCalendar(monthlySelected);
+  // Refresh asks TIPS for the timetable and, for the calendar, attendance and class changes.
+  const refresh = () => { tt.refresh(); cal.refresh(); };
   const daysWithClasses = useMemo(() => {
     const year = monthlySelected.getFullYear();
     const month = monthlySelected.getMonth();
@@ -122,33 +125,39 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     <div className="h-full relative flex flex-col">
       {/* Header */}
       <header
-        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
-        className={`${CONTAINER} flex justify-between items-center py-4 sm:py-6 shrink-0`}
+        style={{ paddingTop: 'calc(1.75rem + env(safe-area-inset-top, 0px))' }}
+        className={`${CONTAINER} flex justify-between items-center pb-4 shrink-0`}
       >
         <div className="flex items-center gap-4">
-          <button
+          <motion.button
+            whileTap={TAP}
             onClick={() => setIsMenuOpen(true)}
             aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'}
             className={`w-10 h-10 rounded-full border ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} flex items-center justify-center transition-colors lg:hidden`}
           >
             <Menu className="w-5 h-5" />
-          </button>
-          <h1 className="text-[24px] sm:text-[28px] lg:text-[32px] font-bold tracking-tight">{t[lang].schedule}</h1>
+          </motion.button>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t[lang].schedule}</h1>
         </div>
+        <RefreshButton onClick={refresh} refreshing={tt.loading || cal.loading} label={refreshLabel}
+          className={`w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`} />
       </header>
 
       {/* Toggle Weekly/Monthly */}
       <div className={`${CONTAINER} mb-4`}>
-        <div className={`flex ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1 shadow-inner`}>
+        <div className={`flex ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1`}>
           {(['weekly', 'monthly'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`flex-1 py-2 rounded-full text-xs font-bold transition-all duration-75 active:scale-95 ${view === v
-                ? (isDark ? 'bg-gray-700 text-white shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4)]' : 'bg-white text-brand-black shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)]')
+              aria-pressed={view === v}
+              className={`relative isolate flex-1 h-10 rounded-full text-xs font-bold transition-colors ${view === v
+                ? (isDark ? 'text-white' : 'text-brand-black')
                 : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-brand-black')
                 }`}
             >
+              {/* The white thumb slides between Weekly and Monthly. */}
+              {view === v && <motion.span layoutId="schedule-view" transition={{ type: 'spring', stiffness: 500, damping: 40 }} className={`absolute inset-0 -z-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white shadow-sm'}`} />}
               {t[lang][v]}
             </button>
           ))}
@@ -157,22 +166,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
       {/* Term: follows TIPS by default, or pin spring/autumn */}
       <div className={`${CONTAINER} mb-4 flex items-center gap-2`}>
-        {(['1', '2'] as Term[]).map(tm => {
-          const active = term === tm;
-          return (
-            <button
-              key={tm}
-              onClick={() => tt.setChoice(tm)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${active
-                ? 'bg-[#0B1F3A] text-white shadow-md'
-                : `border ${isDark ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-white text-gray-600'}`}`}
-            >
-              {tm === '1' ? t[lang].spring : t[lang].autumn}
-            </button>
-          );
-        })}
+        {(['1', '2'] as Term[]).map(tm => (
+          <Pill key={tm} layoutId="schedule-term" active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>
+            {tm === '1' ? t[lang].spring : t[lang].autumn}
+          </Pill>
+        ))}
         {tt.choice !== 'auto' && (
-          <button onClick={() => tt.setChoice('auto')} className={`text-[11px] font-bold underline underline-offset-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <button onClick={() => tt.setChoice('auto')} className={`h-10 px-1 text-[11px] font-bold underline underline-offset-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             {lang === 'en' ? 'Follow TIPS' : 'TIPSに合わせる'}
           </button>
         )}
@@ -183,7 +183,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       {planning && tt.timetable && (
         <div className="flex-1 overflow-y-auto pb-32">
           <div className={CONTAINER}>
-            <p className="mb-4 p-4 rounded-2xl bg-green-500/10 text-green-700 text-sm font-semibold">{t[lang].regOpen(tt.timetable.registrationStatus ?? '')}</p>
+            <p className={`mb-4 p-4 rounded-2xl bg-green-500/10 text-sm font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>{t[lang].regOpen(tt.timetable.registrationStatus ?? '')}</p>
             <RegistrationPlanner lang={lang} isDark={isDark} />
           </div>
         </div>
@@ -229,13 +229,13 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
               {/* Calendar */}
               <div className="bg-white/5 rounded-[32px] p-4 sm:p-6 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
                 <div className="flex justify-between items-center mb-6">
-                  <button onClick={handlePrevMonth} aria-label={lang === 'en' ? 'Previous month' : '前の月'} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
+                  <button onClick={handlePrevMonth} aria-label={lang === 'en' ? 'Previous month' : '前の月'} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full active:scale-95 transition-all">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <div className="font-bold text-xl">
                     {lang === 'en' ? `${monthName} ${year}` : `${year}年 ${monthYear.getMonth() + 1}月`}
                   </div>
-                  <button onClick={handleNextMonth} aria-label={lang === 'en' ? 'Next month' : '次の月'} className="p-2 hover:bg-white/10 rounded-full active:scale-95 transition-all">
+                  <button onClick={handleNextMonth} aria-label={lang === 'en' ? 'Next month' : '次の月'} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full active:scale-95 transition-all">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -260,18 +260,17 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                       calendarSelectedDate.getFullYear() === monthYear.getFullYear();
 
                     return (
-                      <div key={i} className="flex flex-col items-center justify-center h-10 sm:h-12">
+                      <div key={i} className="relative flex flex-col items-center justify-center h-12">
                         <button
                           onClick={() => handleCalendarDayClick(thisDate)}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-75 active:scale-90 ${isSelected
-                            ? 'bg-brand-yellow text-brand-black'
-                            : 'hover:bg-white/20'
-                            }`}
+                          aria-pressed={isSelected}
+                          className={`relative isolate w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors active:scale-90 ${isSelected ? 'text-brand-black' : 'hover:bg-white/20'}`}
                         >
+                          {isSelected && <motion.span layoutId="schedule-day" transition={{ type: 'spring', stiffness: 500, damping: 38 }} className="absolute inset-0 -z-10 rounded-full bg-brand-yellow" />}
                           {dateNum}
                         </button>
                         {hasClass && (
-                          <div className={`w-1 h-1 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-brand-pink'}`} />
+                          <div className={`absolute bottom-0 w-1 h-1 rounded-full ${isSelected ? 'bg-brand-yellow' : 'bg-brand-pink'}`} />
                         )}
                       </div>
                     );
@@ -292,7 +291,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
+                    transition={{ duration: 0.18, ease: EASE }}
                     className="space-y-3"
                   >
                     {monthlySelectedClasses.length > 0 ? (

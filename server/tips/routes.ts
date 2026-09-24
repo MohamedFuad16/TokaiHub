@@ -53,7 +53,8 @@ export async function dump(flow: string, q: Record<string, string>) {
 
 const MIN = 60_000;
 type Q = Record<string, string>;
-type Feature = { ttl: number; key?: (q: Q) => string; run: (q: Q) => Promise<unknown> };
+/** priority: queue order against other TIPS work (see runFeature); default 0. */
+type Feature = { ttl: number; key?: (q: Q) => string; run: (q: Q) => Promise<unknown>; priority?: number };
 type Locale = 'ja_JP' | 'en_US';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -288,6 +289,56 @@ const FEATURES: Record<string, Feature> = {
     },
   },
 
+  /**
+   * What the student still needs per graduation section (I, II, ...) and which section each
+   * course of their curriculum counts toward. Built from three TIPS pages of this student, so
+   * it holds for any student: the graduation check (required / earned / in progress), the
+   * curriculum category list, and each category's course list. TIPS numbers curriculum
+   * categories G1, G2, ... in the same order as the graduation sections I, II, ...
+   */
+  'course-categories': {
+    ttl: 12 * 60 * MIN,
+    priority: -1, // ~10 TIPS pages; never hold up the student's own requests
+    run: async () => {
+      const c = await getClient();
+      const reg = await parser('registration');
+      const grad = (await parser('graduation')).parse((await c.startFlow('HTW0001000-flow')).html);
+      const list = await c.submitForm(await timetablePage(), 'form[name=SearchForm]', { _eventId: 'searchDisplay', searchDisplayFlg: '6', campusCd: '' });
+      const categories = reg.parseCurriculum(list.html) as { d: string; s: string; m: string; name: string }[];
+      const remaining = (i: { required: number | null; earned: number | null; inProgress: number | null }) =>
+        Math.max(0, (i.required ?? 0) - (i.earned ?? 0) - (i.inProgress ?? 0));
+      const sections = grad.groups.map((g: any) => ({
+        section: g.section, name: g.name,
+        required: g.items.reduce((a: number, i: any) => a + (i.required ?? 0), 0),
+        earned: g.items.reduce((a: number, i: any) => a + (i.earned ?? 0), 0),
+        inProgress: g.items.reduce((a: number, i: any) => a + (i.inProgress ?? 0), 0),
+        remaining: g.items.reduce((a: number, i: any) => a + remaining(i), 0),
+        items: g.items.map((i: any) => ({ name: i.name, required: i.required, earned: i.earned, inProgress: i.inProgress, remaining: remaining(i) })),
+      }));
+      const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      const norm = (x: string) => x.normalize('NFKC').replace(/[\s・･()（）]/g, '');
+      const sectionOf = (cat: { d: string; name: string }) => {
+        // Name first (TIPS uses the same words on both pages), then G<n> → section n.
+        const byName = sections.find((sec: any) => norm(cat.name).startsWith(norm(sec.name)) || sec.items.some((i: any) => norm(i.name) === norm(cat.name)));
+        const n = Number(/\d+/.exec(cat.d)?.[0]);
+        return byName?.section ?? sections.find((sec: any) => sec.section === ROMAN[n - 1])?.section ?? null;
+      };
+      const courses: { kamoku: string | null; title: string; credits: number | null; section: string | null; category: string }[] = [];
+      for (const cat of categories) {
+        // Web Flow keeps earlier steps, so every category can be opened from the same list page.
+        const page = await c.submitForm(list, 'form[name=SearchForm]', { _eventId: 'curriculumSearch', kamokuDKbncd: cat.d, kamokuMShozokucd: cat.s, kamokuMKbncd: cat.m, kamokuMKbnnm: '' });
+        const section = sectionOf(cat);
+        for (const k of reg.parseCurriculumCourses(page.html) as any[]) courses.push({ kamoku: k.kamoku, title: k.title, credits: k.credits, section, category: cat.name });
+      }
+      return {
+        sections,
+        total: grad.total ? { ...grad.total, remaining: remaining(grad.total) } : null,
+        categories: categories.map(cat => ({ name: cat.name, section: sectionOf(cat) })),
+        courses,
+      };
+    },
+  },
+
   // Courses offered in one slot (or by code) for the current registration term.
   'registration-candidates': {
     ttl: 10 * MIN,
@@ -326,7 +377,8 @@ async function registrationSearch(c: typeof ClientMod, q: Q) {
 export async function handle(feature: string, q: Q) {
   const f = FEATURES[feature];
   if (!f) throw notFound(`unknown feature ${feature}`);
-  const { mode, refresh, ...params } = q;
+  // bg=1: the UI only wants this for decoration (e.g. a delivery chip), so it waits its turn.
+  const { mode, refresh, bg, ...params } = q;
   const locale = localeOf(params);
   const key = `${f.key ? f.key(params) : feature}@${locale}`;
   const hit = cache.read(key);
@@ -337,7 +389,7 @@ export async function handle(feature: string, q: Q) {
   if (hit && !refresh && Date.now() - hit.cachedAt < f.ttl) return { data: hit.data, cachedAt: hit.cachedAt, fromCache: true, stale: false };
   const { runFeature } = await import('./session');
   const t0 = Date.now();
-  const data = await runFeature(locale, () => f.run(params));
+  const data = await runFeature(locale, () => f.run(params), bg === '1' ? -1 : f.priority ?? 0);
   const entry = cache.write(key, data);
   console.log(`[tips] ${feature} (${locale}) fetched in ${Date.now() - t0} ms`);
   return { data: entry.data, cachedAt: entry.cachedAt, fromCache: false, stale: false };
@@ -371,7 +423,7 @@ export async function act(action: string, body: Record<string, string | boolean>
     }
     const timetable = (await parser('timetable')).parse(page.html);
     return { messages: reg.messages(page.html), title: page.$('title').text(), timetable: timetable.courses.length || timetable.year ? timetable : null };
-  });
+  }, 10);
   // Registration changes what several screens show; drop their caches.
   for (const k of ['timetable:current', 'registration-candidates']) for (const l of ['ja_JP', 'en_US']) cache.remove(`${k}@${l}`);
   console.log(`[tips] action ${action} ${q.code}: ${result.messages.join(' | ') || 'no message'}`);
@@ -382,5 +434,5 @@ export async function act(action: string, body: Record<string, string | boolean>
 export async function file(q: Q) {
   if (!/^\d+$/.test(q.fileId ?? '') || !/^\d+$/.test(q.folderId ?? '')) throw Object.assign(new Error('bad file id'), { status: 400 });
   const { runFeature } = await import('./session');
-  return runFeature('ja_JP', async () => (await getClient()).getBinary(`/campusweb/campussquare.do?_flowId=SDW-filerefer-flow&fileId=${q.fileId}&folderId=${q.folderId}`));
+  return runFeature('ja_JP', async () => (await getClient()).getBinary(`/campusweb/campussquare.do?_flowId=SDW-filerefer-flow&fileId=${q.fileId}&folderId=${q.folderId}`), 5);
 }

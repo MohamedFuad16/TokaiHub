@@ -235,7 +235,7 @@ function keepAlive() {
     if (session.status().state !== 'signed_in') return;
     try {
       const client = await import('./tips/client');
-      await session.runFeature(session.getSessionLocale() ?? 'ja_JP', () => client.get('/campusweb/portal.do?page=main'));
+      await session.runFeature(session.getSessionLocale() ?? 'ja_JP', () => client.get('/campusweb/portal.do?page=main'), -2);
     } catch (e) {
       console.error('[tips] keep-alive failed:', (e as Error).message.split('\n')[0]);
     }

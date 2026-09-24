@@ -37,6 +37,8 @@ function load(feature: string, params: FeatureParams | undefined, refresh: boole
   const p = getFeature(feature, withLang(params), { refresh })
     .then(env => {
       const prev = store.get(key);
+      // An older request that resolves after a newer refresh must not put older data back.
+      if (prev && !prev.stale && env.cachedAt < prev.cachedAt) return prev;
       const changed = !prev || JSON.stringify(prev.data) !== JSON.stringify(env.data);
       const e = { data: env.data, cachedAt: env.cachedAt, stale: false, changedAt: changed ? Date.now() : prev?.changedAt };
       store.set(key, e);
@@ -44,7 +46,9 @@ function load(feature: string, params: FeatureParams | undefined, refresh: boole
       if (changed && prev) window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: key }));
       return e;
     })
-    .finally(() => { inflight.delete(key); notify(); });
+    // A refresh can start while a background load for the same key is still running; only the
+    // newest request clears the flag, so the spinner stays on until the fresh data is in.
+    .finally(() => { if (inflight.get(key) === p) inflight.delete(key); notify(); });
   inflight.set(key, p);
   return p;
 }
@@ -84,6 +88,8 @@ export function useTips<T>(feature: string, params?: FeatureParams, opts: { enab
         const local = await readLocal(key);
         if (local && !cancelled && !store.has(key)) { store.set(key, { data: local.data, cachedAt: local.cachedAt, stale: true }); notify(); }
       }
+      // Unmounted (or re-keyed) while reading: the newer effect run does the fetching.
+      if (cancelled) return;
       // 2) the bridge's encrypted cache, 3) TIPS
       if (!store.has(key)) {
         try {

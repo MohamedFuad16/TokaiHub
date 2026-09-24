@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Menu, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Menu, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SharedMenu from './SharedMenu';
@@ -7,6 +7,17 @@ import type { AppSettings, Language } from '../App';
 
 /** Width + gutters every page uses, so content lines up across screens. */
 export const CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8';
+
+/** Shared motion presets, so every screen moves the same way. */
+export const EASE = [0.22, 1, 0.36, 1] as const;
+/** Press feedback: a short spring that settles in about 150 ms. */
+export const TAP = { scale: 0.96, transition: { type: 'spring', stiffness: 600, damping: 32 } } as const;
+/** Staggered entrance for the i-th item of a list; capped so long lists do not trail. */
+export const rise = (i = 0) => ({
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.28, delay: Math.min(i * 0.035, 0.28), ease: EASE },
+});
 
 interface PageShellProps {
   title: string;
@@ -27,25 +38,22 @@ export default function PageShell({ title, subtitle, lang, setLang, settings, on
   const [menuOpen, setMenuOpen] = useState(false);
   const isDark = settings.isDarkMode;
   const btn = `w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`;
+  const refreshLabel = lang === 'en' ? 'Refresh from TIPS' : 'TIPSから更新';
   return (
     <div className={`h-full relative flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
       <header style={{ paddingTop: 'calc(1.75rem + env(safe-area-inset-top, 0px))' }} className="shrink-0 pb-4">
         <div className={`${CONTAINER} flex items-center gap-3`}>
           {back ? (
-            <button onClick={() => navigate(-1)} aria-label={lang === 'en' ? 'Back' : '戻る'} className={btn}><ChevronLeft className="w-5 h-5" /></button>
+            <motion.button whileTap={TAP} onClick={() => navigate(-1)} aria-label={lang === 'en' ? 'Back' : '戻る'} className={btn}><ChevronLeft className="w-5 h-5" /></motion.button>
           ) : (
-            <button onClick={() => setMenuOpen(true)} aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'} className={`${btn} lg:hidden`}><Menu className="w-5 h-5" /></button>
+            <motion.button whileTap={TAP} onClick={() => setMenuOpen(true)} aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'} className={`${btn} lg:hidden`}><Menu className="w-5 h-5" /></motion.button>
           )}
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{title}</h1>
             {subtitle && <p className={`text-xs font-medium truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{subtitle}</p>}
           </div>
           {right}
-          {onRefresh && (
-            <button onClick={onRefresh} aria-label={lang === 'en' ? 'Refresh from TIPS' : 'TIPSから更新'} className={btn}>
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+          {onRefresh && <RefreshButton onClick={onRefresh} refreshing={refreshing} label={refreshLabel} className={btn} />}
         </div>
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -63,12 +71,30 @@ export const since = (cachedAt: number | null, lang: Language) => {
   return min < 1 ? 'たった今更新' : `${min}分前に更新`;
 };
 
+/** Header refresh button: spins while TIPS is being asked, springs on press. */
+export function RefreshButton({ onClick, refreshing, label, className }: { onClick: () => void; refreshing?: boolean; label: string; className: string }) {
+  return (
+    <motion.button whileTap={TAP} onClick={onClick} aria-label={label} aria-busy={refreshing} title={label} className={className}>
+      <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+    </motion.button>
+  );
+}
+
 /** Small shared building blocks. */
 export const Card: React.FC<{ isDark: boolean; className?: string; children: React.ReactNode; onClick?: () => void }> = ({ isDark, className = '', children, onClick }) => {
+  const base = `rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} ${className}`;
+  if (!onClick) return <div className={base}>{children}</div>;
   return (
-    <div onClick={onClick} className={`rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} ${onClick ? 'cursor-pointer transition-colors ' + (isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100') : ''} ${className}`}>
+    <motion.div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      whileTap={{ scale: 0.985, transition: TAP.transition }}
+      className={`${base} cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 };
 
@@ -81,35 +107,77 @@ export function SectionTitle({ children, right }: { children: React.ReactNode; r
   );
 }
 
-export const Pill: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; isDark: boolean }> = ({ active, onClick, children, isDark }) => {
+/**
+ * Filter chip. Pass the same `layoutId` to every pill of one group and the active
+ * background slides between them instead of jumping.
+ */
+export const Pill: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; isDark: boolean; layoutId?: string }> = ({ active, onClick, children, isDark, layoutId }) => {
+  const activeBg = isDark ? 'bg-brand-yellow' : 'bg-[#0B1F3A]';
   return (
-    <button
+    <motion.button
+      whileTap={TAP}
       onClick={onClick}
-      className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all active:scale-95 shrink-0 ${active
-        ? 'bg-[#0B1F3A] text-white shadow-md'
-        : `border ${isDark ? 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}`}
+      aria-pressed={active}
+      className={`relative isolate h-10 px-4 rounded-full border font-bold text-sm whitespace-nowrap shrink-0 transition-colors ${active
+        ? `border-transparent ${isDark ? 'text-brand-black' : 'text-white'} ${layoutId ? '' : `${activeBg} shadow-md`}`
+        : isDark ? 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
     >
+      {active && layoutId && (
+        <motion.span layoutId={layoutId} className={`absolute inset-0 -z-10 rounded-full shadow-md ${activeBg}`} transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+      )}
       {children}
-    </button>
+    </motion.button>
   );
 };
 
-export function Loading({ text, isDark }: { text: string; isDark: boolean }) {
+/** Native select styled like a Pill (40px tall, same chevron in Safari and Chrome). */
+export function Select({ value, onChange, isDark, children, label, className = '' }: { value: string; onChange: (v: string) => void; isDark: boolean; children: React.ReactNode; label: string; className?: string }) {
   return (
-    <div className={`flex items-center gap-2 text-sm font-medium py-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-      <span className="w-4 h-4 rounded-full border-2 border-brand-yellow border-t-transparent animate-spin" />{text}
-    </div>
+    <span className={`relative inline-block shrink-0 ${className}`}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        aria-label={label}
+        className={`h-10 w-full appearance-none rounded-full pl-4 pr-9 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow truncate ${isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}
+      >
+        {children}
+      </select>
+      <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+    </span>
+  );
+}
+
+/** Grey placeholder block with a shimmer, sized by the caller. */
+export const Skeleton: React.FC<{ isDark: boolean; className?: string }> = ({ isDark, className = '' }) => (
+  <div aria-hidden className={`${isDark ? 'skeleton-dark' : 'skeleton'} ${className}`} />
+);
+
+/** Loading state: a shimmering caption (TIPS can take seconds) over placeholder rows. */
+export function Loading({ text, isDark, rows = 3 }: { text: string; isDark: boolean; rows?: number }) {
+  return (
+    <motion.div role="status" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="py-2">
+      <p className={`text-shimmer text-sm font-medium ${rows ? 'mb-3' : ''} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{text}</p>
+      {rows > 0 && (
+        <div className="space-y-2">
+          {Array.from({ length: rows }, (_, i) => <Skeleton key={i} isDark={isDark} className="h-16 rounded-2xl" />)}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
 export function Empty({ text, isDark }: { text: string; isDark: boolean }) {
-  return <div className={`p-6 rounded-3xl text-sm font-medium ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>{text}</div>;
+  return (
+    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: EASE }} className={`p-6 rounded-3xl text-sm font-medium ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+      {text}
+    </motion.div>
+  );
 }
 
 /** Re-animates its content whenever `value` changes (background refresh brought new data). */
 export const Fresh: React.FC<{ value: React.Key; children: React.ReactNode; className?: string }> = ({ value, children, className }) => (
   <AnimatePresence mode="popLayout" initial={false}>
-    <motion.span key={value} className={className} initial={{ opacity: 0, y: 6, filter: 'blur(2px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} style={{ display: 'inline-block' }}>
+    <motion.span key={value} className={className} initial={{ opacity: 0, y: 6, filter: 'blur(2px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35, ease: EASE }} style={{ display: 'inline-block' }}>
       {children}
     </motion.span>
   </AnimatePresence>

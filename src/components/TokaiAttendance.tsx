@@ -3,7 +3,7 @@ import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Pill, Loading, Empty, since } from './ScreenHeader';
+import PageShell, { Card, Pill, Select, Skeleton, Empty, Fresh, since, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf, colorFor, tidy } from '../lib/tipsAdapters';
@@ -54,32 +54,45 @@ export default function TokaiAttendance(props: ScreenProps) {
   return (
     <PageShell {...props} title={tx.title} subtitle={[termLabel(term, year, lang), since(att.cachedAt, lang)].filter(Boolean).join(' · ')} onRefresh={att.refresh} refreshing={att.loading}>
       <div className="flex flex-wrap items-center gap-2 mb-6">
-        {(['1', '2'] as Term[]).map(tm => <Pill key={tm} active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>)}
+        {(['1', '2'] as Term[]).map(tm => <Pill key={tm} layoutId="attendance-term" active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>)}
         <span className="flex-1" />
-        <select value={sort} onChange={e => setSort(e.target.value as 'time' | 'rate')} className={`rounded-full px-3 py-2 text-sm font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <Select value={sort} onChange={v => setSort(v as 'time' | 'rate')} isDark={isDark} label={tx.byTime}>
           <option value="time">{tx.byTime}</option>
           <option value="rate">{tx.byRate}</option>
-        </select>
+        </Select>
       </div>
 
       {tt.timetable && tt.items.length === 0 && <Empty text={tx.none} isDark={isDark} />}
-      {tt.items.length > 0 && !att.data && <Loading text={tx.loading} isDark={isDark} />}
+      {tt.items.length > 0 && !att.data && (
+        <div role="status" aria-live="polite">
+          <p className={`text-shimmer text-sm font-medium mb-3 ${muted}`}>{tx.loading}</p>
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
+            <Skeleton isDark={isDark} className="col-span-3 md:col-span-1 h-[104px] rounded-3xl" />
+            {[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-[104px] rounded-3xl" />)}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {[0, 1, 2, 3].map(i => <Skeleton key={i} isDark={isDark} className="h-40 rounded-3xl" />)}
+          </div>
+        </div>
+      )}
 
       {att.data && rows.length > 0 && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div className="col-span-2 md:col-span-1 rounded-3xl p-5 bg-brand-black text-white">
+          {/* Phone: overall on its own row, the three counts share the next (no orphan card). */}
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
+            <div className="col-span-3 md:col-span-1 rounded-3xl p-5 bg-brand-black text-white">
               <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{tx.overall}</div>
-              <div className="text-4xl font-bold mt-1">{overall === null ? '—' : `${overall}%`}</div>
+              <div className="text-4xl font-bold mt-1"><Fresh value={overall ?? -1}>{overall === null ? '—' : `${overall}%`}</Fresh></div>
             </div>
-            <Card isDark={isDark} className="p-5"><div className={`text-[11px] font-bold uppercase tracking-widest ${muted}`}>{tx.attended}</div><div className="text-3xl font-bold mt-1">{totals.att}</div></Card>
-            <Card isDark={isDark} className="p-5"><div className={`text-[11px] font-bold uppercase tracking-widest ${muted}`}>{tx.absent}</div><div className="text-3xl font-bold mt-1">{totals.abs}</div></Card>
-            <Card isDark={isDark} className="p-5"><div className={`text-[11px] font-bold uppercase tracking-widest ${muted}`}>{tx.low}</div><div className={`text-3xl font-bold mt-1 ${lowCount ? 'text-red-500' : ''}`}>{lowCount}</div></Card>
+            <Card isDark={isDark} className="p-4 sm:p-5 min-w-0"><div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${muted}`}>{tx.attended}</div><div className="text-2xl sm:text-3xl font-bold mt-1"><Fresh value={totals.att}>{totals.att}</Fresh></div></Card>
+            <Card isDark={isDark} className="p-4 sm:p-5 min-w-0"><div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${muted}`}>{tx.absent}</div><div className="text-2xl sm:text-3xl font-bold mt-1"><Fresh value={totals.abs}>{totals.abs}</Fresh></div></Card>
+            <Card isDark={isDark} className="p-4 sm:p-5 min-w-0"><div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${muted}`}>{tx.low}</div><div className={`text-2xl sm:text-3xl font-bold mt-1 ${lowCount ? 'text-red-500' : ''}`}>{lowCount}</div></Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {rows.map(({ c, recorded, rate, item }, i) => (
-              <motion.div key={c.code} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.03, 0.25) }}>
+              // layout: rows glide to their new place when the sort order changes.
+              <motion.div key={c.code} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: { duration: 0.28, delay: Math.min(i * 0.035, 0.28), ease: EASE } }} transition={{ layout: { type: 'spring', stiffness: 400, damping: 40 } }}>
                 <Card isDark={isDark} className="p-5" onClick={() => navigate(`/course/${c.code}`)}>
                   <div className="flex items-start gap-3">
                     <div className={`w-1.5 self-stretch rounded-full ${colorFor(c.code)}`} />
@@ -98,7 +111,7 @@ export default function TokaiAttendance(props: ScreenProps) {
                     <ChevronRight className={`w-4 h-4 mt-1 shrink-0 ${muted}`} />
                   </div>
                   <div className={`mt-4 h-2 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${rate ?? 0}%` }} transition={{ duration: 0.6 }} className={`h-full rounded-full ${rate !== null && rate < 80 ? 'bg-red-500' : 'bg-blue-500'}`} />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${rate ?? 0}%` }} transition={{ duration: 0.6, ease: EASE }} className={`h-full rounded-full ${rate !== null && rate < 80 ? 'bg-red-500' : 'bg-blue-500'}`} />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(c.sessions ?? []).map(s => <span key={`${s.no}-${s.period}`} title={`${s.month}/${s.day} ${s.mark}`} className={`w-3 h-3 rounded-[4px] ${dot(s.status, isDark)}`} />)}

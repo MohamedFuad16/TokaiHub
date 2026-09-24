@@ -70,8 +70,8 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                 </div>
                 <button
                   onClick={onClose}
-                  aria-label="Close menu"
-                  className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900'}`}
+                  aria-label={lang === 'en' ? 'Close menu' : 'メニューを閉じる'}
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900'}`}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -80,7 +80,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
 
             {/* Nav items */}
             <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
-              {navItems.map(({ path, icon: Icon, labelEn, labelJp, descEn, descJp }) => {
+              {navItems.map(({ path, icon: Icon, labelEn, labelJp, descEn, descJp }, i) => {
                 const active = isActive(path);
                 const label = lang === 'en' ? labelEn : labelJp;
                 const desc = lang === 'en' ? descEn : descJp;
@@ -88,6 +88,10 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                   <motion.button
                     key={path}
                     onClick={() => { onClose(); setTimeout(() => navigate(path), 150); }}
+                    aria-current={active ? 'page' : undefined}
+                    // Items follow the drawer in, one after another.
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0, transition: { duration: 0.26, delay: 0.08 + i * 0.025, ease: [0.22, 1, 0.36, 1] } }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl text-left transition-all duration-200 ${
@@ -134,7 +138,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                   <button
                     key={l}
                     onClick={() => setLang(l)}
-                    className={`flex-1 py-1.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+                    className={`flex-1 h-10 rounded-xl font-bold text-sm transition-all duration-200 ${
                       lang === l
                         ? isDark ? 'bg-brand-yellow text-brand-black shadow-sm' : 'bg-white text-brand-black shadow-sm'
                         : isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'

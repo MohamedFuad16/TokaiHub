@@ -1,7 +1,8 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Loading } from './ScreenHeader';
+import PageShell, { Card, Loading, Fresh, rise } from './ScreenHeader';
+import { motion } from 'motion/react';
 import RegistrationPlanner from './RegistrationPlanner';
 import { useTips } from '../lib/useTips';
 import { termLabel, pct } from '../lib/tipsAdapters';
@@ -32,22 +33,29 @@ export default function TokaiRegistration(props: ScreenProps) {
       {!data && <Loading text={tx.loading} isDark={isDark} />}
       {data && (
         <div className="space-y-5">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <Card isDark={isDark} className="p-3 sm:p-5 min-w-0">
-              <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1 sm:mb-2 ${muted}`}>{tx.status}</div>
-              <div className={`text-xs sm:text-lg font-bold leading-snug ${closed ? 'text-red-500' : 'text-green-600'}`}>{data.registrationStatus ?? '—'}</div>
-            </Card>
-            <Card isDark={isDark} className="p-3 sm:p-5 min-w-0">
-              <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1 sm:mb-2 ${muted}`}>{tx.credits}</div>
-              <div className="text-sm sm:text-lg font-bold">{data.credits.registered ?? 0}<span className={`text-xs sm:text-sm ${muted}`}> / {data.credits.limit ?? '—'}</span></div>
-              <div className={`mt-2 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}><div className="h-full rounded-full bg-brand-yellow" style={{ width: `${Math.min(pct(data.credits.registered, data.credits.limit), 100)}%` }} /></div>
-            </Card>
-            <Card isDark={isDark} className="p-3 sm:p-5 min-w-0">
-              <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1 sm:mb-2 ${muted}`}>{tx.updated}</div>
-              <div className="text-xs sm:text-lg font-bold leading-snug">{data.lastUpdated ?? '—'}</div>
-            </Card>
+          {/* Phone: deadline and credits side by side, last update full width (dates no longer clip). */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            <motion.div {...rise(0)} className="min-w-0">
+              <Card isDark={isDark} className="h-full p-4 sm:p-5">
+                <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1.5 sm:mb-2 ${muted}`}>{tx.status}</div>
+                <div className={`text-sm sm:text-lg font-bold leading-snug break-words ${closed ? 'text-red-500' : isDark ? 'text-green-400' : 'text-green-600'}`}>{data.registrationStatus ?? '—'}</div>
+              </Card>
+            </motion.div>
+            <motion.div {...rise(1)} className="min-w-0">
+              <Card isDark={isDark} className="h-full p-4 sm:p-5">
+                <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1.5 sm:mb-2 ${muted}`}>{tx.credits}</div>
+                <div className="text-lg font-bold"><Fresh value={data.credits.registered ?? 0}>{data.credits.registered ?? 0}</Fresh><span className={`text-sm ${muted}`}> / {data.credits.limit ?? '—'}</span></div>
+                <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}><motion.div className="h-full rounded-full bg-brand-yellow" initial={false} animate={{ width: `${Math.min(pct(data.credits.registered, data.credits.limit), 100)}%` }} transition={{ duration: 0.5 }} /></div>
+              </Card>
+            </motion.div>
+            <motion.div {...rise(2)} className="min-w-0 col-span-2 sm:col-span-1">
+              <Card isDark={isDark} className="h-full p-4 sm:p-5">
+                <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1.5 sm:mb-2 ${muted}`}>{tx.updated}</div>
+                <div className="text-sm sm:text-lg font-bold leading-snug break-words">{data.lastUpdated ?? '—'}</div>
+              </Card>
+            </motion.div>
           </div>
-          {closed && <div className="flex items-start gap-2 p-4 rounded-2xl bg-red-500/10 text-red-600 text-sm font-semibold"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />{tx.closedNote}</div>}
+          {closed && <div className={`flex items-start gap-2 p-4 rounded-2xl bg-red-500/10 text-sm font-semibold ${isDark ? 'text-red-400' : 'text-red-600'}`}><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />{tx.closedNote}</div>}
           <RegistrationPlanner lang={lang} isDark={isDark} />
         </div>
       )}

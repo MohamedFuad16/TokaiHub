@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, RefreshCw } from 'lucide-react';
+import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -11,7 +11,8 @@ import { termLabel, academicYearOf, pct } from '../lib/tipsAdapters';
 import { useClassCalendar } from '../lib/useCalendar';
 import type { TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation } from '../lib/types';
 import { FileRow } from './TokaiCabinet';
-import { Fresh } from './ScreenHeader';
+import { Fresh, CONTAINER, TAP, EASE, RefreshButton, Skeleton } from './ScreenHeader';
+import type { TipsGrades } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
@@ -60,7 +61,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } }
 };
 
 export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
@@ -75,6 +76,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const graduation = useTips<TipsGraduation>('graduation');
   const bulletins = useTips<TipsBulletins>('bulletins');
   const changes = useTips<{ items: TipsChange[] }>('changes');
+  const grades = useTips<TipsGrades>('grades');
   const isDataLoaded = !!tt.timetable || !!tt.error;
 
   // Derive live values from userProfile
@@ -94,6 +96,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const latestPosts = (bulletins.data?.posts ?? []).slice(0, 3);
   // Newest cabinet files across all folders ("2025年9月19日 07:29:41" / "2025/09/19 07:29:41").
   const cabinet = useTips<{ folders: TipsCabinetFolder[] }>('cabinet');
+  // Everything the dashboard shows, asked from TIPS again (the header refresh button).
+  const refreshAll = () => { tt.refresh(); attendance.refresh(); graduation.refresh(); bulletins.refresh(); changes.refresh(); cabinet.refresh(); grades.refresh(); };
+  const refreshing = tt.loading || attendance.loading || graduation.loading || bulletins.loading || changes.loading || cabinet.loading || grades.loading;
   const recentFiles = useMemo(() => {
     const all: TipsCabinetFile[] = [];
     const walk = (fs: TipsCabinetFolder[]) => fs.forEach(f => { all.push(...f.files); walk(f.children); });
@@ -133,9 +138,17 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
 
   if (!isDataLoaded) {
+    // Same frame as the loaded dashboard, so nothing jumps when TIPS answers.
     return (
-      <div className={`h-full w-full flex items-center justify-center ${pageBg}`}>
-        <div className="w-8 h-8 rounded-full border-[3px] border-brand-yellow border-t-transparent animate-spin" />
+      <div className={`h-full w-full overflow-hidden ${pageBg}`} aria-busy="true">
+        <div className={CONTAINER} style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}>
+          <Skeleton isDark={isDark} className="h-10 w-32 rounded-xl" />
+          <Skeleton isDark={isDark} className="mt-10 h-24 w-3/4 max-w-md rounded-2xl" />
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            {[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-28 rounded-3xl" />)}
+          </div>
+          <Skeleton isDark={isDark} className="mt-10 h-80 rounded-[32px]" />
+        </div>
       </div>
     );
   }
@@ -145,8 +158,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
       {/* Header */}
       <header
         style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
-        className={`flex justify-between items-center px-4 sm:px-6 pb-4 sm:pb-6 shrink-0 border-b ${borderClass}`}
+        className={`shrink-0 pb-4 sm:pb-6 border-b ${borderClass}`}
       >
+        <div className={`${CONTAINER} flex justify-between items-center gap-3`}>
         <div className="flex items-center gap-1 lg:hidden">
           <div className={`font-bold text-xl tracking-tighter leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>
             TOKAI<br /><span className="text-brand-yellow">HUB</span>
@@ -156,13 +170,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         <div className="hidden lg:block">
           <h2 className={`text-sm font-semibold ${textMuted}`}>{todayLabel}</h2>
         </div>
-        <button
-          onClick={() => setIsMenuOpen(true)}
-          aria-label="Open navigation menu"
-          className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-50 text-gray-900'} lg:hidden`}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton onClick={refreshAll} refreshing={refreshing} label={lang === 'en' ? 'Refresh from TIPS' : 'TIPSから更新'}
+            className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center shrink-0 transition-colors ${isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-50 text-gray-900'}`} />
+          <motion.button
+            whileTap={TAP}
+            onClick={() => setIsMenuOpen(true)}
+            aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'}
+            className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-50 text-gray-900'} lg:hidden`}
+          >
+            <Menu className="w-5 h-5" />
+          </motion.button>
+        </div>
+        </div>
       </header>
 
       {/* Scrollable Content */}
@@ -170,7 +190,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="pb-48 lg:pb-32">
 
           {/* Title + Student ID badge */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6">
+          <motion.div variants={itemVariants} className={`${CONTAINER} mt-6`}>
             <h1 className={`text-[32px] sm:text-[40px] lg:text-[48px] xl:text-[56px] font-bold leading-[1.1] tracking-tight whitespace-pre-line ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {lang === 'en' ? `Welcome,\n${firstName}` : `ようこそ、\n${firstName}さん`}
             </h1>
@@ -186,19 +206,19 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           </motion.div>
 
           {/* At-a-glance: GPA, credits toward graduation, attendance this term */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-3 gap-3">
-            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/grades')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}>
+          <motion.div variants={itemVariants} className={`${CONTAINER} mt-8 grid grid-cols-3 gap-2.5 sm:gap-3`}>
+            <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}>
               <div className="flex items-center gap-1.5 mb-3"><GraduationCap className="w-4 h-4 text-brand-yellow" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white"><Fresh value={cumGpa}>{cumGpa ? cumGpa.toFixed(2) : '—'}</Fresh></div>
               <div className="text-[10px] font-bold text-gray-500 mt-1">{t[lang].gpa}</div>
             </motion.div>
-            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/grades')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex items-center gap-1.5 mb-3"><Target className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Credits' : '単位'}</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={creditsEarned}>{creditsEarned}</Fresh>{creditsNeeded !== null && <span className={`text-sm font-semibold ${textMuted}`}> / {creditsNeeded}</span>}</div>
               <div className={`mt-2 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}><div className={`h-full rounded-full ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min(pct(creditsEarned, creditsNeeded), 100)}%` }} /></div>
             </motion.div>
-            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/attendance')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <div className="flex items-center gap-1.5 mb-3"><UserCheck className="w-4 h-4 text-brand-green" /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
+            <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/attendance')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex items-center gap-1.5 mb-3"><UserCheck className={`w-4 h-4 ${isDark ? 'text-brand-green' : 'text-green-600'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={attendanceRate ?? -1}>{attendanceRate === null ? '—' : `${attendanceRate}%`}</Fresh></div>
               <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{termLabel(term, termYear, lang)}</div>
             </motion.div>
@@ -206,9 +226,9 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
 
           {/* Class changes (cancellations, room changes, make-ups) for the next two weeks */}
           {alerts.length > 0 && (
-            <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6 space-y-2">
+            <motion.div variants={itemVariants} className={`${CONTAINER} mt-6 space-y-2`}>
               {alerts.slice(0, 3).map((a, i) => (
-                <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 text-red-600">
+                <div key={i} className={`flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <div className="text-sm font-semibold min-w-0 truncate">
                     {a.date}({a.weekday}) {a.period} · {a.title} · {{ cancelled: lang === 'en' ? 'Cancelled' : '休講', makeup: lang === 'en' ? 'Make-up class' : '補講', roomChange: lang === 'en' ? `Room → ${a.room}` : `教室変更 → ${a.room}`, cancelledMakeup: lang === 'en' ? 'Cancelled / make-up' : '休講・補講', normal: '' }[a.status]}
@@ -219,7 +239,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           )}
 
           {/* Weekly Schedule Section */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-10">
+          <motion.div variants={itemVariants} className={`${CONTAINER} mt-10`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <Calendar className="w-5 h-5 text-brand-yellow" />
@@ -227,14 +247,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               </h2>
               <button
                 onClick={() => navigate('/schedule')}
-                className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
                 {lang === 'en' ? "Full View →" : "詳細を表示 →"}
               </button>
             </div>
 
             {tt.timetable?.registrationOpen && tt.timetable.term === tt.currentTerm && (
-              <button onClick={() => navigate('/registration')} className="w-full mb-4 flex items-center gap-3 p-4 rounded-2xl bg-green-500/10 text-green-700 text-left">
+              <button onClick={() => navigate('/registration')} className={`w-full mb-4 flex items-center gap-3 p-4 rounded-2xl bg-green-500/10 text-left active:scale-[0.99] transition-transform ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                 <Target className="w-5 h-5 shrink-0" />
                 <span className="flex-1 text-sm font-semibold">
                   {lang === 'en'
@@ -261,6 +281,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 scheduleItems={courseItems}
                 semesterLabel={termLabel(term, termYear, lang)}
                 grid={tt.timetable?.grid}
+                forceDark
               />
             </div>
 
@@ -276,18 +297,18 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           </motion.div>
 
           {/* Latest bulletins and cabinet files from TIPS */}
-          <div className="px-4 sm:px-6 mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className={`${CONTAINER} mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8`}>
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
-                <button onClick={() => bulletins.refresh()} aria-label={lang === 'en' ? 'Refresh bulletins' : '掲示を更新'} className={`p-2 rounded-full ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
-                  <RefreshCw className={`w-4 h-4 ${textMuted} ${bulletins.loading ? 'animate-spin' : ''}`} />
-                </button>
+                <button onClick={() => navigate('/bulletins')} className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{lang === 'en' ? 'All posts →' : 'すべて →'}</button>
               </div>
               <div className="space-y-3">
                 {latestPosts.map((post, i) => (
                   <motion.div
                     key={post.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.28, delay: i * 0.05, ease: EASE } }}
                     whileHover={{ y: -2, scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => navigate(`/bulletins/${post.id}`)}
@@ -304,19 +325,21 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
                   </motion.div>
                 ))}
-                {!latestPosts.length && (
-                  <p className={`text-sm font-medium ${textMuted}`}>{bulletins.loading ? (lang === 'en' ? 'Loading…' : '読み込み中…') : (lang === 'en' ? 'No bulletins.' : '掲示はありません。')}</p>
-                )}
+                {!latestPosts.length && (bulletins.loading
+                  ? [0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-[72px] rounded-2xl" />)
+                  : <p className={`text-sm font-medium ${textMuted}`}>{lang === 'en' ? 'No bulletins.' : '掲示はありません。'}</p>)}
               </div>
             </motion.div>
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Cabinet · recently added' : 'キャビネット・新着資料'}</h2>
-                <button onClick={() => navigate('/cabinet')} className={`text-xs font-bold px-3 py-1.5 rounded-full ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{lang === 'en' ? 'All files →' : 'すべて →'}</button>
+                <button onClick={() => navigate('/cabinet')} className={`h-10 text-xs font-bold px-4 rounded-full transition-colors active:scale-95 ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{lang === 'en' ? 'All files →' : 'すべて →'}</button>
               </div>
               <div className={`rounded-2xl p-1 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 {recentFiles.map((f, i) => <FileRow key={`${f.name}-${i}`} f={f} isDark={isDark} lang={lang} />)}
-                {!recentFiles.length && <p className={`p-3 text-sm font-medium ${textMuted}`}>{cabinet.loading ? (lang === 'en' ? 'Loading…' : '読み込み中…') : (lang === 'en' ? 'No files.' : '資料はありません。')}</p>}
+                {!recentFiles.length && (cabinet.loading
+                  ? <div className="space-y-1 p-1">{[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-14 rounded-xl" />)}</div>
+                  : <p className={`p-3 text-sm font-medium ${textMuted}`}>{lang === 'en' ? 'No files.' : '資料はありません。'}</p>)}
               </div>
             </motion.div>
           </div>
@@ -329,8 +352,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           whileHover={{ scale: 1.02, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+          whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8, delay: 0.4 }}
           onClick={() => setIsScheduleSheetOpen(true)}
+          role="button"
+          aria-label={`${t[lang].classesToday}: ${todayClasses.length}`}
           className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl"
         >
           <div className="flex items-center gap-4 pl-2">
@@ -342,12 +368,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className="text-xs opacity-60 font-medium">{t[lang].classesToday}</div>
             </div>
           </div>
-          <div
+          <motion.button
+            whileTap={TAP}
             onClick={(e) => { e.stopPropagation(); setIsCalendarSheetOpen(true); }}
+            aria-label={lang === 'en' ? 'Open calendar' : 'カレンダーを開く'}
             className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center text-brand-black hover:bg-gray-100 transition-colors"
           >
             <Calendar className="w-6 h-6" />
-          </div>
+          </motion.button>
         </motion.div>
       </div>
 
@@ -367,6 +395,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
+              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
               className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[80%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
@@ -432,6 +461,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 350, damping: 35, mass: 0.7 }}
+              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
               className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[90%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">

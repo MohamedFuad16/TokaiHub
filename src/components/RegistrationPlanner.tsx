@@ -1,14 +1,16 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Search, X, Loader2, BookOpenText, ChevronRight, ChevronDown, GraduationCap } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Trash2, CheckCircle2, Search, X, Loader2, BookOpenText, ChevronRight, ChevronDown, GraduationCap, ListPlus, ListChecks } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Language } from '../App';
-import { Card, SectionTitle, Loading, Empty, Pill } from './ScreenHeader';
+import { Card, SectionTitle, Loading, Empty, Pill, EASE, TAP } from './ScreenHeader';
 import { useTips, invalidate } from '../lib/useTips';
 import { runAction } from '../lib/api';
 import { colorFor, tidy, parseSlots } from '../lib/tipsAdapters';
 import { PERIOD_TIMES } from '../config/periods';
 import DeliveryChip from './DeliveryChip';
+import CreditsNeeded, { SectionChip, type PlanItem } from './CreditsNeeded';
+import { useCourseCategories } from '../lib/courseCategories';
 import type { TipsActionResult, TipsCandidate, TipsGrades, TipsProfile, TipsSyllabusOptions, TipsSyllabusResult, TipsTimetable, TipsTimetableCourse } from '../lib/types';
 
 const t = {
@@ -28,6 +30,7 @@ const t = {
     conflict: (title: string) => `Clashes with ${title}, already registered in this slot.`,
     ownDept: 'Your department', others: 'Other courses in this slot', othersHint: 'University-wide electives, languages and other faculties, from the TIPS syllabus. Check shows whether TIPS lets you register.',
     check: 'Check & register', notOffered: 'TIPS does not offer this course for your registration.', filter: 'Filter courses…', hideEarned: 'Hide already earned',
+    plan: 'Plan', planned: 'Planned', onlyNeeded: 'Only what I still need',
   },
   jp: {
     bySlot: 'コマから', byCurriculum: 'カリキュラムから', byCode: '時間割番号',
@@ -45,6 +48,7 @@ const t = {
     conflict: (title: string) => `同じコマに登録済みの「${title}」と重なります。`,
     ownDept: '所属学科の科目', others: 'このコマのその他の科目', othersHint: '全学共通科目・語学・他学部の科目（TIPSシラバスより）。「確認して登録」でTIPS上の登録可否を確認できます。',
     check: '確認して登録', notOffered: 'この科目はTIPSで登録対象になっていません。', filter: '科目を絞り込む…', hideEarned: '修得済みを隠す',
+    plan: '計画', planned: '計画済み', onlyNeeded: '必要な区分のみ',
   },
 };
 
@@ -53,7 +57,9 @@ type Pending = { kind: 'register'; c: TipsCandidate; ctx: Ctx } | { kind: 'drop'
 type Cat = { d: string; s: string; m: string; name: string; rawName: string };
 type CurCourse = { kamoku: string | null; number: string; title: string; credits: number | null; spring: number | null; springIntensive: number | null; fall: number | null; fallIntensive: number | null; prerequisite: string | null };
 
-const CandidateCard: React.FC<{ c: TipsCandidate; ctx: Ctx; lang: Language; isDark: boolean; taken: boolean; blocked?: string[]; onRegister: (c: TipsCandidate, ctx: Ctx) => void }> = ({ c, ctx, lang, isDark, taken, blocked = [], onRegister }) => {
+type CatInfo = { section: string | null; category: string; needed: boolean; done: boolean } | null;
+
+const CandidateCard: React.FC<{ c: TipsCandidate; ctx: Ctx; lang: Language; isDark: boolean; taken: boolean; blocked?: string[]; onRegister: (c: TipsCandidate, ctx: Ctx) => void; cat?: CatInfo; planned?: boolean; onTogglePlan?: (c: TipsCandidate) => void }> = ({ c, ctx, lang, isDark, taken, blocked = [], onRegister, cat, planned, onTogglePlan }) => {
   const tx = t[lang];
   const navigate = useNavigate();
   const muted = isDark ? 'text-gray-400' : 'text-gray-500';
@@ -64,7 +70,10 @@ const CandidateCard: React.FC<{ c: TipsCandidate; ctx: Ctx; lang: Language; isDa
           <div className="text-[11px] font-black">{c.code}<span className={`ml-2 font-bold ${muted}`}>{c.slotText}</span></div>
           <div className="font-bold text-sm leading-snug mt-0.5">{tidy(c.title)}</div>
           <div className={`text-xs font-medium mt-1 ${muted}`}>{[tidy(c.teacher), c.requirement, tidy(c.campus)].filter(Boolean).join(' · ')}</div>
-          <div className="mt-1.5"><DeliveryChip code={c.code} year={c.year} lang={lang} /></div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <SectionChip section={cat?.section} needed={!!cat?.needed} done={!!cat?.done} category={cat?.category} isDark={isDark} lang={lang} />
+            <DeliveryChip code={c.code} year={c.year} lang={lang} isDark={isDark} />
+          </div>
         </div>
         <div className="text-right shrink-0"><div className="text-lg font-bold leading-none">{c.credits ?? '—'}</div><div className={`text-[10px] font-bold ${muted}`}>{tx.cr}</div></div>
       </div>
@@ -72,12 +81,18 @@ const CandidateCard: React.FC<{ c: TipsCandidate; ctx: Ctx; lang: Language; isDa
         <div className="mt-3 space-y-1">{blocked.map((b, i) => <p key={i} className="text-xs font-semibold text-red-500">{b}</p>)}</div>
       )}
       <div className="flex gap-2 mt-3">
-        <button onClick={() => navigate(`/course/${c.code}${c.year ? `?year=${c.year}` : ''}`)} className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <button onClick={() => navigate(`/course/${c.code}${c.year ? `?year=${c.year}` : ''}`)} className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
           <BookOpenText className="w-3.5 h-3.5" />{tx.syllabus}
         </button>
+        {!taken && onTogglePlan && c.credits !== null && blocked.length === 0 && (
+          <motion.button whileTap={TAP} onClick={() => onTogglePlan(c)} aria-pressed={planned}
+            className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors ${planned ? 'bg-brand-yellow text-brand-black' : isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
+            {planned ? <ListChecks className="w-3.5 h-3.5" /> : <ListPlus className="w-3.5 h-3.5" />}{planned ? tx.planned : tx.plan}
+          </motion.button>
+        )}
         {taken
-          ? <span className="px-3 py-2 rounded-xl text-xs font-bold bg-green-500/10 text-green-600">{tx.registered}</span>
-          : <button disabled={!c.canRegister || blocked.length > 0} onClick={() => onRegister(c, ctx)} className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-brand-black text-white flex items-center justify-center gap-1 disabled:opacity-40"><Plus className="w-3.5 h-3.5" />{tx.register}</button>}
+          ? <span className="h-10 px-3 rounded-xl text-xs font-bold bg-green-500/10 text-green-600 flex items-center">{tx.registered}</span>
+          : <motion.button whileTap={TAP} disabled={!c.canRegister || blocked.length > 0} onClick={() => onRegister(c, ctx)} className={`flex-1 h-10 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-40 ${isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'}`}><Plus className="w-3.5 h-3.5" />{tx.register}</motion.button>}
       </div>
     </div>
   );
@@ -128,6 +143,26 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
   const [curFilter, setCurFilter] = useState('');
   const [hideEarned, setHideEarned] = useState(true);
 
+  // Graduation sections still short, and the student's plan for this term (kept on the device).
+  const grad = useCourseCategories();
+  const planKey = `tokaihub_plan:${data?.year ?? ''}:${data?.term ?? ''}`;
+  const [plan, setPlan] = useState<PlanItem[]>([]);
+  useEffect(() => {
+    try { setPlan(JSON.parse(localStorage.getItem(planKey) ?? '[]')); } catch { setPlan([]); }
+  }, [planKey]);
+  const savePlan = (next: PlanItem[]) => {
+    setPlan(next);
+    try { localStorage.setItem(planKey, JSON.stringify(next)); } catch { /* private mode */ }
+  };
+  const catOf = (title: string): CatInfo => {
+    const hit = grad.sectionFor(title);
+    return hit ? { section: hit.section, category: hit.category, needed: !!hit.section && grad.needed.has(hit.section), done: !!hit.section && grad.done.has(hit.section) } : null;
+  };
+  const togglePlan = (c: TipsCandidate) => savePlan(plan.some(p => p.code === c.code)
+    ? plan.filter(p => p.code !== c.code)
+    : [...plan, { code: c.code, title: c.title, credits: c.credits ?? 0, section: catOf(c.title)?.section ?? null, requirement: c.requirement }]);
+  const [onlyNeeded, setOnlyNeeded] = useState(false);
+
   const [pending, setPending] = useState<Pending | null>(null);
   const [working, setWorking] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; lines: string[] } | null>(null);
@@ -174,23 +209,29 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
       setPending(null);
       invalidate('timetable');
       invalidate('registration-candidates');
+      invalidate('course-categories');
       tt.refresh();
+      grad.refresh();
     }
   };
 
   if (!data) return <Loading text={tx.loading} isDark={isDark} />;
 
+  const livePlan = plan.filter(p => !registeredCodes.has(p.code));
+  const cardProps = (c: TipsCandidate) => ({ cat: catOf(c.title), planned: plan.some(p => p.code === c.code), onTogglePlan: togglePlan });
   const slotLabel = slot ? `${days[slot.day - 1] ?? ''} ${periods[slot.period - 1] ?? ''}` : '';
   const offeredThisTerm = (x: CurCourse) => (term === '2' ? (x.fall ?? 0) + (x.fallIntensive ?? 0) : (x.spring ?? 0) + (x.springIntensive ?? 0)) > 0;
 
   return (
     <div className="space-y-5">
+      <CreditsNeeded lang={lang} isDark={isDark} cats={grad} plan={livePlan} onRemove={code => savePlan(plan.filter(p => p.code !== code))} />
+
       <AnimatePresence>
         {result && (
           <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`relative p-4 pr-10 rounded-2xl text-sm ${result.ok ? (isDark ? 'bg-gray-800' : 'bg-blue-50') : 'bg-red-500/10 text-red-600'}`}>
             <div className="font-bold mb-1 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" />{tx.reply}</div>
             {result.lines.map((l, i) => <div key={i} className="font-medium">{l}</div>)}
-            <button onClick={() => setResult(null)} aria-label="Close" className="absolute top-3 right-3"><X className="w-4 h-4" /></button>
+            <button onClick={() => setResult(null)} aria-label={lang === 'en' ? 'Close' : '閉じる'} className="absolute top-1 right-1 w-10 h-10 flex items-center justify-center"><X className="w-4 h-4" /></button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -237,17 +278,17 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
 
         {/* Finder */}
         <div ref={listRef} className="scroll-mt-4 min-w-0">
-          <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
-            <Pill active={mode === 'slot'} isDark={isDark} onClick={() => setMode('slot')}>{tx.bySlot}</Pill>
-            <Pill active={mode === 'curriculum'} isDark={isDark} onClick={() => setMode('curriculum')}>{tx.byCurriculum}</Pill>
-            <Pill active={mode === 'code'} isDark={isDark} onClick={() => setMode('code')}>{tx.byCode}</Pill>
+          <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+            <Pill layoutId="planner-mode" active={mode === 'slot'} isDark={isDark} onClick={() => setMode('slot')}>{tx.bySlot}</Pill>
+            <Pill layoutId="planner-mode" active={mode === 'curriculum'} isDark={isDark} onClick={() => setMode('curriculum')}>{tx.byCurriculum}</Pill>
+            <Pill layoutId="planner-mode" active={mode === 'code'} isDark={isDark} onClick={() => setMode('code')}>{tx.byCode}</Pill>
           </div>
 
           {mode === 'slot' && (
             <>
               <label className="flex items-center gap-2 mb-3 text-xs font-bold">
                 <span className={muted}>{tx.campus}</span>
-                <select value={campusCode} onChange={e => setCampus(e.target.value)} className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold appearance-none ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                <select value={campusCode} onChange={e => setCampus(e.target.value)} className={`flex-1 h-10 rounded-xl px-3 text-sm font-semibold appearance-none ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
                   {(options.data?.campuses ?? []).filter(c => c.value).map(c => <option key={c.value} value={c.value}>{tidy(c.label)}</option>)}
                 </select>
               </label>
@@ -259,15 +300,21 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                   {slotCands.loading && !slotCands.data && <Loading text={tx.loading} isDark={isDark} />}
                   {slotCands.data && slotCands.data.candidates.length === 0 && <Empty text={tx.none} isDark={isDark} />}
                   <div className="space-y-2">
-                    {slotCands.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ day: String(slot.day), period: String(slot.period), campus: campusCode }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} />)}
+                    {slotCands.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ day: String(slot.day), period: String(slot.period), campus: campusCode }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} {...cardProps(c)} />)}
                   </div>
 
                   <div className={`text-[11px] font-bold uppercase tracking-wider mt-6 mb-1 ${muted}`}>{tx.others}</div>
                   <p className={`text-xs mb-2 ${muted}`}>{tx.othersHint}</p>
+                  {grad.needed.size > 0 && (
+                    <label className="flex items-center gap-1.5 mb-2 h-10 text-xs font-bold cursor-pointer">
+                      <input type="checkbox" checked={onlyNeeded} onChange={e => setOnlyNeeded(e.target.checked)} className="accent-black w-4 h-4" />{tx.onlyNeeded} ({[...grad.needed].join(', ')})
+                    </label>
+                  )}
                   {others.loading && !others.data && <Loading text={tx.loading} isDark={isDark} />}
                   <div className="space-y-2">
                     {(others.data?.results ?? [])
                       .filter(r => r.ref && !slotCands.data?.candidates.some(c => c.code === r.ref!.code))
+                      .filter(r => !onlyNeeded || !!catOf(r.title)?.needed)
                       .map(r => {
                         const code = r.ref!.code;
                         const earned = earnedTitles.has(r.title);
@@ -279,18 +326,21 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                                 <div className="text-[11px] font-black">{code}<span className={`ml-2 font-bold ${muted}`}>{r.slotText}</span></div>
                                 <div className="font-bold text-sm leading-snug mt-0.5">{tidy(r.title)}</div>
                                 <div className={`text-xs font-medium mt-1 ${muted}`}>{[tidy(r.teacher), tidy(r.campus)].filter(Boolean).join(' · ')}</div>
-                                <div className="mt-1.5"><DeliveryChip code={code} year={r.ref?.year ?? data?.year} lang={lang} /></div>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                  <SectionChip section={catOf(r.title)?.section} needed={!!catOf(r.title)?.needed} done={!!catOf(r.title)?.done} category={catOf(r.title)?.category} isDark={isDark} lang={lang} />
+                                  <DeliveryChip code={code} year={r.ref?.year ?? data?.year} lang={lang} isDark={isDark} />
+                                </div>
                                 {earned && <p className="text-xs font-semibold text-red-500 mt-2">{tx.earnedBlock}</p>}
                               </div>
                               {!earned && (
-                                <button onClick={() => setCheckCode(open ? null : code)} className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{tx.check}</button>
+                                <button onClick={() => setCheckCode(open ? null : code)} aria-expanded={open} className={`shrink-0 h-10 px-3 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{tx.check}</button>
                               )}
                             </div>
                             {open && (
                               <div className="px-3 pb-3 space-y-2">
-                                {checked.loading && !checked.data && <Loading text={tx.loading} isDark={isDark} />}
+                                {checked.loading && !checked.data && <Loading text={tx.loading} isDark={isDark} rows={1} />}
                                 {checked.data && checked.data.candidates.length === 0 && <p className="text-xs font-semibold px-1 text-red-500">{tx.notOffered}</p>}
-                                {checked.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ code }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} />)}
+                                {checked.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ code }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} {...cardProps(c)} />)}
                               </div>
                             )}
                           </div>
@@ -309,7 +359,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                   <Search className={`w-4 h-4 mr-2 ${muted}`} />
                   <input value={codeDraft} onChange={e => setCodeDraft(e.target.value)} placeholder={tx.code} className="bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
                 </div>
-                <button type="submit" className="px-4 rounded-2xl bg-[#0B1F3A] text-white text-sm font-bold">{tx.find}</button>
+                <button type="submit" className={`px-4 rounded-2xl text-sm font-bold ${isDark ? 'bg-brand-yellow text-brand-black' : 'bg-[#0B1F3A] text-white'}`}>{tx.find}</button>
               </form>
               {code && (
                 <>
@@ -317,7 +367,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                   {slotCands.loading && !slotCands.data && <Loading text={tx.loading} isDark={isDark} />}
                   {slotCands.data && slotCands.data.candidates.length === 0 && <Empty text={tx.none} isDark={isDark} />}
                   <div className="space-y-2">
-                    {slotCands.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ code }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} />)}
+                    {slotCands.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ code }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} {...cardProps(c)} />)}
                   </div>
                 </>
               )}
@@ -335,6 +385,12 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                       <Card key={x.m} isDark={isDark} onClick={() => { setCat(x); setOpenKamoku(null); }} className="flex items-center gap-3 p-4">
                         <GraduationCap className="w-5 h-5 text-brand-yellow shrink-0" />
                         <span className="flex-1 font-semibold text-sm">{tidy(x.name)}</span>
+                        {(() => {
+                          // Same TIPS list, same order, whichever language each copy is in.
+                          const i = cats.data?.findIndex(k => k.m === x.m) ?? -1;
+                          const sec = (grad.ja.data ?? grad.en.data)?.categories[i]?.section ?? null;
+                          return <SectionChip section={sec} needed={!!sec && grad.needed.has(sec)} done={!!sec && grad.done.has(sec)} isDark={isDark} lang={lang} />;
+                        })()}
                         <ChevronRight className={`w-4 h-4 ${muted}`} />
                       </Card>
                     ))}
@@ -343,7 +399,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
               )}
               {cat && (
                 <>
-                  <button onClick={() => setCat(null)} className={`mb-3 text-xs font-bold flex items-center gap-1 ${muted}`}><ChevronRight className="w-3.5 h-3.5 rotate-180" />{tidy(cat.name)}</button>
+                  <button onClick={() => setCat(null)} className={`mb-1 h-10 text-xs font-bold flex items-center gap-1 ${muted}`}><ChevronRight className="w-3.5 h-3.5 rotate-180" />{tidy(cat.name)}</button>
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`flex-1 flex items-center rounded-xl px-3 h-10 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
                       <Search className={`w-4 h-4 mr-2 ${muted}`} />
@@ -369,6 +425,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                             <div className="flex-1 min-w-0">
                               <div className="font-bold text-sm leading-snug">{tidy(x.title)}</div>
                               <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                <SectionChip section={catOf(x.title)?.section} needed={!!catOf(x.title)?.needed} done={!!catOf(x.title)?.done} isDark={isDark} lang={lang} />
                                 {earned && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 text-green-600">{tx.earned}</span>}
                                 {!offered && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>{tx.notThisTerm}</span>}
                                 {offered && weekly ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-yellow/30">{tx.slotsWeek(weekly)}</span> : null}
@@ -379,13 +436,17 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                             <div className="text-right shrink-0"><div className="text-base font-bold leading-none">{x.credits ?? '—'}</div><div className={`text-[10px] font-bold ${muted}`}>{tx.cr}</div></div>
                             {offered && x.kamoku && <ChevronDown className={`w-4 h-4 mt-0.5 shrink-0 transition-transform ${open ? 'rotate-180' : ''} ${muted}`} />}
                           </button>
+                          <AnimatePresence initial={false}>
                           {open && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: EASE }} className="overflow-hidden">
                             <div className="px-3 pb-3 space-y-2">
-                              {!sections.data && <Loading text={tx.loading} isDark={isDark} />}
+                              {!sections.data && <Loading text={tx.loading} isDark={isDark} rows={1} />}
                               {sections.data && sections.data.candidates.length === 0 && <p className={`text-xs px-1 ${muted}`}>{tx.noSections}</p>}
-                              {sections.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ ...catParams!, kamoku: x.kamoku! }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} />)}
+                              {sections.data?.candidates.map(c => <CandidateCard key={c.code} c={c} ctx={{ ...catParams!, kamoku: x.kamoku! }} lang={lang} isDark={isDark} taken={registeredCodes.has(c.code)} blocked={blockers(c)} onRegister={(c, ctx) => setPending({ kind: 'register', c, ctx })} {...cardProps(c)} />)}
                             </div>
+                            </motion.div>
                           )}
+                          </AnimatePresence>
                         </div>
                       );
                     })}
@@ -401,7 +462,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
         {pending && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !working && setPending(null)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" />
-            <motion.div role="dialog" aria-modal="true" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md z-[101] rounded-[32px] p-6 shadow-2xl ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <motion.div role="dialog" aria-modal="true" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 500, damping: 36 }} className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md z-[101] rounded-[32px] p-6 shadow-2xl ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
               <h2 className="text-xl font-bold mb-3">{pending.kind === 'register' ? tx.confirmAdd : tx.confirmDrop}</h2>
               <div className={`rounded-2xl p-4 mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <div className="text-xs font-black">{pending.c.code}</div>

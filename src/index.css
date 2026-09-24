@@ -208,3 +208,29 @@ button, a, [role="button"] {
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }
+
+/* Skeleton blocks shown while TIPS data loads (light and dark app themes). */
+.skeleton {
+  background: linear-gradient(90deg, #EEF0F3 25%, #F7F8FA 50%, #EEF0F3 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+.skeleton-dark {
+  background: linear-gradient(90deg, #1F2937 25%, #2B3544 50%, #1F2937 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* A light sweep across loading captions, so a wait reads as progress, not a freeze. */
+.text-shimmer {
+  background: linear-gradient(90deg, currentColor 35%, rgba(255, 215, 71, 0.95) 50%, currentColor 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.2s infinite linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .skeleton-dark, .shimmer, .shimmer-light, .text-shimmer { animation: none; }
+}

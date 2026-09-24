@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { GraduationCap, TrendingUp } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, SectionTitle, Pill, Loading, Fresh } from './ScreenHeader';
+import PageShell, { Card, SectionTitle, Pill, Loading, Skeleton, Fresh, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { pct, termLabel, tidy } from '../lib/tipsAdapters';
 import type { TipsGrades, TipsGraduation } from '../lib/types';
@@ -50,13 +50,24 @@ export default function TokaiCredits(props: ScreenProps) {
 
   return (
     <PageShell {...props} title={tx.title} subtitle={g?.asOf ? tx.asOf(g.asOf) : undefined} onRefresh={() => { grades.refresh(); graduation.refresh(); }} refreshing={grades.loading || graduation.loading}>
-      {!g && <Loading text={tx.loading} isDark={isDark} />}
+      {!g && (
+        <>
+          <Loading text={tx.loading} isDark={isDark} rows={0} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="space-y-5">
+              <Skeleton isDark={isDark} className="h-44 rounded-3xl" />
+              <Skeleton isDark={isDark} className="h-64 rounded-3xl" />
+            </div>
+            <Skeleton isDark={isDark} className="h-80 rounded-3xl" />
+          </div>
+        </>
+      )}
       {g && (
         <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="space-y-5">
               {/* Credits toward graduation */}
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl p-6 bg-brand-black text-white">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="relative overflow-hidden rounded-3xl p-6 bg-brand-black text-white">
                 <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-brand-yellow/10" />
                 <div className="flex items-start justify-between mb-6">
                   <div>
@@ -138,7 +149,7 @@ export default function TokaiCredits(props: ScreenProps) {
                                   <span className={`text-xs font-bold shrink-0 ${done ? 'text-green-600' : ''}`}>{item.earned}/{item.required}</span>
                                 </div>
                                 <div className={`h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${p}%` }} transition={{ duration: 0.6 }} className={`h-full rounded-full ${done ? 'bg-brand-green' : 'bg-brand-yellow'}`} />
+                                  <motion.div initial={{ width: 0 }} animate={{ width: `${p}%` }} transition={{ duration: 0.6, ease: EASE }} className={`h-full rounded-full ${done ? 'bg-brand-green' : 'bg-brand-yellow'}`} />
                                 </div>
                               </div>
                             );
@@ -155,17 +166,19 @@ export default function TokaiCredits(props: ScreenProps) {
           {/* Grades */}
           <section>
             <SectionTitle>{tx.grades}</SectionTitle>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">
-              <Pill active={termFilter === 'all'} isDark={isDark} onClick={() => setTermFilter('all')}>{tx.all}</Pill>
-              {terms.map(tm => <Pill key={tm.key} active={termFilter === tm.key} isDark={isDark} onClick={() => setTermFilter(tm.key)}>{tm.label}</Pill>)}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <Pill layoutId="grades-term" active={termFilter === 'all'} isDark={isDark} onClick={() => setTermFilter('all')}>{tx.all}</Pill>
+              {terms.map(tm => <Pill key={tm.key} layoutId="grades-term" active={termFilter === tm.key} isDark={isDark} onClick={() => setTermFilter(tm.key)}>{tm.label}</Pill>)}
             </div>
             <div className="space-y-6">
+              <AnimatePresence mode="popLayout" initial={false}>
               {grouped.map(group => (
-                <div key={group.key}>
+                // Term groups fade out and the rest close the gap when the filter changes.
+                <motion.div key={group.key} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.12 } }} transition={{ duration: 0.25, ease: EASE, layout: { type: 'spring', stiffness: 400, damping: 40 } }}>
                   <div className={`text-xs font-bold mb-2 ${muted}`}>{group.label}</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {group.courses.map((c, i) => (
-                      <Card key={i} isDark={isDark} className="flex items-center gap-4 p-4">
+                      <Card key={`${c.title}-${i}`} isDark={isDark} className="flex items-center gap-4 p-4">
                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-bold text-brand-black ${GRADE_COLOR[c.grade] ?? 'bg-brand-gray'}`}>{c.grade === '/' ? '—' : c.grade}</div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm leading-snug line-clamp-2">{tidy(c.title)}</div>
@@ -178,8 +191,9 @@ export default function TokaiCredits(props: ScreenProps) {
                       </Card>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               ))}
+              </AnimatePresence>
             </div>
           </section>
         </div>

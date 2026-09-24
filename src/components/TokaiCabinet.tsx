@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Folder, FolderOpen, FileText, ExternalLink, Download, Search, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Loading, Empty, since } from './ScreenHeader';
+import PageShell, { Loading, Empty, since, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { cabinetFileUrl, openCabinetFile } from '../lib/api';
 import type { TipsCabinetFile, TipsCabinetFolder } from '../lib/types';
@@ -35,18 +35,18 @@ const FolderNode: React.FC<{ f: TipsCabinetFolder; depth: number; isDark: boolea
   const n = countFiles(f);
   return (
     <div className={depth === 0 ? `rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-2` : 'pl-3'}>
-      <button onClick={() => setOpen(o => !o)} className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
-        <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''} ${muted}`} />
+      <motion.button whileTap={{ scale: 0.985 }} onClick={() => setOpen(o => !o)} aria-expanded={isOpen} className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
+        <ChevronRight className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''} ${muted}`} />
         {isOpen ? <FolderOpen className="w-5 h-5 shrink-0 text-brand-yellow" /> : <Folder className="w-5 h-5 shrink-0 text-brand-yellow" />}
         <div className="flex-1 min-w-0">
           <div className={`font-bold leading-snug ${depth === 0 ? 'text-[15px]' : 'text-sm'}`}>{f.name}</div>
           {(f.summary || f.owner) && <div className={`text-[11px] font-medium truncate ${muted}`}>{[f.owner, f.summary].filter(Boolean).join(' · ')}</div>}
         </div>
         <span className={`text-[11px] font-bold shrink-0 ${muted}`}>{t[lang].files(n)}</span>
-      </button>
+      </motion.button>
       <AnimatePresence initial={false}>
         {isOpen && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: EASE }} className="overflow-hidden">
             {f.children.map(c => <FolderNode key={c.id} f={c} depth={depth + 1} isDark={isDark} lang={lang} forceOpen={forceOpen} />)}
             {f.files.length > 0 && <div className="pl-7">{f.files.map((x, i) => <FileRow key={`${x.name}-${i}`} f={x} isDark={isDark} lang={lang} />)}</div>}
             {!f.children.length && !f.files.length && <p className={`pl-10 py-2 text-xs ${muted}`}>{t[lang].empty}</p>}
@@ -85,7 +85,11 @@ export default function TokaiCabinet(props: ScreenProps) {
       {!cab.data && <Loading text={tx.loading} isDark={isDark} />}
       {cab.data && folders.length === 0 && <Empty text={tx.none} isDark={isDark} />}
       <div className="space-y-3">
-        {folders.map(f => <FolderNode key={f.id} f={f} depth={0} isDark={isDark} lang={lang} forceOpen={!!query} />)}
+        {folders.map((f, i) => (
+          <motion.div key={f.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: Math.min(i * 0.04, 0.28), ease: EASE }}>
+            <FolderNode f={f} depth={0} isDark={isDark} lang={lang} forceOpen={!!query} />
+          </motion.div>
+        ))}
       </div>
     </PageShell>
   );

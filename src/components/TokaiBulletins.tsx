@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronRight, Paperclip, Search, Mail, ExternalLink } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Pill, Loading, Empty, since } from './ScreenHeader';
+import PageShell, { Card, Pill, Select, Skeleton, Loading, Empty, since, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import type { TipsBulletinDetail, TipsBulletins } from '../lib/types';
 
@@ -31,9 +31,16 @@ function Detail(props: ScreenProps & { id: string }) {
   const d = post.data;
   return (
     <PageShell {...props} title={d?.genre || tx.title} back>
-      {!d && (post.error ? <Empty text={post.error.message} isDark={isDark} /> : <Loading text={tx.opening} isDark={isDark} />)}
+      {!d && (post.error ? <Empty text={post.error.message} isDark={isDark} /> : (
+        <div className="max-w-3xl">
+          <Loading text={tx.opening} isDark={isDark} rows={0} />
+          <Skeleton isDark={isDark} className="h-8 w-4/5 rounded-xl" />
+          <Skeleton isDark={isDark} className="mt-3 h-4 w-1/3 rounded-lg" />
+          <Skeleton isDark={isDark} className="mt-6 h-64 rounded-3xl" />
+        </div>
+      ))}
       {d && (
-        <motion.article initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
+        <motion.article initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="max-w-3xl">
           <h2 className="text-[24px] sm:text-[30px] font-bold leading-tight tracking-tight">{d.title}</h2>
           <p className={`text-xs font-semibold mt-3 ${muted}`}>{[d.poster, d.postedAt].filter(Boolean).join(' · ')}</p>
           <Card isDark={isDark} className="mt-6 p-5 sm:p-6">
@@ -90,30 +97,40 @@ function List(props: ScreenProps) {
         <Search className={`w-5 h-5 mr-3 ${muted}`} />
         <input value={q} onChange={e => setQ(e.target.value)} placeholder={tx.search} className="bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
       </div>
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        {(['all', 'notice', 'personal'] as const).map(c => <Pill key={c} active={category === c} isDark={isDark} onClick={() => setCategory(c)}>{tx[c]}</Pill>)}
-        <Pill active={unreadOnly} isDark={isDark} onClick={() => setUnreadOnly(u => !u)}>
-          {tx.unread}{unreadCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-brand-yellow text-brand-black text-[10px]">{unreadCount}</span>}
-        </Pill>
-        <select value={genre} onChange={e => setGenre(e.target.value)} className={`rounded-full px-3 py-2 text-sm font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <option value="">{tx.genre}</option>
-          {genres.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-        <select value={order} onChange={e => setOrder(e.target.value as 'new' | 'old')} className={`rounded-full px-3 py-2 text-sm font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <option value="new">{tx.newest}</option>
-          <option value="old">{tx.oldest}</option>
-        </select>
+      {/* Phone: chips scroll sideways in one row and the two selects share the next; wider screens fit one row. */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mb-6">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          {(['all', 'notice', 'personal'] as const).map(c => <Pill key={c} layoutId="bulletin-category" active={category === c} isDark={isDark} onClick={() => setCategory(c)}>{tx[c]}</Pill>)}
+          <Pill active={unreadOnly} isDark={isDark} onClick={() => setUnreadOnly(u => !u)}>
+            {tx.unread}{unreadCount > 0 && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${unreadOnly && isDark ? 'bg-brand-black text-white' : 'bg-brand-yellow text-brand-black'}`}>{unreadCount}</span>}
+          </Pill>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Select value={genre} onChange={setGenre} isDark={isDark} label={tx.genre} className="min-w-0 sm:max-w-[240px]">
+            <option value="">{tx.genre}</option>
+            {genres.map(g => <option key={g} value={g}>{g}</option>)}
+          </Select>
+          <Select value={order} onChange={v => setOrder(v as 'new' | 'old')} isDark={isDark} label={tx.newest} className="min-w-0">
+            <option value="new">{tx.newest}</option>
+            <option value="old">{tx.oldest}</option>
+          </Select>
+        </div>
       </div>
 
       {!list.data && <Loading text={tx.loading} isDark={isDark} />}
       {list.data && posts.length === 0 && <Empty text={tx.none} isDark={isDark} />}
       <div className="space-y-2">
+        <AnimatePresence mode="popLayout">
         {posts.map((p, i) => (
+          // layout: when a filter hides posts, the rest slide up instead of snapping.
           <motion.button
             key={p.id}
+            layout="position"
             initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(i * 0.01, 0.2) }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.25, delay: Math.min(i * 0.02, 0.24), ease: EASE } }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ layout: { type: 'spring', stiffness: 450, damping: 42 } }}
+            whileTap={{ scale: 0.985 }}
             onClick={() => navigate(`/bulletins/${p.id}`)}
             className={`w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
           >
@@ -129,6 +146,7 @@ function List(props: ScreenProps) {
             <ChevronRight className={`w-4 h-4 shrink-0 ${muted}`} />
           </motion.button>
         ))}
+        </AnimatePresence>
       </div>
       {list.data && <p className={`pt-4 text-[11px] font-medium ${muted}`}>{tx.readNote}</p>}
     </PageShell>

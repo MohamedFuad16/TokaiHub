@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Search, Check, BookOpenText, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Pill, Loading, Empty } from './ScreenHeader';
+import PageShell, { Pill, Empty, Skeleton, EASE, TAP } from './ScreenHeader';
 import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf } from '../lib/tipsAdapters';
 import type { Term } from '../lib/types';
@@ -49,33 +49,44 @@ export default function TokaiClass(props: ScreenProps) {
 
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {(['1', '2'] as Term[]).map(tm => (
-          <Pill key={tm} active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>
+          <Pill key={tm} layoutId="class-term" active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>
         ))}
         {tt.choice !== 'auto' && (
-          <button onClick={() => tt.setChoice('auto')} className={`text-xs font-bold underline underline-offset-2 ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.follow}</button>
+          <button onClick={() => tt.setChoice('auto')} className={`h-10 px-2 text-xs font-bold underline underline-offset-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.follow}</button>
         )}
       </div>
 
-      {tt.loading && <Loading text={tx.loading} isDark={isDark} />}
+      {tt.loading && (
+        <div role="status" aria-label={tx.loading} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          {[0, 1, 2].map(i => <Skeleton key={i} isDark={isDark} className="h-[340px] rounded-[28px]" />)}
+        </div>
+      )}
       {!tt.loading && tt.timetable && items.length === 0 && (
         tt.timetable.registrationOpen && tt.timetable.term === tt.currentTerm ? (
-          <button onClick={() => navigate('/registration')} className="w-full flex items-center gap-3 p-5 rounded-3xl bg-green-500/10 text-green-700 text-left font-bold text-sm">
+          <button onClick={() => navigate('/registration')} className={`w-full flex items-center gap-3 p-5 rounded-3xl bg-green-500/10 text-left font-bold text-sm active:scale-[0.99] transition-transform ${isDark ? 'text-green-400' : 'text-green-700'}`}>
             <span className="flex-1">{tx.register(termLabel(term, year, lang))}</span><ArrowRight className="w-4 h-4" />
           </button>
         ) : <Empty text={tx.none} isDark={isDark} />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr gap-5">
+        <AnimatePresence mode="popLayout">
         {items.map((item, i) => {
           const slot = [days[(item.dayOfWeek ?? 1) - 1], item.periods?.map(p => periods[p - 1] ?? p).join('・')].filter(Boolean).join(' ');
           return (
             <motion.article
               key={item.id}
+              layout
               initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.3, delay: Math.min(i * 0.04, 0.3), ease: EASE } }}
+              exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98, transition: TAP.transition }}
+              role="link"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter') navigate(`/course/${item.code}`); }}
               onClick={() => navigate(`/course/${item.code}`)}
-              className="group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] cursor-pointer bg-[#1A1D24] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-1"
+              className="group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] cursor-pointer bg-[#1A1D24] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow"
             >
               <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#1A1D24]">
                 <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -102,17 +113,21 @@ export default function TokaiClass(props: ScreenProps) {
             </motion.article>
           );
         })}
+        </AnimatePresence>
       </div>
 
-      <button
+      <motion.button
+        whileTap={{ scale: 0.98 }}
         onClick={() => navigate('/syllabus')}
-        className={`mt-8 w-full sm:w-auto flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
+        className={`mt-8 w-full sm:w-auto sm:min-w-[320px] flex items-center gap-3 px-5 py-4 rounded-2xl text-left transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
       >
-        <BookOpenText className="w-5 h-5 text-brand-yellow" />
-        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{tx.syllabus}</span>
-        <span>{tx.syllabusCta}</span>
-        <ArrowRight className="w-4 h-4 ml-auto" />
-      </button>
+        <BookOpenText className="w-5 h-5 shrink-0 text-brand-yellow" />
+        <span className="flex-1 min-w-0">
+          <span className={`block text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.syllabus}</span>
+          <span className="block text-sm font-bold">{tx.syllabusCta}</span>
+        </span>
+        <ArrowRight className="w-4 h-4 shrink-0" />
+      </motion.button>
     </PageShell>
   );
 }
