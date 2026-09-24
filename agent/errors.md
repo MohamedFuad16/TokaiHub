@@ -64,3 +64,15 @@
   miss rows. The cabinet parser checks both levels.
 - **Cabinet downloads are binary**; the bridge fetches them inside Chromium as base64 and
   streams the bytes with TIPS's Content-Type/Disposition (a 40 MB PDF verified).
+- **TIPS idle timeout returns a 200 "認証エラー" page, not a login redirect** (2026-09-24). Once
+  the TIPS session idles out while the Microsoft/Shibboleth session is alive, flows answer with a
+  page whose form `authorizationError` sends a browser back to the portal by script. The client
+  saw "no flow key on page" / "form not found" and never re-authenticated; bulletins on the
+  phone showed "Load failed". `looksSignedOut` now treats that form as expired.
+- **Silent re-auth lands on TIPS "/" (403 Forbidden)** after the SAML POST, because the SP drops
+  the return address; a second portal visit enters. Stale TIPS cookies can also loop
+  portal ↔ ssologin (ERR_TOO_MANY_REDIRECTS). `reauthenticate` clears tips.u-tokai.ac.jp
+  cookies, then visits the portal up to 3 times. Hosted mode also pings the portal every 20 min
+  so the 30-minute idle timeout does not hit.
+- **cloudflared over IPv6 drops on this network** ("sendmsg: no route to host" to the edge).
+  `~/.cloudflared/tokaihub.yml` sets `edge-ip-version: "4"`.

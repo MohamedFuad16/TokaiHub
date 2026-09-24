@@ -13,6 +13,12 @@ Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), real-devi
 passkey test. No automated tests beyond the passkey/access probes noted below.
 
 ## Recent changes
+- **2026-09-24 (tenth pass) — "Load failed" on the phone fixed** (by: Claude). Causes: TIPS
+  idle-timeout page not recognised as expired (see errors.md), silent re-auth stuck on TIPS "/"
+  403 and a cookie redirect loop, and IPv6 tunnel drops. Fixes in client.ts/session.ts, 20-min
+  keep-alive in hosted mode, tunnel pinned to IPv4, one retry for failed GETs in the app.
+  Verified: bulletins 92 posts after "silent re-auth OK"; timetable, attendance, changes,
+  cabinet, profile all fetched fresh from TIPS (log lines "fetched in … ms").
 - **2026-09-24 (ninth pass) — signed-in devices per passkey** (by: Claude). Owner's iPhone
   unlocked with the Mac-created passkey (iCloud Keychain sync), so the passkey list showed one
   entry for two devices. Tokens now carry the unlocking device's label and last use; Settings

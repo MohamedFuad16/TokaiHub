@@ -30,10 +30,17 @@ export const needsUnlock = () => !IS_LOCAL && !getDeviceToken();
 
 async function call<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const token = IS_LOCAL ? null : getDeviceToken();
-  const res = await fetch(`${BASE}${path}`, {
+  const go = () => fetch(`${BASE}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) },
     signal: init?.signal ?? AbortSignal.timeout(init?.timeoutMs ?? 120_000),
+  });
+  // A phone on mobile data drops the odd request ("Load failed" in Safari). Reads retry once;
+  // writes never do, so a registration is not sent twice.
+  const res = await go().catch(async (e: Error) => {
+    if (e.name !== 'TypeError' || (init?.method ?? 'GET') !== 'GET' || init?.signal?.aborted) throw e;
+    await new Promise(r => setTimeout(r, 1500));
+    return go();
   });
   const body = await res.json().catch(() => ({}));
   if (res.status === 401 && body.error === 'locked') {

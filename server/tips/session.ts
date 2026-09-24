@@ -167,11 +167,26 @@ export function reauthenticate(): Promise<void> {
     const ctx = requireContext();
     const page = await ctx.newPage();
     try {
-      await page.goto(PORTAL_URL);
-      const done = page.waitForURL(isPortal, { timeout: 20_000 });
-      const tile = page.locator('div[role="listitem"]', { hasText: '@tokai.ac.jp' }).first();
-      const picked = tile.waitFor({ timeout: 6_000 }).then(() => tile.click()).catch(() => {});
-      await Promise.race([done, picked.then(() => done)]);
+      // The SAML round trip can land on TIPS's root ("/", 403 Forbidden) because the SP drops the
+      // return address; the Shibboleth session is set by then, so a second portal visit enters.
+      // Stale TIPS cookies (JSESSIONID, Shibboleth) can send portal and ssologin round in a
+      // redirect loop. Drop them; the Microsoft cookies alone sign back in silently.
+      await ctx.clearCookies({ domain: 'tips.u-tokai.ac.jp' });
+      worker = null; // its fetches used the old cookies
+      for (let attempt = 1; ; attempt++) {
+        const nav = await page.goto(PORTAL_URL).then(() => null, (e: Error) => e);
+        if (nav && !/ERR_TOO_MANY_REDIRECTS|ERR_ABORTED/.test(nav.message)) throw nav;
+        // Microsoft may show an account picker; choosing the known account types no password.
+        const tile = page.locator('div[role="listitem"]', { hasText: '@tokai.ac.jp' }).first();
+        void tile.waitFor({ timeout: 6_000 }).then(() => tile.click()).catch(() => {});
+        const where = await Promise.race([
+          page.waitForURL(isPortal, { timeout: 20_000 }).then(() => 'portal' as const),
+          page.waitForURL(u => u.hostname === 'tips.u-tokai.ac.jp' && !isPortal(u) && !u.pathname.includes('ssologin'), { timeout: 20_000 }).then(() => 'tips' as const),
+        ].map(w => w.catch(() => 'timeout' as const)).map(w => w.then(r => (r === 'timeout' ? new Promise<never>(() => {}) : r)))
+          .concat(new Promise<'timeout'>(r => setTimeout(() => r('timeout'), 21_000))));
+        if (where === 'portal') break;
+        if (where === 'timeout' || attempt >= 3) throw new Error(`TIPS did not return to the portal (${where})`);
+      }
       console.log('[tips] silent re-auth OK');
       await persist(); // Microsoft refreshed its cookies
     } catch (e) {

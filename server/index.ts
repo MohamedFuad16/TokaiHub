@@ -222,10 +222,31 @@ if (!DEV && fs.existsSync(BUILD_DIR)) {
 // Never let one failed request take the session down with the process.
 process.on('unhandledRejection', e => console.error('[tips] unhandled:', (e as Error)?.message?.split('\n')[0]));
 
+/**
+ * Hosted mode keeps the TIPS session warm: TIPS idles out after 30 minutes, and the first
+ * request after that pays a Microsoft round trip. One portal hit every 20 minutes (one request,
+ * the page a signed-in browser tab would reload) avoids it; an expired session is re-entered by
+ * the same request.
+ */
+const KEEPALIVE_MS = 20 * 60_000;
+function keepAlive() {
+  if (process.env.TIPS_PERSIST !== '1') return;
+  setInterval(async () => {
+    if (session.status().state !== 'signed_in') return;
+    try {
+      const client = await import('./tips/client');
+      await session.runFeature(session.getSessionLocale() ?? 'ja_JP', () => client.get('/campusweb/portal.do?page=main'));
+    } catch (e) {
+      console.error('[tips] keep-alive failed:', (e as Error).message.split('\n')[0]);
+    }
+  }, KEEPALIVE_MS).unref();
+}
+
 async function main() {
   if (await session.restore().catch(() => false)) {
     if (auth.OWNER_ID && session.getAccountId() !== auth.OWNER_ID) await session.signOut();
   }
+  keepAlive();
   const servers = [app.listen(PORT, '127.0.0.1', () => console.log(`[tips] bridge on http://127.0.0.1:${PORT}`))];
   if (auth.configured()) {
     servers.push(app.listen(PUBLIC_PORT, '127.0.0.1', () => console.log(`[tips] public listener on 127.0.0.1:${PUBLIC_PORT} for ${auth.APP_ORIGIN}, owner ${auth.OWNER_ID}`)));

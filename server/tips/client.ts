@@ -54,7 +54,11 @@ async function once(url: string, req: Req): Promise<Page> {
 
 function looksSignedOut(url: URL, html: string) {
   return url.hostname.endsWith('microsoftonline.com') || url.pathname.includes('ssologin') ||
-    (url.hostname === 'tips.u-tokai.ac.jp' && /_display=login/.test(url.search));
+    (url.hostname === 'tips.u-tokai.ac.jp' && /_display=login/.test(url.search)) ||
+    // Once the TIPS session idles out while the Microsoft/Shibboleth session is still alive,
+    // TIPS answers flows with a 200 "認証エラー" page (form authorizationError) that sends a
+    // browser back to the portal by script. Treat it as expired so request() re-enters TIPS.
+    /name=["']?authorizationError/.test(html);
 }
 
 function encodeForm(form: Record<string, string | string[]>) {
@@ -135,7 +139,7 @@ export function submitForm(page: Page, formSelector: string, overrides: Record<s
 /** Binary download (cabinet files) via the browser: returns bytes, type and file name. */
 export function getBinary(pathOrUrl: string) {
   const url = new URL(pathOrUrl, TIPS_ORIGIN).toString();
-  return serial(async () => {
+  const fetchOnce = async () => {
     const page = await workerPage();
     const r = await page.evaluate(async (u: string) => {
       const res = await fetch(u, { credentials: 'include' });
@@ -144,9 +148,20 @@ export function getBinary(pathOrUrl: string) {
       for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
       return { status: res.status, url: res.url, type: res.headers.get('content-type') ?? 'application/octet-stream', disposition: res.headers.get('content-disposition') ?? '', b64: btoa(bin) };
     }, url);
-    if (new URL(r.url).hostname.endsWith('microsoftonline.com')) throw new SessionExpiredError('tips session expired');
+    const bytes = Buffer.from(r.b64, 'base64');
+    const html = r.type.includes('text/html') ? bytes.toString('latin1') : '';
+    if (looksSignedOut(new URL(r.url), html)) throw new SessionExpiredError('tips session expired');
     if (r.status >= 400) throw new Error(`TIPS ${r.status} for file`);
-    return { type: r.type, disposition: r.disposition, bytes: Buffer.from(r.b64, 'base64') };
+    return { type: r.type, disposition: r.disposition, bytes };
+  };
+  return serial(async () => {
+    try { return await fetchOnce(); }
+    catch (e) {
+      if (!(e instanceof SessionExpiredError)) throw e;
+      await reauthenticate();
+      setSessionLocale(null);
+      return fetchOnce();
+    }
   });
 }
 
