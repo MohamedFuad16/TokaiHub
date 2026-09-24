@@ -123,6 +123,12 @@ app.post('/tips-api/auth/unlock', async (req, res) => {
   try { res.json(await auth.unlock(req.body?.response)); } catch (e) { authError(res, e); }
 });
 
+// Listed from any unlocked device (and the Mac). Removing the device you are on locks it.
+app.get('/tips-api/auth/devices', (req, res) => res.json(auth.listDevices(req.headers.authorization)));
+app.post('/tips-api/auth/devices/remove', (req, res) => {
+  try { auth.removeDevice(req.body?.id); res.json(auth.listDevices(req.headers.authorization)); } catch (e) { authError(res, e); }
+});
+
 // ── TIPS data ──────────────────────────────────────────────────────────────────────────────
 // Feature routes live in routes.ts and are re-imported on every request in dev, so parser
 // edits apply without restarting the bridge (a restart would drop the in-memory session).

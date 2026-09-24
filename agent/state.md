@@ -4,15 +4,29 @@
 
 ## Current state summary
 TIPS wrapper PWA (React+TS+Vite+Tailwind), one owner (HUB_OWNER_ID). Frontend on Vercel at
-tokaihub.mohamedfuad.com (project tokai-hub-ng5h, deploys `main`; branch `tips-wrapper` is
-NOT merged yet, so the live site still shows the old Cognito app). Bridge (`server/`) runs on
+tokaihub.mohamedfuad.com (project tokai-hub-ng5h, deploys `main`; `main` = 57063fc, live
+since 2026-09-24). Bridge (`server/`) runs on
 the owner's Mac Mini under launchd (`scripts/hub.sh`): local listener 8791, public listener
 8792 behind Cloudflare tunnel tokaihub-api.mohamedfuad.com, passkey unlock, TIPS session
 sealed on disk. DNS for mohamedfuad.com on Cloudflare since 2026-09-24 (registrar IONOS).
-Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), merge + deploy,
-real-device passkey test. No automated tests beyond the passkey/access probes noted below.
+Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), real-device
+passkey test. No automated tests beyond the passkey/access probes noted below.
 
 ## Recent changes
+- **2026-09-24 (eighth pass) — passkey device list** (by: Claude). Owner signed in on the Mac
+  and enrolled a Mac passkey; Settings had no device list, only a stale count. Added
+  GET /tips-api/auth/devices and POST /auth/devices/remove (token required on 8792), lastUsedAt,
+  readable labels ("Mac · Chrome"), and a Devices list in Settings that polls while a setup code
+  is shown. Verified: sealed TIPS session survived a bridge restart (status signed_in, account
+  4CJE1108); devices endpoint 401 without token on 8792; list renders on the Mac.
+- **2026-09-24 (seventh pass) — merged and deployed** (by: Claude, on the owner's instruction).
+  `main` fast-forwarded to 57063fc and pushed; Vercel deployment dpl_6PwW7bfJmRvN7DBYcNmGoammJVuX
+  READY. A clean build of 57063fc matches the served files byte for byte (8/8, incl.
+  index.html). tokaihub-api.mohamedfuad.com answers through the tunnel (health 200, status 401
+  locked, CORS only for the app). After the nameserver switch, public resolvers return the same
+  values for all hosts, MX, SPF and DKIM; portfolio/brain/portal 200, apex and www 307 as before.
+  Note: Vercel's Security Checkpoint answers 403 to curl on tokaihub.mohamedfuad.com; browsers
+  pass it.
 - **2026-09-24 (sixth pass) — DNS for mohamedfuad.com moved to Cloudflare** (by: Claude, on the
   owner's instruction). Registrar stays IONOS. Cloudflare zone f65f7dc7… (free plan) holds the
   19 IONOS records, all DNS only, imported from a BIND file and checked name by name against

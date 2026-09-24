@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut,
-  Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone,
+  Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound,
 } from 'lucide-react';
-import { IS_LOCAL, createSetupCode } from '../lib/api';
+import { IS_LOCAL, createSetupCode, listDevices, removeDevice, type HubDevice } from '../lib/api';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -25,7 +25,14 @@ const t = {
     clearAndLogout: IS_LOCAL ? 'Log out and clear cached data' : 'Lock and clear data on this device',
     staysSignedIn: 'Stays signed in on your Mac',
     addPhone: 'Add a device',
-    addPhoneSub: (n: number) => `${n} passkey${n === 1 ? '' : 's'} set up. On the phone or MacBook, open tokaihub.mohamedfuad.com, choose "Set up this device" and enter:`,
+    addPhoneSub: 'On the phone or MacBook, open tokaihub.mohamedfuad.com, choose "Set up this device" and enter:',
+    devices: 'Devices with a passkey',
+    noDevices: 'No devices yet.',
+    thisDevice: 'This device',
+    added: 'Added',
+    lastUsed: 'last used',
+    remove: 'Remove',
+    confirmRemove: 'Remove?',
     codeValid: 'Valid for 10 minutes, once.',
     enhancedUI: 'Enhanced UI',
     enhancedUISub: 'Enable enhanced animations and visual upgrades',
@@ -61,7 +68,14 @@ const t = {
     clearAndLogout: IS_LOCAL ? 'ログアウトしてキャッシュを削除' : 'ロックしてこの端末のデータを削除',
     staysSignedIn: 'Macでサインインしたままです',
     addPhone: '端末を追加',
-    addPhoneSub: (n: number) => `パスキー登録済み: ${n}件。スマホやMacBookでtokaihub.mohamedfuad.comを開き「この端末を設定」を選んで入力：`,
+    addPhoneSub: 'スマホやMacBookでtokaihub.mohamedfuad.comを開き「この端末を設定」を選んで入力：',
+    devices: 'パスキー登録済みの端末',
+    noDevices: 'まだ端末はありません。',
+    thisDevice: 'この端末',
+    added: '追加',
+    lastUsed: '最終使用',
+    remove: '削除',
+    confirmRemove: '削除しますか？',
     codeValid: '10分間、1回だけ有効です。',
     enhancedUI: '強化UI',
     enhancedUISub: '拡張アニメーションとビジュアルアップグレードを有効化',
@@ -131,6 +145,69 @@ const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel, isDark }: T
 
 type SettingsProps = ScreenProps;
 
+// ─── Passkey devices ──────────────────────────────────────────────────────────
+
+function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewDevice }: {
+  lang: 'en' | 'jp'; isDark: boolean; tx: typeof t['en']; borderClass: string; textMuted: string;
+  /** A setup code is on screen: poll so the new device shows up as soon as it registers. */
+  watching: boolean; onNewDevice: () => void;
+}) {
+  const [devices, setDevices] = useState<HubDevice[] | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    let count = -1;
+    const load = () => listDevices().then(d => {
+      if (!alive) return;
+      if (count >= 0 && d.length > count) onNewDevice();
+      count = d.length;
+      setDevices(d);
+    }).catch(() => {});
+    load();
+    const id = watching ? setInterval(load, 3000) : undefined;
+    return () => { alive = false; if (id) clearInterval(id); };
+  }, [watching, onNewDevice]);
+
+  const date = (iso: string) => new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short', day: 'numeric' });
+  const phone = (label: string) => /iPhone|Android/.test(label);
+
+  return (
+    <div className={`mt-4 pt-4 border-t ${borderClass}`}>
+      <div className="flex items-center gap-2 mb-2 text-xs font-bold"><KeyRound className="w-3.5 h-3.5 text-brand-yellow" />{tx.devices}</div>
+      {devices?.length === 0 && <p className={`text-xs font-medium ${textMuted}`}>{tx.noDevices}</p>}
+      <div className="space-y-1.5">
+        {devices?.map(d => (
+          <div key={d.id} className={`flex items-center gap-3 p-2.5 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+            {phone(d.label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold truncate flex items-center gap-2">
+                {d.label}
+                {d.current && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
+              </div>
+              <div className={`text-[11px] font-medium ${textMuted}`}>
+                {tx.added} {date(d.createdAt)}{d.lastUsedAt ? ` · ${tx.lastUsed} ${date(d.lastUsedAt)}` : ''}
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                if (confirming !== d.id) { setConfirming(d.id); return; }
+                setConfirming(null);
+                try { setDevices(await removeDevice(d.id)); } catch { /* removing this device locks it */ }
+              }}
+              onBlur={() => setConfirming(c => (c === d.id ? null : c))}
+              aria-label={`${tx.remove} ${d.label}`}
+              className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${confirming === d.id ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`}
+            >
+              {confirming === d.id ? tx.confirmRemove : <Trash2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TokaiSettings({
@@ -139,6 +216,7 @@ export default function TokaiSettings({
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
   const [setupCode, setSetupCode] = useState<string | null>(null);
+  const clearSetupCode = useCallback(() => setSetupCode(null), []);
 
   // Derived theme tokens
   const bgClass   = isDark ? 'bg-gray-800' : 'bg-brand-gray';
@@ -327,6 +405,9 @@ export default function TokaiSettings({
                 </button>
               ))}
             </div>}
+            {(!IS_LOCAL || session?.ownerId) && (
+              <DeviceList lang={lang} isDark={isDark} tx={tx} borderClass={borderClass} textMuted={textMuted} watching={Boolean(setupCode && !setupCode.startsWith('! '))} onNewDevice={clearSetupCode} />
+            )}
             {IS_LOCAL && session?.ownerId && (
               <div className={`mt-4 pt-4 border-t ${borderClass}`}>
                 <button
@@ -339,7 +420,7 @@ export default function TokaiSettings({
                   ? <p className="mt-3 text-xs font-bold text-red-500">{setupCode.slice(2)}</p>
                   : (
                     <div className="mt-3 text-xs font-medium">
-                      <p className={textMuted}>{tx.addPhoneSub(session.devices ?? 0)}</p>
+                      <p className={textMuted}>{tx.addPhoneSub}</p>
                       <p className="my-2 text-center text-2xl font-black tracking-[0.3em]">{setupCode}</p>
                       <p className={textMuted}>{tx.codeValid}</p>
                     </div>

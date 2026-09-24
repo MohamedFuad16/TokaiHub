@@ -62,6 +62,21 @@ export async function unlockWithPasskey() {
   setDeviceToken(token);
 }
 
+export interface HubDevice { id: string; label: string; createdAt: string; lastUsedAt: string | null; current: boolean }
+export const listDevices = () => call<HubDevice[]>('/auth/devices', { timeoutMs: 10_000 });
+/** Forgets a passkey. Removing the device you are on locks it. */
+export const removeDevice = (id: string) => call<HubDevice[]>('/auth/devices/remove', { method: 'POST', body: JSON.stringify({ id }), timeoutMs: 10_000 });
+
+/** A readable name for this device, e.g. "iPhone · Safari" or "Mac · Chrome". */
+export function deviceLabel() {
+  const ua = navigator.userAgent;
+  const touchMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  const platform = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) || touchMac ? 'iPad' : /Android/.test(ua) ? 'Android'
+    : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Device';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
+  return browser ? `${platform} · ${browser}` : platform;
+}
+
 /** Adds this device's passkey using a setup code shown on the Mac, then unlocks. */
 export async function registerPasskey(code: string, label: string) {
   const options = await call<any>('/auth/register/options', { method: 'POST', body: JSON.stringify({ code }), timeoutMs: 15_000 });

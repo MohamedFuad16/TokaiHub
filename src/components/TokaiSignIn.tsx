@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Loader2, Terminal, RefreshCw, ShieldCheck, ScanFace, Laptop, KeyRound } from 'lucide-react';
 import { Language, AppSettings } from '../App';
-import { signIn, unlockWithPasskey, registerPasskey } from '../lib/api';
+import { signIn, unlockWithPasskey, registerPasskey, deviceLabel } from '../lib/api';
 import type { TipsStatus } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotCover from '../assets/mascots/mascot_2_2.png';
@@ -238,7 +238,7 @@ export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastE
     setError('');
     setWaiting(true);
     try {
-      if (setup) await registerPasskey(code.trim(), navigator.userAgent.match(/\(([^;)]+)/)?.[1] ?? 'device');
+      if (setup) await registerPasskey(code.trim(), deviceLabel());
       else await unlockWithPasskey();
       onUnlocked();
     } catch (e) {

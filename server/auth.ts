@@ -28,7 +28,7 @@ const FILE = path.join(os.homedir(), '.tokaihub', 'owner.json');
 const TOKEN_DAYS = 30;
 const CODE_MINUTES = 10;
 
-interface Credential { id: string; publicKey: string; counter: number; transports?: AuthenticatorTransportFuture[]; label: string; createdAt: string }
+interface Credential { id: string; publicKey: string; counter: number; transports?: AuthenticatorTransportFuture[]; label: string; createdAt: string; lastUsedAt?: string }
 interface Token { hash: string; credentialId: string; expiresAt: number }
 interface Store { ownerId: string; credentials: Credential[]; tokens: Token[] }
 
@@ -125,6 +125,7 @@ export async function unlock(response: any) {
   });
   if (!v.verified) throw httpError(403, 'passkey not verified');
   cred.counter = v.authenticationInfo.newCounter;
+  cred.lastUsedAt = new Date().toISOString();
   return issueToken(cred.id);
 }
 
@@ -156,6 +157,26 @@ export function revokeToken(header: string | undefined) {
   const token = header?.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) return;
   store.tokens = store.tokens.filter(t => t.hash !== sha(token));
+  save();
+}
+
+const tokenOf = (header: string | undefined) => {
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : '';
+  return token ? store.tokens.find(t => t.hash === sha(token)) : undefined;
+};
+
+/** Enrolled passkeys for the Settings screen; `current` marks the device making the request. */
+export function listDevices(header: string | undefined) {
+  const current = tokenOf(header)?.credentialId;
+  return store.credentials.map(c => ({ id: c.id, label: c.label, createdAt: c.createdAt, lastUsedAt: c.lastUsedAt ?? null, current: c.id === current }));
+}
+
+/** Forgets one passkey and signs out every device token it issued. */
+export function removeDevice(id: unknown) {
+  const before = store.credentials.length;
+  store.credentials = store.credentials.filter(c => c.id !== id);
+  if (store.credentials.length === before) throw httpError(404, 'unknown device');
+  store.tokens = store.tokens.filter(t => t.credentialId !== id);
   save();
 }
 
