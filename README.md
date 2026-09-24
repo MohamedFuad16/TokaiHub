@@ -1,75 +1,141 @@
 <div align="center">
-<img width="192" height="192" alt="TokaiHub Logo" src="https://MohamedFuad16.github.io/TokaiHub/icons/icon-512x512.png?v=2" />
+<img width="160" height="160" alt="TokaiHub logo" src="public/icons/icon-512x512.png" />
 
 # TokaiHub
-**The modern, central student portal for Tokai University.**
 
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![AWS Amplify](https://img.shields.io/badge/AWS_Amplify-FF9900?style=for-the-badge&logo=aws-amplify&logoColor=white)](https://aws.amazon.com/amplify/)
-[![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
+**One place on a phone for the university things a Tokai University student checks every week.**
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-mohamedfuad16.github.io/TokaiHub-2EA44F?style=for-the-badge&logo=github&logoColor=white)](https://mohamedfuad16.github.io/TokaiHub/)
+[![Live App](https://img.shields.io/badge/Live-tokaihub.mohamedfuad.com-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://tokaihub.mohamedfuad.com/)
+[![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
+[![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://tokaihub.mohamedfuad.com/)
+
+<img src="docs/screenshots/unlock.jpg" alt="TokaiHub unlock screen with the passkey button" width="100%" />
 
 </div>
 
 ---
 
-## 📖 Overview
+## Overview
 
-**TokaiHub** is engineered to consolidate academic workflows, course tracking, and campus networking into a single, beautifully animated application. Built entirely as a modern Progressive Web App (PWA), TokaiHub feels like a native mobile app but runs directly from the browser with zero installations required.
+TokaiHub is an installable React PWA in English and Japanese that puts a Tokai
+University student's weekly tasks on one phone screen: timetable, courses and
+syllabi, grades and credits, attendance, reports and exams, and notices.
 
-**🔗 Live:** <https://mohamedfuad16.github.io/TokaiHub/>
+**Live:** <https://tokaihub.mohamedfuad.com/>
 
-## 🏗️ Architecture & Security
+The data comes from TIPS, the university's own portal (tips.u-tokai.ac.jp). TIPS
+has no JSON API; every screen is server-rendered HTML. TokaiHub therefore runs a
+small bridge server that signs in to TIPS the way a browser does, parses the
+pages, and serves typed JSON to the app. The hosted instance opens for one
+student only (the owner) and is unlocked with a passkey saved on the device.
 
-We built TokaiHub to meet modern high-availability standards leveraging **Amazon Web Services (AWS)** securely from the edge.
+## Features
 
-### Unique Auth Mechanism (Cognito)
-We completely bypassed the standard AWS Cognito Hosted UI redirect pages to maintain our sleek, native user experience. 
+- **Home and timetable**: today's classes and a weekly timetable for the active
+  term, falling back to the other term when the current one has no courses.
+- **Course pages**: the full syllabus grouped as TIPS groups it, attached files,
+  and one grading panel for every course (weights, grade scale, attendance
+  conditions).
+- **Grades and credits**: credits earned and credits still needed to graduate.
+- **Registration planner**: a "Credits to graduate" panel that subtracts planned
+  courses by graduation category.
+- **Attendance, reports and exams, notices and the file cabinet**, each read
+  from TIPS.
+- **Syllabus search** across the catalog.
+- **Passkey unlock**: the hosted app talks to the bridge only with the owner's
+  device token.
+- **English or Japanese, in a light or a dark theme.**
 
-Through `aws-amplify`, our custom authentication engine interacts intelligently with the backend:
-- **Student ID Identity:** Under the hood, the raw `studentId` (e.g. `4CJE1108`) is strictly deployed as the primary Cognito string `username`, virtually eliminating any collision attacks.
-- **Email Alias Integration:** We use AWS's `Email Alias` configuration, meaning students organically log in via `email` and `password`. AWS Cognito natively maps the alias immediately back to the student ID on the backend seamlessly.
+## How It Works
 
-## ✨ Current Progress (What's Done)
+```
+React PWA (Vite)
+  └─ /tips-api ──▶ bridge: server/index.ts (Express)
+                     ├─ tips/session.ts  Microsoft sign-in in a real browser window
+                     │                   (Playwright), session kept by the bridge
+                     ├─ tips/client.ts   drives TIPS pages inside headless Chromium,
+                     │                   one request at a time
+                     ├─ tips/parse/*.ts  HTML → typed JSON (cheerio)
+                     └─ tips/cache.ts    encrypted cache, so screens paint cached data first
+```
 
-- [x] **PWA Foundation & Theming:** Mobile responsive, deeply integrated Tailwind styling, Dark/Light modes, and bilingual support (EN/JP).
-- [x] **Interactive Onboarding UI:** A sleek, multi-step campus, course, and GPA collection wizard heavily polished with layout animations (`motion/react`).
-- [x] **Custom Auth Workflows:** Replaced traditional AWS hosted websites with completely custom Login forms natively integrated with `aws-amplify`.
-- [x] **Cognito OTP Integrations:** Registration dispatches SES-backed OTP verification codes, prompting an interactive step 3 "Check your email" loop entirely constructed from scratch inside the app.
-- [x] **AWS Lambda Backend:** A serverless API layer of Lambda functions handles schedule fetching, dashboard aggregation, course browsing/detail, course enrollment, and profile updates, with Cognito `pre-signup` / `post-confirmation` and `custom-message` triggers wiring the auth lifecycle.
-- [x] **DynamoDB Persistence:** Student profiles, course catalog, enrollment, and schedule data are persisted in DynamoDB (single-table `userclass-entity` model) — replacing the earlier local stubbed state.
-- [x] **Admin Console:** A gated `/admin/database` view backed by an `admin-database` Lambda for inspecting and managing backend records.
-- [x] **Mascot Pre-wiring:** Custom Fox Mascot character ready and integrated (currently hidden, primed for future UI upgrades).
+- In development the bridge listens on `127.0.0.1:8791`, and the Vite dev server
+  proxies `/tips-api` to it for requests from the same machine only.
+- In hosted mode a second listener serves the public app. Every data request
+  needs the owner's device token, and the TIPS session must belong to
+  `HUB_OWNER_ID`.
+- Full page-by-page findings: [`docs/tips-integration.md`](docs/tips-integration.md).
 
-## 🚀 Roadmap (Pending Integrations)
+## Tech Stack
 
-Our cloud infrastructure expands further over the coming sprints. The following pipeline is pending:
-- [ ] **AWS S3 Cloud Storage:** Allowing users to upload assignments, avatar pictures, and class materials seamlessly.
-- [ ] **Route 53 DNS Configuration:** Migrating from `.github.io` to a protected production TLD namespace.
+| Layer | Technology |
+| ----- | ---------- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, Motion |
+| App shell | Installable PWA (web manifest and service worker) |
+| Bridge | Node.js, Express, Playwright (Chromium), cheerio |
+| Unlock | Passkeys via SimpleWebAuthn |
+| Testing | Vitest, `tsc`, ESLint |
+| Hosting | Vercel (frontend) |
+
+## Project Structure
+
+```
+src/
+  App.tsx          # Routes and app-wide settings
+  components/      # One file per screen (Tokai*) plus shared pieces
+  lib/             # Bridge client, TIPS adapters, grading and syllabus logic, tests
+server/
+  index.ts         # Bridge entry: local and public listeners
+  auth.ts          # Passkey unlock and device tokens
+  tips/            # TIPS session, client, parsers and cache
+public/            # Manifest, service worker, icons, fonts
+scripts/hub.sh     # Start, stop and inspect the hosted bridge
+lambdas/           # Earlier AWS backend, no longer called by the app
+docs/              # TIPS findings, screenshots
+```
+
+## Getting Started
+
+**Prerequisites:** Node.js 22.12 or later (Vitest 5 and ESLint 10 need it) and a
+Tokai University TIPS account.
+
+```bash
+npm install
+npx playwright install chromium   # the bridge signs in through Chromium
+
+npm run bridge   # terminal 1: TIPS bridge on http://127.0.0.1:8791
+npm run dev      # terminal 2: app on http://localhost:3000
+```
+
+Sign in with Microsoft from the app; the bridge opens a separate Chromium window
+for the university login. Bridge settings (`TIPS_BRIDGE_PORT`,
+`TIPS_HUB_SESSION_MINUTES` and the hosted-mode variables) are documented in
+`.env.example`.
+
+```bash
+npm test         # Vitest (pure logic and parsers on synthetic HTML)
+npm run lint     # tsc --noEmit
+npm run eslint   # ESLint
+npm run build    # production build into build/
+```
+
+## Deployment
+
+- **Frontend:** Vercel builds `main` into `build/` and serves
+  `tokaihub.mohamedfuad.com`. `.env.production` sets the bridge URL.
+- **Bridge:** runs on the owner's own machine, managed by `scripts/hub.sh`.
+
+## History
+
+Before September 2026, TokaiHub ran on a serverless AWS backend: Cognito sign-in
+with custom forms, API Gateway, Lambda functions and a DynamoDB table. The app
+switched to reading TIPS directly, and the Lambda sources stay in `lambdas/` for
+reference only.
 
 ---
 
-## 🛠️ Local Development
-
-Getting the app running locally is straight-forward.
-
-**Prerequisites:** 
-- Node.js (`v18.0.0+`)
-- AWS CLI (If actively pushing Amplify config changes)
-
-1. **Clone & Install Dependencies**
-```bash
-npm install
-```
-
-2. **Environment Variables**
-Local development needs no keys. Hosting settings are described in `.env.example`.
-
-3. **Boot the Dev Server**
-```bash
-npm run dev
-```
-
-> **Note**: For bypassing AWS Auth requirements locally during rapid UI developments, flip `settings.devSkipAuth = true` inside your App environment flags.
+<div align="center">
+Built by <a href="https://github.com/MohamedFuad16">Mohamed Fuad</a> · <a href="https://www.mohamedfuad.com">mohamedfuad.com</a>
+</div>
