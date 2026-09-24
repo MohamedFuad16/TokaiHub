@@ -190,7 +190,8 @@ export default function TokaiCourse(props: ScreenProps) {
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18, ease: EASE }}>
               {tab === 'overview' && syl && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                // items-start: the summary card keeps its own height instead of stretching to the side column.
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                   <Card isDark={isDark} className="p-5 sm:p-6 lg:col-span-2">
                     <h3 className="font-bold mb-3">{tx.summary}</h3>
                     <Expandable text={section('科目の要旨・概要') || tx.notListed} {...exp} />

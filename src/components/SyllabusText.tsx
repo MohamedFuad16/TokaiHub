@@ -40,7 +40,7 @@ export function GradingChart({ parts, isDark, lang }: { parts: { label: string; 
   });
   const shown = active ?? null;
   return (
-    <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center gap-5">
+    <div className="flex flex-col items-center gap-4">
       <div className="relative w-40 h-40 shrink-0">
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" role="img" aria-label={parts.map(p => `${p.label} ${p.pct}%`).join(', ')}>
           <circle cx="50" cy="50" r={R} fill="none" strokeWidth="14" className={isDark ? 'stroke-gray-700' : 'stroke-gray-200'} />
@@ -70,7 +70,8 @@ export function GradingChart({ parts, isDark, lang }: { parts: { label: string; 
             <button onPointerEnter={() => setActive(i)} onPointerLeave={() => setActive(null)} onClick={() => setActive(v => (v === i ? null : i))}
               className={`w-full min-h-10 flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors ${active === i ? (isDark ? 'bg-gray-700' : 'bg-white shadow-sm') : ''}`}>
               <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-              <span className="flex-1 min-w-0 text-sm font-semibold leading-snug break-words">{p.label}</span>
+              {/* keep-all: Japanese labels wrap between words, never inside 中間試験. */}
+              <span className="flex-1 min-w-0 text-sm font-semibold leading-snug [word-break:keep-all] [overflow-wrap:anywhere]">{p.label}</span>
               <span className="text-sm font-bold tabular-nums">{p.pct}%</span>
             </button>
           </li>
