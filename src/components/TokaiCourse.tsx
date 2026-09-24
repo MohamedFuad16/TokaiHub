@@ -7,9 +7,10 @@ import PageShell, { Card, Loading, LoadError, Empty, Skeleton, SectionTitle, EAS
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
 import { academicYearOf, slotLabel, tidy } from '../lib/tipsAdapters';
-import { RichText, GradingChart, FileLink } from './SyllabusText';
+import { RichText, FileLink } from './SyllabusText';
+import GradingPanel from './GradingPanel';
 import { SectionChip } from './CreditsNeeded';
-import { gradingWeights, withoutWeightLines, pickLang } from '../lib/syllabusText';
+import { pickLang } from '../lib/syllabusText';
 import { useCourseCategories } from '../lib/courseCategories';
 import type { AttendanceStatus, TipsAttendanceCourse, TipsSyllabus } from '../lib/types';
 
@@ -20,7 +21,7 @@ const t = {
     keywords: 'Keywords', instructors: 'Instructors', rate: 'Attendance rate', attended: 'Attended', absent: 'Absent', other: 'Other',
     noAttendance: 'No attendance record for this course in the selected term.', noSyllabus: 'The syllabus for this course is not available on TIPS.',
     loading: 'Loading from TIPS…', jpOnly: 'The instructor published this syllabus in Japanese only.', prep: 'Preparation & review', method: 'Method',
-    more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.', files: 'Attached files',
+    more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.', files: 'Attached files', gradingText: 'Syllabus wording',
     materials: 'Materials and notes', otherGroup: 'Other details',
     legend: { present: 'Present', absent: 'Absent', notice: 'Notice of absence', accommodation: 'Accommodation', cancelled: 'Cancelled', unrecorded: 'Not recorded', late: 'Late', early: 'Left early', other: 'Other' },
   },
@@ -30,7 +31,7 @@ const t = {
     keywords: 'キーワード', instructors: '担当教員', rate: '出席率', attended: '出席', absent: '欠席', other: 'その他',
     noAttendance: '選択中の学期にこの科目の出欠記録はありません。', noSyllabus: 'この科目のシラバスはTIPSにありません。',
     loading: 'TIPSから読み込み中…', jpOnly: '', prep: '予習・復習', method: '学習方法',
-    more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。', files: '添付ファイル',
+    more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。', files: '添付ファイル', gradingText: 'シラバスの記載',
     materials: '教材・履修上の注意', otherGroup: 'その他の項目',
     legend: { present: '出席', absent: '欠席', notice: '欠席届', accommodation: '合理的配慮', cancelled: '休講', unrecorded: '未登録', late: '遅刻', early: '早退', other: 'その他' },
   },
@@ -156,7 +157,6 @@ export default function TokaiCourse(props: ScreenProps) {
   const exp = { isDark, more: tx.more, less: tx.less };
   const gradingSection = syl?.sections.find(s => s.label.jp === '成績評価の基準・方法');
   const gradingText = gradingSection?.value;
-  const weights = useMemo(() => (gradingText ? gradingWeights(gradingText) : null), [gradingText]);
   const grad = useCourseCategories();
   const cat = grad.sectionFor(course?.title.jp) ?? grad.sectionFor(syl?.title.jp) ?? grad.sectionFor(syl?.title.en) ?? grad.sectionFor(course?.title.en);
 
@@ -238,9 +238,20 @@ export default function TokaiCourse(props: ScreenProps) {
                   <div className="space-y-4">
                     <Card isDark={isDark} className="p-5">
                       <h3 className="font-bold mb-3">{tx.grading}</h3>
-                      {weights && <div className="mb-4"><GradingChart parts={weights} isDark={isDark} lang={lang} /></div>}
-                      {(() => { const rest = weights && gradingText ? withoutWeightLines(gradingText) : gradingText; return rest || !weights ? <Expandable text={rest || tx.notListed} size={weights ? 'text-[13px]' : undefined} {...exp} /> : null; })()}
-                      <Files files={gradingSection?.files} syl={syl} isDark={isDark} label={tx.files} />
+                      {gradingText ? (
+                        <GradingPanel text={gradingText} lang={lang} isDark={isDark} attendance={record ? { attended: record.attended, absent: record.absent } : null}
+                          after={(
+                            <>
+                              <Files files={gradingSection?.files} syl={syl} isDark={isDark} label={tx.files} />
+                              <details className="group">
+                                <summary className={`min-h-10 flex items-center gap-1.5 text-xs font-bold cursor-pointer list-none ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
+                                  <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />{tx.gradingText}
+                                </summary>
+                                <div className="mt-1"><RichText text={gradingText} isDark={isDark} size="text-[13px]" /></div>
+                              </details>
+                            </>
+                          )} />
+                      ) : <p className={`text-sm ${muted}`}>{tx.notListed}</p>}
                     </Card>
                     {keywords.length > 0 && (
                       <Card isDark={isDark} className="p-5">

@@ -103,16 +103,34 @@ export function pickLang(value: string, lang: 'en' | 'jp'): string {
  * Returns null unless the parts add up to about 100%, so conditions such as "80% attendance or
  * more" are not drawn as if they were weights.
  */
+// Segments that state a grade band or a condition, not a weight ("90%以上でS", "出席率が66%以下").
+const NOT_A_WEIGHT = /以上|以下|未満|超|[〜~～]|出席|欠席|attend|absen|\d\s*[%％]\s*[:：]\s*[SABCDE]\b/i;
+const NUMBERING = /^\s*(?:\d{1,2}[\s.)）]\s*|[(（]\d{1,2}[)）]\s*|[①-⑳]\s*|[・•*\-–]\s*)/;
+
 export function gradingWeights(text: string): { label: string; pct: number }[] | null {
   const parts: { label: string; pct: number }[] = [];
-  for (const seg of text.split(/[\n・、，,;；/／]|(?<=[%％)）])\s*(?:と|及び|および|and|\+)\s*/)) {
-    const re = /([^%％\d]*?)[\s:：(（=＝]*(\d{1,3}(?:\.\d+)?)\s*[%％]\s*[)）]?/g;
+  const re = /([^%％\d]*?)[\s:：(（=＝]*(\d{1,3}(?:\.\d+)?)\s*[%％]\s*[)）]?/g;
+  const clean = (l: string) => l.replace(/^[\s・•*\-–:：、,とおよび及び]+|[\s:：(（=＝、,]+$/g, '').replace(/^(?:and|&)\s+/i, '').trim();
+  const take = (seg: string) => {
+    if (NOT_A_WEIGHT.test(seg)) return;
     let m: RegExpExecArray | null;
+    re.lastIndex = 0;
     while ((m = re.exec(seg))) {
-      const label = m[1].replace(/^[\s・•*\-–:：、,とおよび及び]+|[\s:：(（=＝]+$/g, '').replace(/^(?:and|&)\s+/i, '').trim();
+      const label = clean(m[1]);
       const pct = Number(m[2]);
       if (label && label.length <= 40 && pct > 0 && pct <= 100) parts.push({ label, pct });
     }
+  };
+  for (const line of text.split('\n')) {
+    const count = (line.match(/\d\s*[%％]/g) ?? []).length;
+    // A line with one weight is one component, even if its description contains commas
+    // ("1 グループワークに参加し、他者と関係を築く(50%)").
+    if (count === 1 && !NOT_A_WEIGHT.test(line)) {
+      const m = /^(.*?)[\s:：(（=＝]*(\d{1,3}(?:\.\d+)?)\s*[%％]\s*[)）]?(.*)$/.exec(line.replace(NUMBERING, ''));
+      const label = m ? clean(m[1]) : '';
+      if (m && label && label.length <= 60 && Number(m[2]) > 0) { parts.push({ label, pct: Number(m[2]) }); continue; }
+    }
+    for (const seg of line.split(/[・、，,;；/／]|(?<=[%％)）])\s*(?:と|及び|および|and|\+)\s*/)) take(seg);
   }
   const sum = parts.reduce((a, p) => a + p.pct, 0);
   if (parts.length === 0 || sum < 95 || sum > 105) return null;

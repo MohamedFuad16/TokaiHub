@@ -14,6 +14,14 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-24 (thirteenth pass) — one grading panel for every course** (by: Claude). Owner
+  reported TTX060's grading still as plain text (no stated weights). New src/lib/grading.ts
+  (analyzeGrading: weights, single named component = 100%, named components without weights,
+  grade scale from ranges or thresholds, attendance/lateness/other conditions with numbers) and
+  src/components/GradingPanel.tsx (same-size ring for every mode, scale bar, condition rows with
+  the student's own attendance, files, syllabus wording folded). Weight parser keeps whole
+  numbered lines as labels and ignores bands and conditions. Checked against 20 real syllabi
+  (local only, not committed) and 10 synthetic unit tests; TTX060/TTX015/TTX005 viewed at 375px.
 - **2026-09-24 (twelfth pass) — unused dependencies removed** (by: Claude, owner's request).
   Removed @google/genai, dotenv, autoprefixer (no references) and the dead GEMINI_API_KEY
   define in vite.config.ts plus its docs. Kept jimp: scripts/remove_bg.{mjs,cjs} use it for
