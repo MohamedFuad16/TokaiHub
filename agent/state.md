@@ -14,6 +14,10 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-24 (twelfth pass) — unused dependencies removed** (by: Claude, owner's request).
+  Removed @google/genai, dotenv, autoprefixer (no references) and the dead GEMINI_API_KEY
+  define in vite.config.ts plus its docs. Kept jimp: scripts/remove_bg.{mjs,cjs} use it for
+  mascot images. React type definitions deliberately not added (owner: not now).
 - **2026-09-24 (twelfth pass) — syllabus completeness, links, error states, lint + tests;
   uncommitted** (by: Claude, UI/syllabus worker). Syllabus parser keeps each field's TIPS group
   (a label can sit in two groups: 地域志向 flag and content, the second was silently dropped),

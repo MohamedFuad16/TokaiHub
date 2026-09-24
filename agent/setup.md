@@ -26,7 +26,6 @@ lives only in the bridge's memory; restarting the bridge means signing in again.
 - `VITE_API_BASE_URL` — API Gateway base URL.
 - `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID`, `VITE_COGNITO_DOMAIN`,
   `VITE_OAUTH_REDIRECT_SIGN_IN`, `VITE_OAUTH_REDIRECT_SIGN_OUT` — Cognito/Amplify.
-- `GEMINI_API_KEY` — optional, asset/script tooling.
 
 ## Lambda deployment (manual!)
 Each `lambdas/*.mjs` documents its own console setup in its doc header: runtime

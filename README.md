@@ -65,11 +65,7 @@ npm install
 ```
 
 2. **Environment Variables**
-Ensure you have the required backend bindings (or simply skip dev auth in `App.tsx`)
-```bash
-# Add to .env.local if needed
-GEMINI_API_KEY=YOUR_KEY
-```
+Local development needs no keys. Hosting settings are described in `.env.example`.
 
 3. **Boot the Dev Server**
 ```bash
