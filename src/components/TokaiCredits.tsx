@@ -1,239 +1,189 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, GraduationCap, BookOpen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { GraduationCap, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ScreenProps } from '../App';
-import { allItems } from '../data';
-import { getDashboard } from '../lib/api';
-import type { CourseItem } from '../lib/types';
+import PageShell, { Card, SectionTitle, Pill, Loading, Fresh } from './ScreenHeader';
+import { useTips } from '../lib/useTips';
+import { pct, termLabel, tidy } from '../lib/tipsAdapters';
+import type { TipsGrades, TipsGraduation } from '../lib/types';
 
-const DAY_LABELS: Record<number, { en: string; jp: string }> = {
-  1: { en: 'Monday', jp: '月曜日' },
-  2: { en: 'Tuesday', jp: '火曜日' },
-  3: { en: 'Wednesday', jp: '水曜日' },
-  4: { en: 'Thursday', jp: '木曜日' },
-  5: { en: 'Friday', jp: '金曜日' },
+const t = {
+  en: {
+    title: 'Grades & Credits', asOf: (d: string) => `From TIPS, as of ${d}`, earned: 'Credits earned', more: (n: number) => `${n} more credits to graduate`,
+    done: 'Graduation credits complete', cumulative: 'Cumulative', rank: (r: number, c: number) => `Latest term rank: ${r} of ${c}`,
+    requirements: 'Graduation requirements', perTerm: 'Credits by semester', total: (n: number | null) => `total ${n ?? '—'}`,
+    grades: 'Course grades', all: 'All terms', passed: 'Passed', notPassed: 'Not passed', loading: 'Loading grades from TIPS…', cr: 'cr',
+  },
+  jp: {
+    title: '成績・単位', asOf: (d: string) => `TIPS ${d} 現在`, earned: '修得単位数', more: (n: number) => `卒業まであと${n}単位`,
+    done: '卒業単位を満たしています', cumulative: '通算', rank: (r: number, c: number) => `直近学期の順位：${c}人中${r}位`,
+    requirements: '卒業要件（自己判定）', perTerm: 'セメスター別修得単位', total: (n: number | null) => `累計 ${n ?? '—'}`,
+    grades: '科目別成績', all: 'すべての学期', passed: '合格', notPassed: '不合格', loading: 'TIPSから成績を読み込み中…', cr: '単位',
+  },
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
-};
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-};
+const GRADE_COLOR: Record<string, string> = { S: 'bg-brand-green', A: 'bg-brand-yellow', B: 'bg-blue-200', C: 'bg-orange-200', D: 'bg-brand-pink', E: 'bg-red-300' };
 
-export default function TokaiCredits({ lang, settings, userProfile }: ScreenProps) {
-  const navigate = useNavigate();
+export default function TokaiCredits(props: ScreenProps) {
+  const { lang, settings } = props;
+  const tx = t[lang];
   const isDark = settings.isDarkMode;
+  const muted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const grades = useTips<TipsGrades>('grades');
+  const graduation = useTips<TipsGraduation>('graduation');
+  const [termFilter, setTermFilter] = useState<string>('all');
 
-  // Start empty — fetch from same getDashboard source as TokaiHome
-  const [catalogCourses, setCatalogCourses] = useState<CourseItem[]>([]);
+  const g = grades.data;
+  const grad = graduation.data;
+  const earned = grad?.total?.earned ?? g?.totalEarned ?? 0;
+  const required = grad?.total?.required ?? null;
+  const shortfall = grad?.total?.shortfall ?? null;
+  const last = g?.gpa[g.gpa.length - 1];
 
-  useEffect(() => {
-    const controller = new AbortController();
-    getDashboard(controller.signal)
-      .then(data => {
-        if (!data.courses?.length) return;
-        const enrolledIds = data.enrolledCourseIds ?? [];
-        console.log('📊 TokaiCredits — enrolled:', enrolledIds, 'courses:', data.courses.length);
-
-        const merged = data.courses.map(apiCourse => {
-          const local = (allItems as CourseItem[]).find(
-            item => item.id === apiCourse.id || item.code === apiCourse.code
-          );
-          return {
-            ...(local ?? {}),
-            ...apiCourse,
-            id: apiCourse.id,
-            code: apiCourse.code,
-            // Prefer local metadata for display fields
-            color: local?.color ?? apiCourse.color,
-            credits: apiCourse.credits ?? local?.credits ?? 0,
-            dayOfWeek: (apiCourse.dayOfWeek !== undefined && apiCourse.dayOfWeek !== null) ? apiCourse.dayOfWeek : local?.dayOfWeek,
-            periods: (Array.isArray(apiCourse.periods) && apiCourse.periods.length > 0) ? apiCourse.periods : local?.periods,
-            time: apiCourse.time || local?.time,
-            title: typeof apiCourse.title === 'string'
-              ? { en: apiCourse.title, jp: local?.title?.jp ?? apiCourse.title }
-              : (apiCourse.title ?? local?.title ?? { en: '', jp: '' }),
-          } as CourseItem;
-        });
-        setCatalogCourses(merged);
-      })
-      .catch(err => { if (err?.name !== 'AbortError') console.error('Credits fetch error:', err); });
-    return () => controller.abort();
-  }, []);
-
-  const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-  const selectedCourses = useMemo(() =>
-    catalogCourses.filter(item =>
-      selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? '')
-    ).sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0)),
-    [catalogCourses, selectedCourseIds]
-  );
-
-  const totalCredits = selectedCourses.reduce((acc, c) => acc + (c.credits ?? 0), 0);
-  const maxCredits = 20;
-  const progress = Math.min((totalCredits / maxCredits) * 100, 100);
-
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
-  const borderClass = isDark ? 'border-gray-800' : 'border-gray-100';
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-gray-50';
+  // Term keys ("2026-1") newest first, labelled in the UI language.
+  const terms = useMemo(() => {
+    const keys = [...new Set((g?.courses ?? []).map(c => `${c.year}-${c.term}`))].sort().reverse();
+    return keys.map(k => { const [y, tm] = k.split('-'); return { key: k, label: termLabel(tm as '1' | '2', Number(y), lang) }; });
+  }, [g, lang]);
+  const visible = useMemo(() => (g?.courses ?? []).filter(c => termFilter === 'all' || `${c.year}-${c.term}` === termFilter), [g, termFilter]);
+  const grouped = useMemo(() => terms.map(tm => ({ ...tm, courses: visible.filter(c => `${c.year}-${c.term}` === tm.key) })).filter(x => x.courses.length), [terms, visible]);
 
   return (
-    <div className={`h-full flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
-      {/* Header */}
-      <header
-        style={{ paddingTop: 'calc(2.5rem + env(safe-area-inset-top, 0px))' }}
-        className={`px-4 sm:px-6 pb-4 shrink-0 border-b ${borderClass} flex items-center gap-4`}
-      >
-        <button
-          onClick={() => navigate(-1)}
-          className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="font-bold text-xl tracking-tight">
-            {lang === 'en' ? 'Course Credits' : '履修単位数'}
-          </h1>
-          <p className={`text-xs font-medium ${textMuted}`}>
-            {lang === 'en' ? '5th Semester' : '5セメスター'}
-          </p>
-        </div>
-      </header>
-
-      {/* Scrollable content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="px-4 sm:px-6 pb-12 pt-6 space-y-5"
-        >
-          {/* Summary card */}
-          <motion.div
-            variants={itemVariants}
-            className={`relative overflow-hidden rounded-3xl p-6 ${isDark ? 'bg-brand-black' : 'bg-brand-black'}`}
-          >
-            <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-brand-yellow/10 pointer-events-none" />
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">
-                  {lang === 'en' ? 'Total Credits' : '合計単位数'}
-                </p>
-                <div className="flex items-end gap-2">
-                  <span className="text-6xl font-bold text-white tracking-tight leading-none">{totalCredits}</span>
-                  <span className="text-gray-500 text-lg font-semibold mb-1">/ {maxCredits}</span>
+    <PageShell {...props} title={tx.title} subtitle={g?.asOf ? tx.asOf(g.asOf) : undefined} onRefresh={() => { grades.refresh(); graduation.refresh(); }} refreshing={grades.loading || graduation.loading}>
+      {!g && <Loading text={tx.loading} isDark={isDark} />}
+      {g && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="space-y-5">
+              {/* Credits toward graduation */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl p-6 bg-brand-black text-white">
+                <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-brand-yellow/10" />
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">{tx.earned}</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-6xl font-bold tracking-tight leading-none"><Fresh value={earned}>{earned}</Fresh></span>
+                      {required !== null && <span className="text-gray-500 text-lg font-semibold mb-1">/ {required}</span>}
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-brand-yellow/20 flex items-center justify-center"><GraduationCap className="w-6 h-6 text-brand-yellow" /></div>
                 </div>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-brand-yellow/20 flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-brand-yellow" />
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div className="h-2 rounded-full bg-white/10 mb-2">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-                className="h-full rounded-full bg-brand-yellow"
-              />
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-xs font-medium">
-                {selectedCourses.length} {lang === 'en' ? 'courses enrolled' : '科目履修中'}
-              </span>
-              <span className="text-gray-400 text-xs font-semibold">{Math.round(progress)}%</span>
-            </div>
-          </motion.div>
+                {required !== null && (
+                  <>
+                    <div className="h-2 rounded-full bg-white/10 mb-2">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(pct(earned, required), 100)}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="h-full rounded-full bg-brand-yellow" />
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400 font-medium">{shortfall && shortfall < 0 ? tx.more(Math.abs(shortfall)) : tx.done}</span>
+                      <span className="text-gray-400 font-semibold">{pct(earned, required)}%</span>
+                    </div>
+                  </>
+                )}
+              </motion.div>
 
-          {/* Course list */}
-          <motion.div variants={itemVariants}>
-            <h2 className={`text-xs font-bold uppercase tracking-widest mb-3 ${textMuted}`}>
-              {lang === 'en' ? 'Enrolled Courses' : '履修科目一覧'}
-            </h2>
-            {selectedCourses.length === 0 ? (
-              <div className={`rounded-3xl p-8 text-center ${cardBg}`}>
-                <BookOpen className={`w-10 h-10 mx-auto mb-3 ${textMuted}`} />
-                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === 'en' ? 'No courses selected' : '科目が選択されていません'}
-                </p>
-                <p className={`text-sm mt-1 ${textMuted}`}>
-                  {lang === 'en' ? 'Add courses in Edit Profile' : 'プロフィール編集で科目を追加してください'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {selectedCourses.map((course, i) => (
-                  <motion.div
-                    key={course.id}
-                    variants={itemVariants}
-                    onClick={() => navigate(`/course/${course.id}`)}
-                    className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
-                  >
-                    {/* Color dot */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${course.color ?? 'bg-brand-gray'}`}>
-                      <BookOpen className="w-4 h-4 text-brand-black/60" />
+              {/* GPA by term */}
+              <Card isDark={isDark} className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${muted}`}><TrendingUp className="w-4 h-4" />GPA</h3>
+                  {last && <span className="text-xs font-bold text-green-600 bg-green-500/10 px-2 py-1 rounded-lg">{tx.cumulative} {last.cumulativeGpa.toFixed(2)}</span>}
+                </div>
+                <div className="flex items-end gap-3 h-44">
+                  {g.gpa.map(x => (
+                    <div key={`${x.year}-${x.term}`} className="flex-1 flex flex-col items-center justify-end h-full gap-1.5 min-w-0">
+                      <span className="text-xs font-bold">{x.termGpa.toFixed(2)}</span>
+                      <motion.div initial={{ height: 0 }} animate={{ height: `${(x.termGpa / 4) * 100}%` }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="w-full max-w-[44px] rounded-xl bg-brand-yellow" />
+                      <span className={`text-[10px] font-bold truncate ${muted}`}>{termLabel(x.term, x.year, lang).replace(' Semester', '').replace('年度 ', '/')}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                        {lang === 'en' ? course.title.en : course.title.jp}
+                  ))}
+                </div>
+                {last?.rank && last.cohort && <p className={`text-xs font-medium mt-4 ${muted}`}>{tx.rank(last.rank, last.cohort)}</p>}
+              </Card>
+
+              {/* Credits per semester */}
+              {g.perTerm.length > 0 && (
+                <div>
+                  <SectionTitle>{tx.perTerm}</SectionTitle>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-3 xl:grid-cols-5 gap-2">
+                    {g.perTerm.map(x => (
+                      <Card key={x.label} isDark={isDark} className="p-3 text-center">
+                        <div className={`text-[10px] font-bold ${muted}`}>{x.label}</div>
+                        <div className="text-xl font-bold">{x.earned}</div>
+                        <div className={`text-[10px] font-semibold ${muted}`}>{tx.total(x.cumulative)}</div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Graduation requirements */}
+            {grad && (
+              <Card isDark={isDark} className="p-5 sm:p-6 self-start">
+                <h3 className={`text-xs font-bold uppercase tracking-widest mb-5 ${muted}`}>{tx.requirements}</h3>
+                <div className="space-y-5">
+                  {grad.groups.map(group => {
+                    const items = group.items.filter(i => (i.required ?? 0) > 0);
+                    if (!items.length) return null;
+                    return (
+                      <div key={group.section}>
+                        <div className="text-sm font-bold mb-2">{group.section}. {group.name}</div>
+                        <div className="space-y-3">
+                          {items.map(item => {
+                            const p = Math.min(pct(item.earned, item.required), 100);
+                            const done = (item.shortfall ?? 0) >= 0;
+                            return (
+                              <div key={item.name}>
+                                <div className="flex justify-between mb-1 gap-3">
+                                  <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{item.name}</span>
+                                  <span className={`text-xs font-bold shrink-0 ${done ? 'text-green-600' : ''}`}>{item.earned}/{item.required}</span>
+                                </div>
+                                <div className={`h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                  <motion.div initial={{ width: 0 }} animate={{ width: `${p}%` }} transition={{ duration: 0.6 }} className={`h-full rounded-full ${done ? 'bg-brand-green' : 'bg-brand-yellow'}`} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className={`text-xs font-medium mt-0.5 ${textMuted}`}>
-                        {DAY_LABELS[course.dayOfWeek ?? 0]?.[lang] ?? ''}{course.time ? ` · ${course.time}` : ''}
-                      </div>
-                    </div>
-                    <div className={`shrink-0 flex flex-col items-end`}>
-                      <span className={`text-xl font-bold ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                        {course.credits ?? 0}
-                      </span>
-                      <span className={`text-[10px] font-semibold ${textMuted}`}>
-                        {lang === 'en' ? 'cr' : '単位'}
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              </Card>
             )}
-          </motion.div>
+          </div>
 
-          {/* Code breakdown */}
-          {selectedCourses.length > 0 && (
-            <motion.div variants={itemVariants} className={`rounded-3xl p-5 ${cardBg}`}>
-              <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${textMuted}`}>
-                {lang === 'en' ? 'Credit Breakdown' : '単位内訳'}
-              </h3>
-              <div className="space-y-3">
-                {selectedCourses.map(course => {
-                  const pct = ((course.credits ?? 0) / totalCredits) * 100;
-                  return (
-                    <div key={course.id}>
-                      <div className="flex justify-between mb-1">
-                        <span className={`text-xs font-medium truncate max-w-[70%] ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {lang === 'en' ? course.title.en : course.title.jp}
-                        </span>
-                        <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                          {course.credits} {lang === 'en' ? 'cr' : '単位'}
-                        </span>
-                      </div>
-                      <div className={`h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-                          className={`h-full rounded-full ${course.color ?? 'bg-brand-yellow'}`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
-      </div>
-    </div>
+          {/* Grades */}
+          <section>
+            <SectionTitle>{tx.grades}</SectionTitle>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">
+              <Pill active={termFilter === 'all'} isDark={isDark} onClick={() => setTermFilter('all')}>{tx.all}</Pill>
+              {terms.map(tm => <Pill key={tm.key} active={termFilter === tm.key} isDark={isDark} onClick={() => setTermFilter(tm.key)}>{tm.label}</Pill>)}
+            </div>
+            <div className="space-y-6">
+              {grouped.map(group => (
+                <div key={group.key}>
+                  <div className={`text-xs font-bold mb-2 ${muted}`}>{group.label}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {group.courses.map((c, i) => (
+                      <Card key={i} isDark={isDark} className="flex items-center gap-4 p-4">
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-bold text-brand-black ${GRADE_COLOR[c.grade] ?? 'bg-brand-gray'}`}>{c.grade === '/' ? '—' : c.grade}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm leading-snug line-clamp-2">{tidy(c.title)}</div>
+                          <div className={`text-xs font-medium mt-0.5 truncate ${muted}`}>{[c.category, c.subcategory].filter(Boolean).join(' · ')}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-lg font-bold leading-none">{c.credits ?? 0}</div>
+                          <div className={`text-[10px] font-semibold ${c.passed ? muted : 'text-red-500'}`}>{c.passed ? tx.cr : tx.notPassed}</div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </PageShell>
   );
 }

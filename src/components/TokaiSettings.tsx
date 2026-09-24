@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut,
-  Code2, Pencil, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Database,
+  Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone,
 } from 'lucide-react';
-import { ScreenProps, UserProfile } from '../App';
+import { IS_LOCAL, createSetupCode } from '../lib/api';
+import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { allItems } from '../data';
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
 
@@ -18,11 +18,18 @@ const t = {
     darkMode: 'Dark Mode',
     privacy: 'Privacy & Security',
     developer: 'Developer',
-    devSkipAuth: 'Skip Login (Dev Mode)',
-    devSkipAuthSub: 'Bypass auth for testing',
+    session: 'TIPS Session',
+    sessionSub: 'Signed in with your university Microsoft account',
+    minutesLeft: (m: number) => `${Math.floor(m / 60)}h ${m % 60}m left`,
+    extend: 'Extend',
+    clearAndLogout: IS_LOCAL ? 'Log out and clear cached data' : 'Lock and clear data on this device',
+    staysSignedIn: 'Stays signed in on your Mac',
+    addPhone: 'Add a device',
+    addPhoneSub: (n: number) => `${n} passkey${n === 1 ? '' : 's'} set up. On the phone or MacBook, open tokaihub.mohamedfuad.com, choose "Set up this device" and enter:`,
+    codeValid: 'Valid for 10 minutes, once.',
     enhancedUI: 'Enhanced UI',
     enhancedUISub: 'Enable enhanced animations and visual upgrades',
-    logout: 'Log Out',
+    logout: IS_LOCAL ? 'Log Out' : 'Lock this device',
     account: 'Account',
     verified: 'Verified',
     notVerified: 'Not Verified',
@@ -47,11 +54,18 @@ const t = {
     darkMode: 'ダークモード',
     privacy: 'プライバシーとセキュリティ',
     developer: '開発者',
-    devSkipAuth: 'ログインをスキップ（開発モード）',
-    devSkipAuthSub: 'テスト用に認証をバイパス',
+    session: 'TIPSセッション',
+    sessionSub: '大学のMicrosoftアカウントでサインイン中',
+    minutesLeft: (m: number) => `残り ${Math.floor(m / 60)}時間${m % 60}分`,
+    extend: '延長',
+    clearAndLogout: IS_LOCAL ? 'ログアウトしてキャッシュを削除' : 'ロックしてこの端末のデータを削除',
+    staysSignedIn: 'Macでサインインしたままです',
+    addPhone: '端末を追加',
+    addPhoneSub: (n: number) => `パスキー登録済み: ${n}件。スマホやMacBookでtokaihub.mohamedfuad.comを開き「この端末を設定」を選んで入力：`,
+    codeValid: '10分間、1回だけ有効です。',
     enhancedUI: '強化UI',
     enhancedUISub: '拡張アニメーションとビジュアルアップグレードを有効化',
-    logout: 'ログアウト',
+    logout: IS_LOCAL ? 'ログアウト' : 'この端末をロック',
     account: 'アカウント',
     verified: '検証済み',
     notVerified: '未検証',
@@ -115,17 +129,16 @@ const Toggle = React.memo(function Toggle({ on, onToggle, ariaLabel, isDark }: T
 
 // ─── Settings props ───────────────────────────────────────────────────────────
 
-interface SettingsProps extends ScreenProps {
-  onDevSkipChange?: (val: boolean) => void;
-}
+type SettingsProps = ScreenProps;
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TokaiSettings({
-  lang, settings, setSettings, userProfile, setUserProfile, onSignOut, onDevSkipChange, isAdmin,
+  lang, settings, setSettings, userProfile, onSignOut, session, onExtendSession,
 }: SettingsProps) {
   const navigate = useNavigate();
   const isDark = settings.isDarkMode;
+  const [setupCode, setSetupCode] = useState<string | null>(null);
 
   // Derived theme tokens
   const bgClass   = isDark ? 'bg-gray-800' : 'bg-brand-gray';
@@ -143,13 +156,8 @@ export default function TokaiSettings({
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [feedbackSending, setFeedbackSending] = useState(false);
 
-  // Total enrolled credits — computed once, reused in both the card and progress bar
-  const totalCredits = useMemo(() => {
-    const ids = userProfile?.selectedCourseIds ?? [];
-    return allItems
-      .filter(item => item.type === 'Classes' && (ids.includes(item.id) || ids.includes(item.code ?? '')))
-      .reduce((acc, item) => acc + (item.credits || 0), 0);
-  }, [userProfile?.selectedCourseIds]);
+  const totalCredits = userProfile?.creditsEarned ?? 0;
+  const [extending, setExtending] = useState(false);
 
   const toggleDarkMode = useCallback(() => setSettings(s => ({ ...s, isDarkMode: !s.isDarkMode })), [setSettings]);
   const togglePrivacy  = useCallback(() => setSettings(s => ({ ...s, privacy: !s.privacy })), [setSettings]);
@@ -200,13 +208,13 @@ export default function TokaiSettings({
           {/* ── Profile card ──────────────────────────────────────────────── */}
           <motion.div variants={itemVariants} className={`flex items-center gap-4 ${bgClass} p-4 sm:p-5 rounded-3xl`}>
             <div className="w-14 h-14 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-xl text-brand-black shrink-0">
-              {userProfile?.name?.charAt(0) ?? 'T'}
+              {(lang === 'en' ? userProfile?.givenName : userProfile?.nameJp)?.charAt(0) ?? 'T'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="font-bold text-lg truncate">{userProfile?.name ?? 'TokaiHub User'}</h2>
+                <h2 className="font-bold text-lg truncate">{(lang === 'en' ? userProfile?.name : userProfile?.nameJp) ?? 'TokaiHub User'}</h2>
                 <AnimatePresence>
-                  {userProfile?.isVerified && (
+                  {!!userProfile && (
                     <motion.div
                       key="verified-badge"
                       initial={{ opacity: 0, scale: 0 }}
@@ -221,12 +229,8 @@ export default function TokaiSettings({
                 </AnimatePresence>
               </div>
               <p className={`text-sm font-medium ${textMuted}`}>{userProfile?.studentId ?? '—'}</p>
-              <p className={`text-xs font-medium mt-0.5 capitalize ${textMuted}`}>
-                {userProfile?.campus === 'shinagawa'
-                  ? (lang === 'en' ? 'Shinagawa Campus' : '品川キャンパス')
-                  : userProfile?.campus === 'shonan'
-                  ? (lang === 'en' ? 'Shonan Campus' : '湘南キャンパス')
-                  : '—'}
+              <p className={`text-xs font-medium mt-0.5 ${textMuted}`}>
+                {[userProfile?.department, userProfile?.campus, userProfile?.year ? (lang === 'en' ? `Year ${userProfile.year}` : `${userProfile.year}年`) : ''].filter(Boolean).join(' · ') || '—'}
               </p>
             </div>
             <div className="text-right shrink-0">
@@ -271,7 +275,7 @@ export default function TokaiSettings({
             <motion.div
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/credits')}
+              onClick={() => navigate('/grades')}
               className={`p-5 rounded-3xl shadow-sm cursor-pointer ${isDark ? 'bg-gray-800' : 'bg-brand-gray'} border ${borderClass}`}
             >
               <div className="flex items-center justify-between mb-4">
@@ -289,7 +293,7 @@ export default function TokaiSettings({
               <div className={`mt-3 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`}
-                  style={{ width: `${Math.min((totalCredits / 20) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totalCredits / 124) * 100, 100)}%` }}
                 />
               </div>
               <p className={`text-[10px] font-bold mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'} uppercase tracking-tighter`}>
@@ -298,23 +302,50 @@ export default function TokaiSettings({
             </motion.div>
           </motion.div>
 
-          {/* ── Edit Profile button ────────────────────────────────────────── */}
-          <motion.div variants={itemVariants}>
-            <button
-              onClick={() => navigate('/editProfile')}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} shadow-sm border ${borderClass}`}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
-                  <Pencil className="w-5 h-5 text-brand-black" />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-sm">{tx.editProfile}</div>
-                  <div className={`text-xs font-medium ${textMuted}`}>{tx.editProfileSub}</div>
+          {/* ── TIPS session ──────────────────────────────────────────────── */}
+          <motion.div variants={itemVariants} className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm border ${borderClass}`}>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5 text-brand-black" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm">{tx.session}</div>
+                <div className={`text-xs font-medium ${textMuted}`}>
+                  {tx.sessionSub} · {session?.hubExpiresAt ? tx.minutesLeft(session.minutesLeft) : tx.staysSignedIn}
                 </div>
               </div>
-              <ChevronRight className={`w-5 h-5 ${textMuted}`} />
-            </button>
+            </div>
+            {session?.hubExpiresAt && <div className="flex gap-2 mt-4">
+              {[30, 60, 120].map(m => (
+                <button
+                  key={m}
+                  disabled={extending}
+                  onClick={async () => { setExtending(true); await onExtendSession?.(m); setExtending(false); }}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} ${extending ? 'opacity-60' : ''}`}
+                >
+                  {tx.extend} +{m}{lang === 'en' ? 'm' : '分'}
+                </button>
+              ))}
+            </div>}
+            {IS_LOCAL && session?.ownerId && (
+              <div className={`mt-4 pt-4 border-t ${borderClass}`}>
+                <button
+                  onClick={async () => { setSetupCode(null); try { setSetupCode((await createSetupCode()).code); } catch (e) { setSetupCode(`! ${(e as Error).message}`); } }}
+                  className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
+                >
+                  <Smartphone className="w-4 h-4" />{tx.addPhone}
+                </button>
+                {setupCode && (setupCode.startsWith('! ')
+                  ? <p className="mt-3 text-xs font-bold text-red-500">{setupCode.slice(2)}</p>
+                  : (
+                    <div className="mt-3 text-xs font-medium">
+                      <p className={textMuted}>{tx.addPhoneSub(session.devices ?? 0)}</p>
+                      <p className="my-2 text-center text-2xl font-black tracking-[0.3em]">{setupCode}</p>
+                      <p className={textMuted}>{tx.codeValid}</p>
+                    </div>
+                  ))}
+              </div>
+            )}
           </motion.div>
 
           {/* ── Preferences ───────────────────────────────────────────────── */}
@@ -525,47 +556,6 @@ export default function TokaiSettings({
             <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{tx.developer}</h3>
             <div className={`${isDark ? 'bg-gray-800 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'} border-2 rounded-3xl p-2`}>
 
-              {/* Toggle verification badge */}
-              <div
-                onClick={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })}
-                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
-              >
-                <div className="flex items-center gap-4 text-left">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                    <BadgeCheck className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div className="font-bold text-sm">{tx.devVerify}</div>
-                </div>
-                <Toggle
-                  on={!!userProfile?.isVerified}
-                  onToggle={() => userProfile && setUserProfile?.({ ...userProfile, isVerified: !userProfile.isVerified })}
-                  ariaLabel={tx.devVerify}
-                  isDark={isDark}
-                />
-              </div>
-
-              {/* Skip login */}
-              <div
-                onClick={() => onDevSkipChange?.(!settings.devSkipAuth)}
-                className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl cursor-pointer transition-colors ${isDark ? 'hover:bg-yellow-500/10' : 'hover:bg-yellow-100'}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
-                    <Code2 className="w-5 h-5 text-brand-black" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm">{tx.devSkipAuth}</div>
-                    <div className={`text-xs font-medium ${textMuted}`}>{tx.devSkipAuthSub}</div>
-                  </div>
-                </div>
-                <Toggle
-                  on={settings.devSkipAuth}
-                  onToggle={() => onDevSkipChange?.(!settings.devSkipAuth)}
-                  ariaLabel={tx.devSkipAuth}
-                  isDark={isDark}
-                />
-              </div>
-
               {/* Enhanced UI animations */}
               <div
                 onClick={() => setSettings(s => ({ ...s, enableEnhancedUI: !s.enableEnhancedUI }))}
@@ -590,38 +580,19 @@ export default function TokaiSettings({
             </div>
           </motion.div>
 
-          {/* ── Admin section (visible only for admin users) ──────────────── */}
-          {isAdmin && (
-            <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                {lang === 'en' ? 'Administration' : '管理'}
-              </h3>
-              <div className={`${isDark ? 'bg-gray-800 border-blue-500/20' : 'bg-blue-50 border-blue-200'} border-2 rounded-3xl p-2`}>
-                <button
-                  onClick={() => navigate('/admin/database')}
-                  className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-2xl transition-colors ${isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100'}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
-                      <Database className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-bold text-sm">{lang === 'en' ? 'Database Manager' : 'データベース管理'}</div>
-                      <div className={`text-xs font-medium ${isDark ? 'text-blue-400/60' : 'text-blue-500/70'}`}>
-                        {lang === 'en' ? 'Browse, edit, add & delete records' : 'レコードの閲覧・編集・追加・削除'}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {/* ── Sign out ──────────────────────────────────────────────────── */}
           <motion.button
             variants={itemVariants}
-            onClick={onSignOut}
+            onClick={() => onSignOut?.(true)}
+            className={`w-full ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} py-2 text-xs font-bold flex items-center justify-center gap-1.5`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {tx.clearAndLogout}
+          </motion.button>
+
+          <motion.button
+            variants={itemVariants}
+            onClick={() => onSignOut?.(false)}
             className={`w-full ${isDark ? 'bg-red-900/20 text-red-400 hover:bg-red-900/40' : 'bg-red-50 text-red-600 hover:bg-red-100'} rounded-full py-4 font-bold flex items-center justify-center gap-2 transition-colors`}
           >
             <LogOut className="w-5 h-5" />

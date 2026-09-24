@@ -1,280 +1,118 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Menu, Check, Search } from 'lucide-react';
-import { ScreenProps, preloadRoutes } from '../App';
+import React, { useMemo, useState } from 'react';
+import { Search, Check, BookOpenText, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import SharedMenu from './SharedMenu';
 import { motion } from 'motion/react';
-import { allItems } from '../data';
-import type { CourseItem } from '../lib/types';
-import mascotIdle from '../assets/mascots/mascot_1_2.png';
+import { ScreenProps } from '../App';
+import PageShell, { Pill, Loading, Empty } from './ScreenHeader';
+import { useTimetable } from '../lib/useTerm';
+import { termLabel, academicYearOf } from '../lib/tipsAdapters';
+import type { Term } from '../lib/types';
 
 const t = {
   en: {
-    classes: "Classes",
-    all: "All",
-    events: "Events",
-    clubs: "Clubs",
-    allActivities: "All Activities",
-    todays: "Today's",
-    noItems: "No items found for this category.",
-    searchPlaceholder: "Search courses, teachers...",
+    title: 'Classes', search: 'Search my courses, teachers, rooms…', spring: 'Spring', fall: 'Fall', follow: 'Follow TIPS',
+    none: 'No registered courses in this term.', view: 'View course', loading: 'Loading courses from TIPS…',
+    syllabus: 'Looking for other courses?', syllabusCta: 'Search the syllabus', enrolled: 'Enrolled',
+    register: (term: string) => `Registration is open: choose your ${term} classes`,
   },
   jp: {
-    classes: "授業",
-    all: "すべて",
-    events: "イベント",
-    clubs: "クラブ",
-    allActivities: "すべてのアクティビティ",
-    todays: "今日の",
-    noItems: "このカテゴリのアイテムはありません。",
-    searchPlaceholder: "授業名、講師で検索...",
-  }
+    title: '授業', search: '履修科目・教員・教室で検索…', spring: '春学期', fall: '秋学期', follow: 'TIPSに合わせる',
+    none: 'この学期の履修科目はありません。', view: '詳細を見る', loading: 'TIPSから履修科目を読み込み中…',
+    syllabus: '他の科目を探す', syllabusCta: 'シラバスを検索', enrolled: '履修中',
+    register: (term: string) => `履修登録期間中：${term}の科目を選ぶ`,
+  },
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05 } }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
-};
-
-export default function TokaiClass({ lang, setLang, settings, userProfile }: ScreenProps) {
+export default function TokaiClass(props: ScreenProps) {
+  const { lang, settings } = props;
+  const tx = t[lang];
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-
   const isDark = settings.isDarkMode;
-  const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-100';
-  const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
+  const [q, setQ] = useState('');
+  const tt = useTimetable();
+  const term: Term = tt.timetable?.term ?? '1';
+  const year = tt.timetable?.year ?? academicYearOf(new Date());
+  const days = tt.timetable?.grid.days ?? [];
+  const periods = tt.timetable?.grid.periods ?? [];
 
-  const isEnrolled = useCallback((item: CourseItem) =>
-    selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''),
-    [selectedCourseIds]);
-
-  const filteredItems = useMemo(() => {
-    let items = allItems as CourseItem[];
-    
-    if (activeCategory !== 'All') {
-      if (activeCategory === 'Classes') {
-        items = items.filter(item => item.type === 'Classes' && isEnrolled(item));
-      } else {
-        items = items.filter(item => item.type === activeCategory);
-      }
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      items = items.filter(item => 
-        item.title?.[lang]?.toLowerCase().includes(q) || 
-        item.teacher?.[lang]?.toLowerCase().includes(q) ||
-        item.location?.[lang]?.toLowerCase().includes(q)
-      );
-    }
-
-    return items;
-  }, [activeCategory, searchQuery, isEnrolled, lang]);
-
-  const handleImageLoad = (id: string) => setLoadedImages(prev => new Set(prev).add(id));
+  const items = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return s ? tt.items.filter(i => [i.title[lang], i.code, i.teacher?.[lang], i.location?.[lang]].some(v => v?.toLowerCase().includes(s))) : tt.items;
+  }, [tt.items, q, lang]);
 
   return (
-    <div className={`h-full relative flex flex-col ${pageBg}`}>
-      {/* Header */}
-      <header
-        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
-        className="flex justify-between items-center px-4 sm:px-6 pb-4 shrink-0"
-      >
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setIsMenuOpen(true)}
-            className={`w-10 h-10 rounded-full border ${borderClass} flex items-center justify-center lg:hidden`}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t[lang].classes}</h1>
-        </div>
-      </header>
-
-      {/* Search Bar */}
-      <div className="px-4 sm:px-6 mb-6">
-        <div className={`relative flex items-center ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-2xl px-4 py-3 shadow-inner`}>
-          <Search className={`w-5 h-5 ${textMuted} mr-3`} />
-          <input 
-            type="text" 
-            placeholder={t[lang].searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-gray-400"
-          />
-        </div>
+    <PageShell {...props} title={tx.title} subtitle={termLabel(term, year, lang)} onRefresh={tt.refresh} refreshing={tt.loading}>
+      <div className={`flex items-center rounded-2xl px-4 py-3 mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <Search className={`w-5 h-5 mr-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={tx.search} className="bg-transparent outline-none w-full text-sm font-medium placeholder:text-gray-400" />
       </div>
 
-      {/* Category Filter Pills */}
-      <div className="flex gap-2 sm:gap-3 px-4 sm:px-6 overflow-x-auto no-scrollbar pb-4 shrink-0">
-        {(['All', 'Classes', 'Events', 'Clubs'] as const).map(cat => {
-          const catLabel = cat === 'All' ? t[lang].all : cat === 'Classes' ? t[lang].classes : cat === 'Events' ? t[lang].events : t[lang].clubs;
-          const isActive = activeCategory === cat;
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {(['1', '2'] as Term[]).map(tm => (
+          <Pill key={tm} active={term === tm} isDark={isDark} onClick={() => tt.setChoice(tm)}>{tm === '1' ? tx.spring : tx.fall}</Pill>
+        ))}
+        {tt.choice !== 'auto' && (
+          <button onClick={() => tt.setChoice('auto')} className={`text-xs font-bold underline underline-offset-2 ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{tx.follow}</button>
+        )}
+      </div>
+
+      {tt.loading && <Loading text={tx.loading} isDark={isDark} />}
+      {!tt.loading && tt.timetable && items.length === 0 && (
+        tt.timetable.registrationOpen && tt.timetable.term === tt.currentTerm ? (
+          <button onClick={() => navigate('/registration')} className="w-full flex items-center gap-3 p-5 rounded-3xl bg-green-500/10 text-green-700 text-left font-bold text-sm">
+            <span className="flex-1">{tx.register(termLabel(term, year, lang))}</span><ArrowRight className="w-4 h-4" />
+          </button>
+        ) : <Empty text={tx.none} isDark={isDark} />
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr gap-5">
+        {items.map((item, i) => {
+          const slot = [days[(item.dayOfWeek ?? 1) - 1], item.periods?.map(p => periods[p - 1] ?? p).join('・')].filter(Boolean).join(' ');
           return (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`relative px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 whitespace-nowrap transition-all duration-200 active:scale-95 shrink-0 ${isActive
-                ? 'bg-[#0B1F3A] text-white shadow-md'
-                : `border ${borderClass} ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`
-                }`}
+            <motion.article
+              key={item.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }}
+              onClick={() => navigate(`/course/${item.code}`)}
+              className="group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] cursor-pointer bg-[#1A1D24] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-1"
             >
-              {isActive && (
-                <motion.div
-                  layoutId="activeTabClass"
-                  className="absolute inset-0 bg-[#0B1F3A] rounded-full"
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shadow-[0_0_4px_rgba(250,204,21,0.8)]" />}
-                {catLabel}
-              </span>
-            </button>
+              <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#1A1D24]">
+                <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1A1D24] to-transparent" />
+                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1">
+                  <Check className="w-2.5 h-2.5" />{tx.enrolled}
+                </span>
+                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 text-white backdrop-blur-sm">{item.code}</span>
+              </div>
+              <div className="flex flex-1 flex-col gap-3 px-5 pb-5 pt-4">
+                <div>
+                  <h2 className="text-[17px] font-bold leading-snug text-white line-clamp-2 min-h-[2.75rem]">{item.title[lang]}</h2>
+                  <p className="mt-1 text-[13px] text-white/60 truncate min-h-[1.25rem]">{item.teacher?.[lang]}</p>
+                </div>
+                <div className="flex flex-wrap content-start gap-1.5 min-h-[3.75rem]">
+                  {slot && <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white">{slot}</span>}
+                  {item.time && <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white">{item.time}</span>}
+                  {item.location?.[lang] && <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white max-w-full truncate">{item.location[lang]}</span>}
+                </div>
+                <div className="mt-auto flex items-center justify-center gap-2 w-full rounded-full bg-white py-2.5 text-[14px] font-bold text-black transition-colors group-hover:bg-brand-yellow">
+                  {tx.view}<ArrowRight className="w-4 h-4" />
+                </div>
+              </div>
+            </motion.article>
           );
         })}
       </div>
 
-      {/* Main Content Areas */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <motion.div 
-          variants={containerVariants} 
-          initial="hidden" 
-          animate="show" 
-          className="px-4 sm:px-6 pb-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-        >
-          {filteredItems.map((item) => {
-            const enrolled = isEnrolled(item);
-            // Derive a per-card accent colour from the item's color token
-            const cardBg = '#1A1D24'; // sleek dark slate
-            return (
-              <motion.div
-                key={item.id}
-                variants={itemVariants}
-                onClick={() => setTimeout(() => navigate(`/${item.action}/${item.id}`), 150)}
-                whileHover={{ y: -6 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="relative w-full overflow-hidden rounded-[32px] cursor-pointer"
-                style={{ background: cardBg, boxShadow: '0 20px 50px -12px rgba(0,0,0,0.35)' }}
-              >
-                {/* ── Image Section ── */}
-                <div className="relative h-[200px] w-full">
-                  {/* Shimmer placeholder */}
-                  {!loadedImages.has(item.id) && (
-                    <div className="absolute inset-0 shimmer-light rounded-t-[32px]" />
-                  )}
-                  <motion.img
-                    whileHover={{ scale: 1.06 }}
-                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                    src={item.image || mascotIdle}
-                    alt={item.title?.[lang] ?? ''}
-                    onLoad={() => handleImageLoad(item.id)}
-                    className={`h-full w-full object-cover transition-opacity duration-500 ${loadedImages.has(item.id) ? 'opacity-100' : 'opacity-0'}`}
-                  />
-                  {/* Gradient blending image into card background */}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-t from-[#1A1D24] via-[#1A1D24]/80 via-40% to-transparent pointer-events-none"
-                  />
-
-                  {/* Enrolled badge */}
-                  {enrolled && (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1 shadow-md">
-                      <Check className="w-2.5 h-2.5" />Enrolled
-                    </span>
-                  )}
-
-                  {/* Pagination dots */}
-                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 space-x-1.5 pointer-events-none">
-                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                    <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
-                    <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
-                  </div>
-                </div>
-
-                {/* ── Content Section ── */}
-                <div className="flex flex-col px-5 pb-5 pt-1">
-
-                  {/* Title + Credits pill */}
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h2 className="text-[18px] font-bold tracking-tight text-white leading-tight line-clamp-2 flex-1">
-                      {item.title?.[lang]}
-                    </h2>
-                    {item.credits != null && (
-                      <motion.div
-                        whileHover={{ scale: 1.08 }}
-                        className="shrink-0 rounded-full bg-black/40 px-3 py-1 text-[12px] font-semibold text-white backdrop-blur-sm"
-                      >
-                        {item.credits} {lang === 'jp' ? '単位' : 'cr'}
-                      </motion.div>
-                    )}
-                  </div>
-
-                  {/* Teacher as description */}
-                  <p className="mb-4 text-[13px] leading-[1.4] text-white/65 line-clamp-1">
-                    {item.teacher?.[lang] ?? (lang === 'jp' ? '担当教員未定' : 'Instructor TBD')}
-                  </p>
-
-                  {/* Tags: day + time */}
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {item.time && (
-                      <motion.span
-                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-                        className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white transition-colors"
-                      >
-                        {item.time}
-                      </motion.span>
-                    )}
-                    {item.location?.[lang] && (
-                      <motion.span
-                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-                        className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white transition-colors line-clamp-1 max-w-[160px]"
-                      >
-                        {item.location?.[lang]}
-                      </motion.span>
-                    )}
-                  </div>
-
-                  {/* CTA Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02, backgroundColor: '#f9fafb' }}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full rounded-full bg-white py-3 text-[14px] font-bold text-black transition-all"
-                  >
-                    {lang === 'jp' ? '詳細を見る' : 'View Course'}
-                  </motion.button>
-
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {filteredItems.length === 0 && (
-            <div className="col-span-full py-20 flex flex-col items-center text-center gap-4">
-              <img src={mascotIdle} alt="" className="w-24 h-24 object-contain opacity-50" />
-              <p className={textMuted}>{t[lang].noItems}</p>
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      <SharedMenu
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        lang={lang}
-        setLang={setLang}
-        settings={settings}
-      />
-    </div>
+      <button
+        onClick={() => navigate('/syllabus')}
+        className={`mt-8 w-full sm:w-auto flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
+      >
+        <BookOpenText className="w-5 h-5 text-brand-yellow" />
+        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{tx.syllabus}</span>
+        <span>{tx.syllabusCta}</span>
+        <ArrowRight className="w-4 h-4 ml-auto" />
+      </button>
+    </PageShell>
   );
 }

@@ -1,463 +1,284 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Clock, BookOpen, Award, CheckCircle, FileText, Calendar, User } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Clock, MapPin, Award, CalendarDays, User, CheckCircle2, CircleSlash, Languages, ChevronDown } from 'lucide-react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { allItems } from '../data';
-import { getCourseDetails } from '../lib/api';
-import type { CourseItem } from '../lib/types';
+import PageShell, { Card, Loading, Empty } from './ScreenHeader';
+import { useTips } from '../lib/useTips';
+import { useTimetable } from '../lib/useTerm';
+import { academicYearOf, tidy } from '../lib/tipsAdapters';
+import type { AttendanceStatus, TipsAttendanceCourse, TipsSyllabus } from '../lib/types';
 
-// 🔹 Local JP fallback
-const courseFallbacks: Record<string, { jp?: { overview?: string; evaluation?: string } }> = {
-  TTK000: {
-    jp: {
-      overview: "概要はまだありません。",
-      evaluation: "評価方法は未定です。"
-    }
-  }
+const t = {
+  en: {
+    registered: 'Registered', notRegistered: 'Not registered', overview: 'Overview', attendance: 'Attendance', plan: 'Class plan', details: 'Syllabus',
+    time: 'Time', room: 'Room', credits: 'Credits', when: 'Day & period', summary: 'Course summary', grading: 'Grading',
+    keywords: 'Keywords', instructors: 'Instructors', rate: 'Attendance rate', attended: 'Attended', absent: 'Absent', other: 'Other',
+    noAttendance: 'No attendance record for this course in the selected term.', noSyllabus: 'The syllabus for this course is not available on TIPS.',
+    loading: 'Loading from TIPS…', jpOnly: 'The instructor published this syllabus in Japanese only.', prep: 'Preparation & review', method: 'Method',
+    more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.',
+    legend: { present: 'Present', absent: 'Absent', notice: 'Notice of absence', accommodation: 'Accommodation', cancelled: 'Cancelled', unrecorded: 'Not recorded', late: 'Late', early: 'Left early', other: 'Other' },
+  },
+  jp: {
+    registered: '履修中', notRegistered: '未履修', overview: '概要', attendance: '出欠', plan: '授業計画', details: 'シラバス',
+    time: '時間', room: '教室', credits: '単位', when: '曜日・時限', summary: '科目の要旨', grading: '成績評価',
+    keywords: 'キーワード', instructors: '担当教員', rate: '出席率', attended: '出席', absent: '欠席', other: 'その他',
+    noAttendance: '選択中の学期にこの科目の出欠記録はありません。', noSyllabus: 'この科目のシラバスはTIPSにありません。',
+    loading: 'TIPSから読み込み中…', jpOnly: '', prep: '予習・復習', method: '学習方法',
+    more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。',
+    legend: { present: '出席', absent: '欠席', notice: '欠席届', accommodation: '合理的配慮', cancelled: '休講', unrecorded: '未登録', late: '遅刻', early: '早退', other: 'その他' },
+  },
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } }
+const STATUS_STYLE: Record<AttendanceStatus, string> = {
+  present: 'bg-blue-500 text-white', absent: 'bg-red-500 text-white', late: 'bg-orange-400 text-white', early: 'bg-orange-400 text-white',
+  notice: 'bg-purple-300 text-brand-black', accommodation: 'bg-purple-300 text-brand-black', cancelled: 'bg-gray-400 text-white',
+  unrecorded: 'bg-transparent', other: 'bg-gray-300 text-brand-black',
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }
-};
+type Tab = 'overview' | 'attendance' | 'plan' | 'details';
 
-const SEMESTER_START = new Date(2026, 3, 8); // April 8, 2026
-const SEMESTER_END = new Date(2026, 6, 21);   // July 21, 2026
-
-const AttendanceTracker = ({ courseId, courseDay, isDark, lang }: { courseId: string; courseDay: string; isDark: boolean; lang: string }) => {
-  const daysMap: Record<string, number> = { 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 0 };
-  const targetDay = daysMap[courseDay?.toLowerCase()] ?? 1;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const [attendance, setAttendance] = useState<Record<string, boolean>>(() => {
-    const stored = localStorage.getItem(`attendance_${courseId}`);
-    return stored ? JSON.parse(stored) : {};
-  });
-
-  const classDates = useMemo(() => {
-    const dates: Date[] = [];
-    let current = new Date(SEMESTER_START);
-    while (current.getDay() !== targetDay && current <= SEMESTER_END) {
-      current.setDate(current.getDate() + 1);
-    }
-    while (current <= SEMESTER_END) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 7);
-    }
-    return dates;
-  }, [targetDay]);
-
-  const { attendedCount, totalCount, percentage } = useMemo(() => {
-    const attended = classDates.filter(d => attendance[d.toISOString().split('T')[0]]).length;
-    const total = classDates.length;
-    return { attendedCount: attended, totalCount: total, percentage: Math.round((attended / total) * 100) };
-  }, [classDates, attendance]);
-
-  const toggleAttendance = useCallback((dateStr: string) => {
-    setAttendance(prev => {
-      const next = { ...prev, [dateStr]: !prev[dateStr] };
-      localStorage.setItem(`attendance_${courseId}`, JSON.stringify(next));
-      return next;
-    });
-  }, [courseId]);
-
+function Expandable({ text, isDark, more, less }: { text: string; isDark: boolean; more: string; less: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 280;
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between px-1">
-        <div>
-          <h3 className="font-bold text-xl flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
-            {lang === 'en' ? 'Attendance Tracker' : '出席トラッカー'}
-          </h3>
-        </div>
-        <div className="text-right">
-          <div className={`text-xl font-bold tracking-tight leading-none ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`}>
-            {attendedCount} <span className="text-sm font-medium text-gray-400">/ {totalCount}</span>
-          </div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            {lang === 'en' ? 'Classes Attended' : '出席済み'}
-          </div>
-        </div>
-      </div>
-
-      <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-3xl border ${isDark ? 'border-gray-700' : 'border-transparent'} shadow-sm`}>
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-end mb-2 px-1">
-             <span className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-brand-black'}`}>{lang === 'en' ? 'Semester Progress' : '学期出席率'}</span>
-             <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-yellow'} opacity-90`}>{percentage}%</span>
-          </div>
-          {/* Premium Progress Track */}
-          <div className="relative h-[22px] w-full bg-[#1e293b] rounded-full overflow-hidden shadow-inner border border-white/5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${percentage}%` }}
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
-              transition={{ type: 'spring', stiffness: 50, damping: 15 }}
-            />
-          </div>
-        </div>
-
-        {/* Scrollable Date Section */}
-        <div className="flex gap-3 overflow-x-auto pb-6 pt-2 -mx-2 px-2 no-scrollbar snap-x">
-          {classDates.map((date) => {
-            const dateStr = date.toISOString().split('T')[0];
-            const isAttended = attendance[dateStr];
-            const isToday = date.getTime() === today.getTime();
-            const isPast = date < today;
-
-            return (
-              <button
-                key={dateStr}
-                onClick={() => toggleAttendance(dateStr)}
-                className={`flex-shrink-0 w-[68px] h-[68px] rounded-[20px] flex flex-col items-center justify-center gap-1 transition-all snap-start relative active:scale-95
-                  ${isAttended
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-[0_0_16px_rgba(59,130,246,0.4)] border border-blue-400/30'
-                      : isToday
-                          ? 'bg-[#2c2c2e] shadow-[0_0_0_2px_#3b82f6]'
-                          : 'bg-[#2c2c2e] shadow-[0_4px_12px_rgba(0,0,0,0.3)]'}
-                `}
-              >
-                <span className={`text-[9px] uppercase font-bold tracking-widest
-                  ${isAttended ? 'text-white' : isToday ? 'text-blue-400' : 'text-white/40'}`}>
-                  {date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short' })}
-                </span>
-                <span className={`text-xl font-bold tracking-tighter leading-none text-white`}>
-                  {date.getDate()}
-                </span>
-                {isAttended && <CheckCircle className="w-4 h-4 text-white mt-0.5 opacity-90" />}
-                {isToday && !isAttended && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />}
-                {isToday && <div className="absolute -top-2.5 px-2 py-0.5 bg-blue-500 text-white text-[7px] font-black rounded-full uppercase tracking-wider shadow-sm">{lang === 'en' ? 'TODAY' : '今日'}</div>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div>
+      <p className={`text-[15px] leading-relaxed whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-700'} ${long && !open ? 'line-clamp-5' : ''}`}>{text}</p>
+      {long && (
+        <button onClick={() => setOpen(o => !o)} className={`mt-2 text-xs font-bold flex items-center gap-1 ${isDark ? 'text-brand-yellow' : 'text-blue-600'}`}>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />{open ? less : more}
+        </button>
+      )}
     </div>
   );
-};
+}
 
-const TokaiCourse = React.memo(function TokaiCourse({ lang, settings }: ScreenProps) {
-  const navigate = useNavigate();
-  const goBack = useCallback(() => navigate(-1), [navigate]);
-  const { id } = useParams();
-
+export default function TokaiCourse(props: ScreenProps) {
+  const { lang, settings } = props;
+  const tx = t[lang];
   const isDark = settings.isDarkMode;
-  const bgClass = isDark ? 'bg-gray-800' : 'bg-brand-gray';
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
-  const textNormal = isDark ? 'text-gray-300' : 'text-gray-600';
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
+  const muted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const { id } = useParams();
+  const [params] = useSearchParams();
+  const code = (id ?? '').toUpperCase();
 
-  const courseId = id || '';
-  // Use local item only as a metadata seed (colors, credits); API overwrites everything
-  const localSeed = allItems.find(item => item.id === courseId || item.code === courseId) ?? null;
-  const [course, setCourse] = useState<CourseItem | null>(localSeed);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const tt = useTimetable();
+  const course = tt.items.find(c => c.code === code);
+  const raw = tt.timetable?.courses.find(c => c.code === code);
+  const year = Number(params.get('year')) || tt.timetable?.year || academicYearOf(new Date());
+  const term = tt.timetable?.term ?? '1';
 
-  useEffect(() => {
-    if (!courseId) return;
-    const controller = new AbortController();
-    // Try the courseId directly, then its code equivalent
-    const apiId = localSeed?.code ?? courseId;
+  const syllabus = useTips<TipsSyllabus>('syllabus', { code, year }, { enabled: !!code });
+  const attendance = useTips<{ courses: TipsAttendanceCourse[] }>('attendance', { year, term }, { enabled: !!course });
+  const record = attendance.data?.courses.find(c => c.code === code);
+  const syl = syllabus.data;
+  const [tab, setTab] = useState<Tab>('overview');
 
-    getCourseDetails(apiId, controller.signal)
-      .then(data => {
-        const { overview, evaluation, title, teacher, location, ...rest } = data;
-        setCourse(prev => {
-          const base = prev ?? {} as CourseItem;
-          return {
-            ...base,
-            ...rest,
-            // 🛡️ PROTECT CURATED TRANSLATIONS: Always prefer local translations if they exist!
-            title: title ? { ...title, ...base.title } : base.title,
-            teacher: (base.teacher?.jp || base.teacher?.en) ? { ...teacher, ...base.teacher } : teacher,
-            location: (base.location?.jp || base.location?.en) ? { ...location, ...base.location } : location,
-            overview: (base.overview?.jp || base.overview?.en) ? { ...overview, ...base.overview } : overview,
-            evaluation: (base.evaluation?.jp || base.evaluation?.en) ? { ...evaluation, ...base.evaluation } : evaluation,
-          };
-        });
-      })
-      .catch(err => {
-        if (err?.name !== 'AbortError') {
-          setLoadError('Failed to load course details.');
-        }
-      });
-    return () => controller.abort();
-  }, [courseId, localSeed?.code]);
+  const section = (jp: string) => syl?.sections.find(s => s.label.jp === jp)?.value;
+  const title = course?.title[lang] ?? tidy(syl ? (lang === 'en' ? syl.title.en || syl.title.jp : syl.title.jp) : code);
+  const teacher = course?.teacher?.[lang] ?? tidy(syl ? syl.mainInstructor[lang] : '');
+  const days = tt.timetable?.grid.days ?? [];
+  const periods = tt.timetable?.grid.periods ?? [];
+  // Syllabus gives "月/Mon 2"; keep the half for the UI language.
+  const sylWhen = syl?.dayPeriod?.replace(/([^/\s]+)\/([A-Za-z]+)/g, (_, jp: string, en: string) => (lang === 'en' ? en : jp));
+  const when = course ? `${days[(course.dayOfWeek ?? 1) - 1] ?? ''} ${course.periods?.map(p => periods[p - 1] ?? p).join('・')}` : sylWhen;
+  const keywords = (section('科目キーワード') ?? '').split(/[、,，]/).map(s => s.trim()).filter(Boolean);
+  const detailSections = useMemo(() => {
+    const shown = new Set(['科目の要旨・概要', '成績評価の基準・方法', '科目キーワード']);
+    return (syl?.sections ?? []).filter(s => !shown.has(s.label.jp) && s.value);
+  }, [syl]);
 
-  // UI text
-  const t = {
-    en: {
-      status: "Confirmed",
-      credits: "Credits",
-      field: "Information Systems",
-      evalTitle: "Evaluation",
-      overviewTitle: "Overview",
-      fallbackOverview: "Course overview not available.",
-      fallbackEvaluation: "Attendance/Lab 40% + Report 60%"
-    },
-    jp: {
-      status: "確定",
-      credits: "単位",
-      field: "情報システム",
-      evalTitle: "評価方法",
-      overviewTitle: "概要",
-      fallbackOverview: "概要は利用できません。",
-      fallbackEvaluation: "出席・実験40%＋レポート60%"
-    }
-  };
+  const recorded = (record?.attended ?? 0) + (record?.absent ?? 0);
+  const rate = recorded ? Math.round(((record?.attended ?? 0) / recorded) * 100) : null;
+  const byMonth = useMemo(() => {
+    const m = new Map<number, NonNullable<TipsAttendanceCourse['sessions']>>();
+    for (const s of record?.sessions ?? []) m.set(s.month, [...(m.get(s.month) ?? []), s]);
+    return [...m.entries()];
+  }, [record]);
+  const usedStatuses = [...new Set((record?.sessions ?? []).map(s => s.status))];
 
-  // Show loading/error state when course hasn't loaded from API yet
-  if (!course) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-3">
-        {loadError ? (
-          <p className="text-sm text-red-400 font-medium">{loadError}</p>
-        ) : (
-          <p className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-            {lang === 'en' ? 'Loading course…' : 'ロード中…'}
-          </p>
-        )}
-      </div>
-    );
-  }
+  const tabs: { id: Tab; label: string; show: boolean }[] = [
+    { id: 'overview', label: tx.overview, show: true },
+    { id: 'attendance', label: tx.attendance, show: !!course },
+    { id: 'plan', label: tx.plan, show: !!syl?.schedule.length },
+    { id: 'details', label: tx.details, show: detailSections.length > 0 },
+  ];
 
-  const apiCourseId = course.code || "TTK000";
-  const fallback = courseFallbacks[apiCourseId];
+  const facts = [
+    { icon: CalendarDays, label: tx.when, value: when },
+    { icon: Clock, label: tx.time, value: course?.time },
+    { icon: MapPin, label: tx.room, value: raw?.room || raw?.campus },
+    { icon: Award, label: tx.credits, value: syl?.credits != null ? String(syl.credits) : undefined },
+  ].filter(f => f.value);
 
-  // Overview logic
-  const overviewText =
-    lang === "jp"
-      ? fallback?.jp?.overview || course.overview?.jp
-      : course.overview?.en;
-
-  const finalOverview = overviewText || t[lang].fallbackOverview;
-
-  // Evaluation logic
-  const evaluationText =
-    lang === "jp"
-      ? fallback?.jp?.evaluation || course.evaluation?.jp
-      : course.evaluation?.en;
-
-  const finalEvaluation = evaluationText || t[lang].fallbackEvaluation;
+  const exp = { isDark, more: tx.more, less: tx.less };
 
   return (
-    <div className="h-full relative flex flex-col">
+    <PageShell {...props} title={code} subtitle={syl?.semester?.[lang] || undefined} back onRefresh={() => { syllabus.refresh(); attendance.refresh(); }} refreshing={syllabus.loading || attendance.loading}>
+      {!course && !syl && (syllabus.loading || tt.loading) && <Loading text={tx.loading} isDark={isDark} />}
+      {!course && !syl && !syllabus.loading && syllabus.error && <Empty text={tx.noSyllabus} isDark={isDark} />}
 
-      {/* Header */}
-      <header 
-        style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
-        className="flex justify-between items-center p-4 sm:p-6 shrink-0 max-w-4xl w-full mx-auto"
-      >
-        <div className="font-bold text-2xl tracking-tighter">
-          {course.code}
-        </div>
-        <button
-          onClick={() => setTimeout(goBack, 150)}
-          className={`w-12 h-12 rounded-full border ${borderClass} flex items-center justify-center transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} active:scale-95`}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-      </header>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="pb-12 max-w-4xl w-full mx-auto"
-        >
-
-          {/* Title */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-brand-black text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                {course.code}
-              </span>
-              <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> {t[lang].status}
-              </span>
+      {(course || syl) && (
+        <>
+          {/* Summary card */}
+          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[32px] bg-brand-black text-white p-6 sm:p-8">
+            <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-brand-yellow/10" />
+            <div className="relative flex flex-wrap items-center gap-2 mb-4">
+              {course
+                ? <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-400 text-brand-black flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{tx.registered}</span>
+                : <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15 flex items-center gap-1"><CircleSlash className="w-3.5 h-3.5" />{tx.notRegistered}</span>}
+              {syl?.delivery?.[lang] && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{syl.delivery[lang]}</span>}
+              {syl?.creditType && (
+                // TIPS gives "講義科目 Lectures": show the half in the UI language.
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{(lang === 'en' ? syl.creditType.match(/[A-Za-z].*$/)?.[0] : syl.creditType.split(/\s+[A-Za-z]/)[0]) || syl.creditType}</span>
+              )}
             </div>
-
-            <h1 className="text-[28px] sm:text-[36px] lg:text-[42px] font-bold leading-[1.1] tracking-tight whitespace-pre-line">
-              {course.title[lang]}
-            </h1>
-          </motion.div>
-
-          {/* Grid */}
-          <motion.div
-            variants={itemVariants}
-            className="px-4 sm:px-6 mt-8 grid grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Clock className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
-              <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                {lang === 'en' ? 'Time' : '時間'}
+            <h2 className="relative text-[26px] sm:text-[34px] font-bold leading-tight tracking-tight">{title}</h2>
+            {teacher && <p className="relative mt-2 text-sm text-white/70 flex items-center gap-2"><User className="w-4 h-4" />{teacher}</p>}
+            {facts.length > 0 && (
+              <div className="relative mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {facts.map(f => (
+                  <div key={f.label} className="rounded-2xl bg-white/10 px-4 py-3 min-w-0">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/60"><f.icon className="w-3.5 h-3.5 text-brand-yellow" />{f.label}</div>
+                    <div className="mt-1 text-sm font-bold truncate">{f.value}</div>
+                  </div>
+                ))}
               </div>
-              <div className="font-bold text-sm">{course.time}</div>
-            </div>
+            )}
+          </motion.section>
 
-            <div className={`${bgClass} p-5 rounded-3xl`}>
-              <Award className={`w-6 h-6 mb-3 ${isDark ? 'text-brand-yellow' : 'text-brand-black'}`} />
-              <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                {t[lang].credits}
-              </div>
-              <div className="font-bold text-sm">
-                {course.credits || 2} {t[lang].credits}
-              </div>
-            </div>
+          {/* Tabs */}
+          <div role="tablist" className={`mt-6 mb-5 flex gap-1 p-1 rounded-full overflow-x-auto no-scrollbar ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            {tabs.filter(x => x.show).map(x => (
+              <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
+                className={`flex-1 min-w-fit px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'bg-gray-700 text-white' : 'bg-white text-brand-black shadow-sm') : muted}`}>
+                {x.label}
+              </button>
+            ))}
+          </div>
 
-            <div className={`${bgClass} p-5 rounded-3xl flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
-                <Calendar className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                  {lang === 'en' ? 'Weekly' : '毎週'}
+          {lang === 'en' && syl?.contentLang === 'jp' && tab !== 'attendance' && (
+            <p className={`mb-4 text-xs font-semibold flex items-center gap-1.5 ${muted}`}><Languages className="w-3.5 h-3.5" />{tx.jpOnly}</p>
+          )}
+          {syllabus.loading && !syl && tab !== 'attendance' && <Loading text={tx.loading} isDark={isDark} />}
+
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+              {tab === 'overview' && syl && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <Card isDark={isDark} className="p-5 sm:p-6 lg:col-span-2">
+                    <h3 className="font-bold mb-3">{tx.summary}</h3>
+                    <Expandable text={section('科目の要旨・概要') || tx.notListed} {...exp} />
+                  </Card>
+                  <div className="space-y-4">
+                    <Card isDark={isDark} className="p-5">
+                      <h3 className="font-bold mb-3">{tx.grading}</h3>
+                      <Expandable text={section('成績評価の基準・方法') || tx.notListed} {...exp} />
+                    </Card>
+                    {keywords.length > 0 && (
+                      <Card isDark={isDark} className="p-5">
+                        <h3 className="font-bold mb-3">{tx.keywords}</h3>
+                        <div className="flex flex-wrap gap-1.5">{keywords.map(k => <span key={k} className={`px-3 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{k}</span>)}</div>
+                      </Card>
+                    )}
+                    {syl.instructors.length > 0 && (
+                      <Card isDark={isDark} className="p-5">
+                        <h3 className="font-bold mb-3">{tx.instructors}</h3>
+                        <ul className="space-y-2">{syl.instructors.map(i => (
+                          <li key={i.name.jp} className="text-sm"><div className="font-semibold">{tidy(i.name[lang])}</div><div className={`text-xs ${muted}`}>{tidy(i.affiliation[lang])}</div></li>
+                        ))}</ul>
+                      </Card>
+                    )}
+                  </div>
                 </div>
-                <div className="font-bold text-[14px] uppercase truncate">
-                   {lang === 'en' 
-                     ? (course.day || courseId.split('-')[0])?.toUpperCase() 
-                     : (course.day === 'mon' || courseId.startsWith('mon') ? '月曜日' : 
-                        course.day === 'tue' || courseId.startsWith('tue') ? '火曜日' : 
-                        course.day === 'wed' || courseId.startsWith('wed') ? '水曜日' : 
-                        course.day === 'thu' || courseId.startsWith('thu') ? '木曜日' : 
-                        course.day === 'fri' || courseId.startsWith('fri') ? '金曜日' : 
-                        course.day === 'sat' || courseId.startsWith('sat') ? '土曜日' : '日曜日')}
-                </div>
-              </div>
-            </div>
+              )}
 
-            <div className={`${bgClass} p-5 rounded-3xl flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
-                <User className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                  {lang === 'en' ? 'Teacher' : '担当教員'}
-                </div>
-                <div className="font-bold text-[13.5px] leading-snug line-clamp-2">
-                   {course.teacher?.[lang] || (lang === 'en' ? 'Staff' : '担当者')}
-                </div>
-              </div>
-            </div>
-
-            <div className={`${bgClass} p-5 rounded-3xl col-span-2 lg:col-span-1 flex items-center gap-4`}>
-              <div className={`w-12 h-12 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded-full flex items-center justify-center shrink-0`}>
-                <BookOpen className={`${isDark ? 'text-brand-yellow' : 'text-brand-black'} w-6 h-6`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`text-xs ${textMuted} font-bold mb-1`}>
-                  {lang === 'en' ? 'Field' : '分野'}
-                </div>
-                <div className="font-bold text-[14px] truncate">
-                  {t[lang].field}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          {/* Syllabus Button (Coming Soon) */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6">
-            <div className={`p-4 rounded-[28px] ${isDark ? 'bg-gray-800' : 'bg-gray-50'} border-2 border-dashed ${isDark ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between group cursor-not-allowed opacity-80 shadow-sm`}>
-              <div className="flex items-center gap-4">
-                 <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white'} flex items-center justify-center`}>
-                   <FileText className="w-5 h-5 text-gray-400" />
-                 </div>
-                 <div>
-                   <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-brand-black'}`}>
-                     {lang === 'en' ? 'Syllabus PDF' : 'シラバス PDF'}
-                   </div>
-                   <div className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-0.5">
-                      {lang === 'en' ? 'Available Soon' : '近日公開予定'}
-                   </div>
-                 </div>
-              </div>
-              <div className={`px-2.5 py-1 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg text-[9px] font-black text-gray-400 uppercase tracking-tighter`}>
-                 Pending
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Overview + Evaluation */}
-          <motion.div
-            variants={itemVariants}
-            className="px-4 sm:px-6 mt-8 lg:grid lg:grid-cols-2 lg:gap-8 space-y-8 lg:space-y-0"
-          >
-            {/* Overview */}
-            <div>
-              <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
-                {t[lang].overviewTitle}
-              </h3>
-              <p className={`${textNormal} text-base leading-relaxed font-medium ${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-5 rounded-3xl`}>
-                {finalOverview}
-              </p>
-            </div>
-
-            {/* Evaluation */}
-            <div>
-              <h3 className="font-bold text-xl mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
-                {t[lang].evalTitle}
-              </h3>
-              <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} p-6 rounded-3xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]`}>
-                {course.evaluationBreakdown && course.evaluationBreakdown.length > 0 ? (
-                  <div className="space-y-6">
-                    {course.evaluationBreakdown.map((item, idx) => (
-                      <div key={idx} className="space-y-2">
-                        <div className="flex justify-between items-end px-1">
-                          <span className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-brand-black'}`}>
-                            {item.label[lang]}
-                          </span>
-                          <span className={`text-xs font-black tracking-tighter ${isDark ? 'text-brand-yellow' : 'text-brand-black'} opacity-80`}>
-                            {item.percentage}%
-                          </span>
-                        </div>
-                        {/* Premium Progress Track */}
-                        <div className="relative h-[22px] w-full bg-[#1e293b] rounded-full overflow-hidden shadow-inner border border-white/5">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            whileInView={{ width: `${item.percentage}%` }}
-                            viewport={{ once: true }}
-                            transition={{
-                              type: 'spring',
-                              stiffness: 100,
-                              damping: 20,
-                              delay: 0.1 + (idx * 0.1)
-                            }}
-                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
-                          />
+              {tab === 'attendance' && (
+                !record ? (attendance.loading ? <Loading text={tx.loading} isDark={isDark} /> : <Empty text={tx.noAttendance} isDark={isDark} />) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <Card isDark={isDark} className="p-6 flex flex-col items-center justify-center text-center">
+                      <div className="relative w-36 h-36">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2" className={isDark ? 'stroke-gray-700' : 'stroke-gray-200'} />
+                          <motion.circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2" strokeLinecap="round" pathLength={100} className={rate !== null && rate < 80 ? 'stroke-red-500' : 'stroke-blue-500'}
+                            strokeDasharray="100 100" initial={{ strokeDashoffset: 100 }} animate={{ strokeDashoffset: 100 - (rate ?? 0) }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-3xl font-bold">{rate === null ? '—' : `${rate}%`}</span>
+                          <span className={`text-[11px] font-bold ${muted}`}>{tx.rate}</span>
                         </div>
                       </div>
-                    ))}
-                    {/* Bars ONLY — redundant text removed */}
+                      <div className="mt-5 grid grid-cols-3 gap-2 w-full">
+                        {([[tx.attended, record.attended], [tx.absent, record.absent], [tx.other, record.other]] as const).map(([l, v]) => (
+                          <div key={l} className={`rounded-2xl py-2 ${isDark ? 'bg-gray-700' : 'bg-white'}`}>
+                            <div className="text-lg font-bold">{v ?? 0}</div>
+                            <div className={`text-[10px] font-bold ${muted}`}>{l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                    <Card isDark={isDark} className="p-5 sm:p-6 lg:col-span-2">
+                      <div className="space-y-5">
+                        {byMonth.map(([month, sessions]) => (
+                          <div key={month}>
+                            <div className={`text-xs font-bold mb-2 ${muted}`}>{new Date(2000, month - 1, 1).toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'long' })}</div>
+                            <div className="flex flex-wrap gap-2">
+                              {sessions.map(s => (
+                                <div key={`${s.no}-${s.period}`} title={`${tx.legend[s.status]}${s.period ? ` · ${periods[s.period - 1] ?? s.period}` : ''}`}
+                                  className={`w-12 h-12 rounded-2xl flex flex-col items-center justify-center text-sm font-bold ${STATUS_STYLE[s.status]} ${s.status === 'unrecorded' ? `border-2 border-dashed ${isDark ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-400'}` : ''}`}>
+                                  {s.day}
+                                  {s.period && <span className="text-[9px] font-semibold opacity-80 leading-none">{s.period}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
+                        {usedStatuses.map(st => (
+                          <span key={st} className={`flex items-center gap-1.5 text-[11px] font-semibold ${muted}`}>
+                            <span className={`w-3 h-3 rounded ${STATUS_STYLE[st]} ${st === 'unrecorded' ? 'border border-dashed border-gray-400' : ''}`} />{tx.legend[st]}
+                          </span>
+                        ))}
+                      </div>
+                    </Card>
                   </div>
-                ) : (
-                  <div className={`${textNormal} text-base leading-relaxed font-medium`}>
-                    {finalEvaluation}
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
+                )
+              )}
 
-          {/* Attendance Tracker */}
-          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8">
-            <AttendanceTracker courseId={courseId} courseDay={course.day} isDark={isDark} lang={lang} />
-          </motion.div>
+              {tab === 'plan' && syl && (
+                <ol className="space-y-1">
+                  {syl.schedule.map((row, i) => (
+                    <li key={`${row.no}-${i}`} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-9 h-9 rounded-full bg-brand-yellow text-brand-black font-bold text-sm flex items-center justify-center shrink-0">{row.no ?? i + 1}</div>
+                        {i < syl.schedule.length - 1 && <div className={`w-0.5 flex-1 my-1 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />}
+                      </div>
+                      <Card isDark={isDark} className="flex-1 p-4 mb-2">
+                        <div className={`text-[11px] font-bold ${muted}`}>{row.when}</div>
+                        <div className="font-bold text-[15px] mt-0.5">{row.topic}</div>
+                        {row.method && <details className="mt-2"><summary className={`text-xs font-bold cursor-pointer ${muted}`}>{tx.method}</summary><p className={`mt-1 text-sm whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{row.method}</p></details>}
+                        {row.prep && <details className="mt-1"><summary className={`text-xs font-bold cursor-pointer ${muted}`}>{tx.prep}</summary><p className={`mt-1 text-sm whitespace-pre-line ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{row.prep}</p></details>}
+                      </Card>
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-        </motion.div>
-      </div>
-    </div>
+              {tab === 'details' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {detailSections.map(s => (
+                    <Card key={s.label.jp} isDark={isDark} className={`p-5 ${s.value.length > 300 ? 'md:col-span-2' : ''}`}>
+                      <h3 className={`text-xs font-bold uppercase tracking-wider mb-2 ${muted}`}>{s.label[lang] || s.label.jp}</h3>
+                      <Expandable text={s.value} {...exp} />
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
+    </PageShell>
   );
-});
-
-export default TokaiCourse;
+}

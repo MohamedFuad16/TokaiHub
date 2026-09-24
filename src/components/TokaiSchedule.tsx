@@ -5,9 +5,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
-import { getClassesForDate, allItems } from '../data';
-import { getSchedule } from '../lib/api';
-import type { CourseItem } from '../lib/types';
+import { useTimetable } from '../lib/useTerm';
+import { termLabel, academicYearOf } from '../lib/tipsAdapters';
+import { useClassCalendar } from '../lib/useCalendar';
+import RegistrationPlanner from './RegistrationPlanner';
+import { CONTAINER } from './ScreenHeader';
+import type { Term } from '../lib/types';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 
 const t = {
@@ -18,8 +21,11 @@ const t = {
     noClasses: "No classes today.",
     noClassesWeek: "No classes this week.",
     classesOn: (d: Date) => `Classes on ${d.toLocaleString('en-US', { month: 'long' })} ${d.getDate()}`,
-    noCourses: "Select your courses in Edit Profile to see your schedule",
-    goToEditProfile: "Edit Profile",
+    cancelled: "Cancelled", makeup: "Make-up", roomChange: "Room change",
+    noCourses: "No registered courses for this term.",
+    spring: "Spring",
+    regOpen: (d: string) => `Registration is open until ${d}. Pick this term's classes below; only courses TIPS lets you take are listed.`,
+    autumn: "Fall",
   },
   jp: {
     schedule: "スケジュール",
@@ -28,8 +34,11 @@ const t = {
     noClasses: "今日の授業はありません。",
     noClassesWeek: "今週の授業はありません。",
     classesOn: (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日の授業`,
-    noCourses: "プロフィール編集で授業を選択してスケジュールを表示しましょう",
-    goToEditProfile: "プロフィール編集",
+    cancelled: "休講", makeup: "補講", roomChange: "教室変更",
+    noCourses: "この学期の履修登録はありません。",
+    spring: "春学期",
+    regOpen: (d: string) => `履修登録期間中です（${d}まで）。下の時間割から今学期の科目を選べます。表示されるのはTIPSで履修できる科目のみです。`,
+    autumn: "秋学期",
   }
 };
 
@@ -56,49 +65,12 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const setView = useCallback((v: 'weekly' | 'monthly') => {
     setSearchParams({ view: v }, { replace: true });
   }, [setSearchParams]);
-  const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-
-  // Initialize with allItems so the schedule is never empty even before the API responds
-  const [scheduleItems, setScheduleItems] = useState<CourseItem[]>(allItems as CourseItem[]);
-  useEffect(() => {
-    const controller = new AbortController();
-    getSchedule(controller.signal)
-      .then(data => {
-        if (data?.length) {
-          const merged = data.map(apiItem => {
-            const local = (allItems as CourseItem[]).find(
-              item => item.id === apiItem.id || item.code === apiItem.code
-            );
-
-            if (!local) return apiItem;
-
-            return {
-              ...local,
-              ...apiItem,
-              // 🛡️ PROTECT SCHEDULING FIELDS: Local data.ts is the ground truth for day/period
-              dayOfWeek: local.dayOfWeek,
-              periods: local.periods,
-              time: local.time || apiItem.time,
-              // 🛡️ PROTECT CURATED TRANSLATIONS: If we have local definitions, use them!
-              title: { ...apiItem.title, ...local.title },
-              location: local.location?.jp ? { ...apiItem.location, ...local.location } : apiItem.location,
-              teacher: local.teacher?.jp ? { ...apiItem.teacher, ...local.teacher } : apiItem.teacher,
-              overview: local.overview || apiItem.overview,
-              evaluation: local.evaluation || apiItem.evaluation,
-            };
-          });
-
-          // 🔧 SUPPLEMENT: If the API missed any enrolled course IDs, add them from local data
-          const mergedIds = new Set(merged.flatMap(c => [c.id, c.code].filter(Boolean)));
-          const missingLocals = (allItems as CourseItem[]).filter(
-            local => !mergedIds.has(local.id) && !mergedIds.has(local.code ?? '')
-          );
-          setScheduleItems([...merged, ...missingLocals] as CourseItem[]);
-        }
-      })
-      .catch(err => { if (err?.name !== 'AbortError') { /* keep local fallback */ } });
-    return () => controller.abort();
-  }, []);
+  const tt = useTimetable();
+  const scheduleItems = tt.items;
+  const selectedCourseIds = scheduleItems.map(c => c.id);
+  const term: Term = tt.timetable?.term ?? '1';
+  const termYear = tt.timetable?.year ?? academicYearOf(new Date());
+  const planning = view === 'weekly' && !!tt.timetable && tt.timetable.term === tt.currentTerm && tt.timetable.registrationOpen;
 
   const [monthlySelected, setMonthlySelected] = useState<Date>(new Date());
   
@@ -116,6 +88,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
   const monthName = monthYear.toLocaleString('en-US', { month: 'long' });
   const year = monthYear.getFullYear();
 
+  const cal = useClassCalendar(monthlySelected);
   const daysWithClasses = useMemo(() => {
     const year = monthlySelected.getFullYear();
     const month = monthlySelected.getMonth();
@@ -123,10 +96,10 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
     const s = new Set<number>();
     for (let d = 1; d <= count; d++) {
       const date = new Date(year, month, d);
-      if (getClassesForDate(date, selectedCourseIds, scheduleItems).length > 0) s.add(d);
+      if (cal.index.has(date)) s.add(d);
     }
     return s;
-  }, [monthlySelected, selectedCourseIds, scheduleItems]);
+  }, [monthlySelected, cal.index]);
 
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<Date>(new Date());
 
@@ -137,8 +110,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
 
   const monthlySelectedClasses = useMemo(() => {
     if (!monthlySelected) return [];
-    return getClassesForDate(calendarSelectedDate, selectedCourseIds, scheduleItems);
-  }, [calendarSelectedDate, selectedCourseIds, scheduleItems]);
+    return cal.index.on(calendarSelectedDate, scheduleItems);
+  }, [calendarSelectedDate, scheduleItems, cal.index]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -150,7 +123,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       {/* Header */}
       <header
         style={{ paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))' }}
-        className="flex justify-between items-center p-4 sm:p-6 shrink-0"
+        className={`${CONTAINER} flex justify-between items-center py-4 sm:py-6 shrink-0`}
       >
         <div className="flex items-center gap-4">
           <button
@@ -165,7 +138,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
       </header>
 
       {/* Toggle Weekly/Monthly */}
-      <div className="px-4 sm:px-6 mb-4 max-w-6xl">
+      <div className={`${CONTAINER} mb-4`}>
         <div className={`flex ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1 shadow-inner`}>
           {(['weekly', 'monthly'] as const).map((v) => (
             <button
@@ -182,12 +155,46 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
         </div>
       </div>
 
+      {/* Term: follows TIPS by default, or pin spring/autumn */}
+      <div className={`${CONTAINER} mb-4 flex items-center gap-2`}>
+        {(['1', '2'] as Term[]).map(tm => {
+          const active = term === tm;
+          return (
+            <button
+              key={tm}
+              onClick={() => tt.setChoice(tm)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${active
+                ? 'bg-[#0B1F3A] text-white shadow-md'
+                : `border ${isDark ? 'border-gray-700 bg-gray-800 text-gray-300' : 'border-gray-200 bg-white text-gray-600'}`}`}
+            >
+              {tm === '1' ? t[lang].spring : t[lang].autumn}
+            </button>
+          );
+        })}
+        {tt.choice !== 'auto' && (
+          <button onClick={() => tt.setChoice('auto')} className={`text-[11px] font-bold underline underline-offset-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {lang === 'en' ? 'Follow TIPS' : 'TIPSに合わせる'}
+          </button>
+        )}
+        <span className={`ml-auto text-[11px] font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{termLabel(term, termYear, lang)}</span>
+      </div>
+
+      {/* Registration open for the term being viewed: plan and register right here. */}
+      {planning && tt.timetable && (
+        <div className="flex-1 overflow-y-auto pb-32">
+          <div className={CONTAINER}>
+            <p className="mb-4 p-4 rounded-2xl bg-green-500/10 text-green-700 text-sm font-semibold">{t[lang].regOpen(tt.timetable.registrationStatus ?? '')}</p>
+            <RegistrationPlanner lang={lang} isDark={isDark} />
+          </div>
+        </div>
+      )}
+
       {/* Dark Container */}
-      <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
+      {!planning && <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
         <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-4xl w-full mx-auto min-h-0">
 
-          {/* ─── NO COURSES SELECTED ─── */}
-          {selectedCourseIds.length === 0 && (
+          {/* ─── NO COURSES REGISTERED (monthly only; weekly shows the empty grid) ─── */}
+          {view === 'monthly' && selectedCourseIds.length === 0 && !tt.loading && (
             <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
               <div className="w-24 h-24 relative scale-[1.15] drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center">
                 <img
@@ -197,17 +204,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 />
               </div>
               <p className="text-white/70 text-sm font-medium max-w-[260px]">{t[lang].noCourses}</p>
-              <button
-                onClick={() => navigate('/editProfile')}
-                className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
-              >
-                {t[lang].goToEditProfile}
-              </button>
             </motion.div>
           )}
 
           {/* ─── WEEKLY TIMETABLE VIEW ─── */}
-          {view === 'weekly' && selectedCourseIds.length > 0 && (
+          {view === 'weekly' && !!tt.timetable && (
             <motion.div variants={itemVariants} className="bg-white/5 pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden relative">
               <WeeklyTimetable 
                 lang={lang}
@@ -215,6 +216,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                 selectedCourseIds={selectedCourseIds}
                 scheduleItems={scheduleItems}
                 forceDark={true}
+                semesterLabel={termLabel(term, termYear, lang)}
+                grid={tt.timetable?.grid}
               />
             </motion.div>
           )}
@@ -293,7 +296,7 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                     className="space-y-3"
                   >
                     {monthlySelectedClasses.length > 0 ? (
-                      monthlySelectedClasses.map((cls) => (
+                      monthlySelectedClasses.map(({ item: cls, status }) => (
                         <motion.div
                           key={cls.id}
                           whileTap={{ scale: 0.98 }}
@@ -307,6 +310,11 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
                           <div className="flex-1 min-w-0">
                             <div className="font-bold text-base leading-tight truncate">{cls.title?.[lang]}</div>
                             <div className="text-sm font-medium opacity-60 truncate mt-0.5">{cls.location?.[lang]}</div>
+                            {status && status !== 'normal' && (
+                              <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 text-white">
+                                {status === 'makeup' ? t[lang].makeup : status === 'roomChange' ? t[lang].roomChange : t[lang].cancelled}
+                              </span>
+                            )}
                           </div>
                         </motion.div>
                       ))
@@ -321,28 +329,8 @@ export default function TokaiSchedule({ lang, setLang, settings, userProfile }: 
             </motion.div>
           )}
 
-          {/* Empty state for weekly/monthly when no courses selected */}
-          {(view === 'weekly' || view === 'monthly') && selectedCourseIds.length === 0 && (
-            <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 py-16 text-center">
-              <div className={`w-20 h-20 rounded-full overflow-hidden relative ${isDark ? 'bg-[#1A1A1A]' : 'bg-white'} scale-[1.05]`}>
-                <img
-                  src={mascotIdle}
-                  alt="No courses"
-                  className={`w-full h-full object-contain mix-blend-multiply ${isDark ? 'brightness-125 contrast-110' : 'opacity-70'}`}
-                />
-              </div>
-              <p className="text-white/50 text-sm font-medium">{t[lang].noCourses}</p>
-              <button
-                onClick={() => navigate('/editProfile')}
-                className="px-4 py-2 rounded-xl bg-brand-yellow text-brand-black font-bold text-sm active:scale-95 transition-transform"
-              >
-                {t[lang].goToEditProfile}
-              </button>
-            </motion.div>
-          )}
-
         </motion.div>
-      </div>
+      </div>}
 
       <SharedMenu
         isOpen={isMenuOpen}

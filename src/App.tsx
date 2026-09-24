@@ -1,89 +1,75 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
-import { Hub } from 'aws-amplify/utils';
 import { AnimatePresence, motion } from 'motion/react';
-import { Home, Calendar, ClipboardList, Settings } from 'lucide-react';
+import { Clock, Plus, RefreshCw } from 'lucide-react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
-import TokaiAuth, { LoadingScreen } from './components/TokaiAuth';
-import TokaiOnboarding from './components/TokaiOnboarding';
-import TokaiFederatedOnboarding from './components/TokaiFederatedOnboarding';
-import MaintenanceBanner from './components/MaintenanceBanner';
-import TokaiSplash from './components/TokaiSplash';
-import { configureAmplify } from './lib/awsConfig';
-import { clearCoursesCache, getDashboard } from './lib/api';
+import TokaiSignIn, { LoadingScreen } from './components/TokaiSignIn';
+import { getStatus, signOut as bridgeSignOut, extendSession, needsUnlock, IS_LOCAL, LOCKED_EVENT, LockedError } from './lib/api';
+import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT } from './lib/useTips';
+import { displayName, tidy } from './lib/tipsAdapters';
+import { NAV_ITEMS } from './lib/nav';
+import type { TipsGrades, TipsProfile, TipsStatus } from './lib/types';
 import mascotLogo from './assets/mascots/mascot_1_1.png';
-
-configureAmplify();
 
 // Lazy load route components — imports cached after first load
 const lazyHome = () => import('./components/TokaiHome');
 const lazyCourse = () => import('./components/TokaiCourse');
 const lazySchedule = () => import('./components/TokaiSchedule');
 const lazySettings = () => import('./components/TokaiSettings');
-const lazyEditProfile = () => import('./components/TokaiEditProfile');
-const lazyCredits = () => import('./components/TokaiCredits');
+const lazyGrades = () => import('./components/TokaiCredits');
 const lazyClass = () => import('./components/TokaiClass');
-const lazyAdminDb = () => import('./components/AdminDatabase');
+const lazyAttendance = () => import('./components/TokaiAttendance');
+const lazyBulletins = () => import('./components/TokaiBulletins');
+const lazyTasks = () => import('./components/TokaiTasks');
+const lazySyllabus = () => import('./components/TokaiSyllabus');
+const lazyRegistration = () => import('./components/TokaiRegistration');
+const lazyCabinet = () => import('./components/TokaiCabinet');
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
 const TokaiSchedule = React.lazy(lazySchedule);
 const TokaiSettings = React.lazy(lazySettings);
-const TokaiEditProfile = React.lazy(lazyEditProfile);
-const TokaiCredits = React.lazy(lazyCredits);
+const TokaiCredits = React.lazy(lazyGrades);
 const TokaiClass = React.lazy(lazyClass);
-const AdminDatabase = React.lazy(lazyAdminDb);
+const TokaiAttendance = React.lazy(lazyAttendance);
+const TokaiBulletins = React.lazy(lazyBulletins);
+const TokaiTasks = React.lazy(lazyTasks);
+const TokaiSyllabus = React.lazy(lazySyllabus);
+const TokaiRegistration = React.lazy(lazyRegistration);
+const TokaiCabinet = React.lazy(lazyCabinet);
 
 // Preload all route components after initial paint
 export function preloadRoutes() {
-  lazyHome().catch(() => {});
-  lazyCourse().catch(() => {});
-  lazySchedule().catch(() => {});
-  lazySettings().catch(() => {});
-  lazyEditProfile().catch(() => {});
-  lazyCredits().catch(() => {});
-  lazyClass().catch(() => {});
-  lazyAdminDb().catch(() => {});
+  [lazyHome, lazyCourse, lazySchedule, lazySettings, lazyGrades, lazyClass, lazyAttendance, lazyBulletins, lazyTasks, lazySyllabus, lazyRegistration, lazyCabinet]
+    .forEach(l => l().catch(() => {}));
 }
 
-// Start preloading immediately to hide chunk fetch times
 preloadRoutes();
 
 export type Language = 'en' | 'jp';
-export type AuthScreen = 'signIn' | 'signUp' | 'federatedOnboarding';
-
-/**
- * Clears all Cognito/Amplify tokens from localStorage.
- * Used instead of Amplify's signOut() because it always redirects to
- * Cognito's hosted logout page when OAuth is configured.
- */
-function clearCognitoTokens() {
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('CognitoIdentityServiceProvider') || key.startsWith('amplify')) {
-      localStorage.removeItem(key);
-    }
-  });
-}
 
 export interface AppSettings {
   isDarkMode: boolean;
   notifications: boolean;
   privacy: boolean;
-  devSkipAuth: boolean;
   enableEnhancedUI: boolean;
   fontFamily: 'default' | 'merry_varsity' | 'moshi_moshi' | 'one_more' | 'pramukh_rounded';
 }
 
+/** The signed-in student, built from TIPS (学生ポートフォリオ + 単位修得状況). */
 export interface UserProfile {
-  name: string;
-  email: string;
+  name: string;        // English name as TIPS lists it
+  nameJp: string;      // katakana/kanji name
+  givenName: string;   // for greetings, in the current language
   studentId: string;
-  campus: string;
-  selectedCourseIds: string[];
+  campus: string;      // e.g. 品川
+  department: string;
+  year: string;
+  semester: string;
+  advisor: string;
   cumulativeGpa: number;
   lastSemGpa: number;
-  isVerified?: boolean;
+  creditsEarned: number;
 }
 
 export interface ScreenProps {
@@ -92,41 +78,41 @@ export interface ScreenProps {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   userProfile?: UserProfile;
-  setUserProfile?: React.Dispatch<React.SetStateAction<UserProfile | undefined>>;
-  onSignOut?: () => void;
-  isAdmin?: boolean;
+  session?: TipsStatus | null;
+  onExtendSession?: (minutes: number) => Promise<void>;
+  onSignOut?: (clearCache?: boolean) => void;
 }
-
-// Admin email whitelist
-const ADMIN_EMAILS = ['mohamed.fuad.jp@gmail.com'];
-
-const sidebarNav = [
-  { path: '/', icon: Home, labelEn: 'Home', labelJp: 'ホーム' },
-  { path: '/schedule', icon: Calendar, labelEn: 'Schedule', labelJp: 'スケジュール' },
-  { path: '/class', icon: ClipboardList, labelEn: 'Classes', labelJp: '授業' },
-  { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定' },
-];
-
-const DEV_PROFILE: UserProfile = {
-  name: 'Mohamed Fuad',
-  email: 'm.fuad@tokai.ac.jp',
-  studentId: '4CJE1108',
-  campus: 'shinagawa',
-  selectedCourseIds: [],
-  cumulativeGpa: 0,
-  lastSemGpa: 0,
-  isVerified: true,
-};
 
 const DEFAULT_SETTINGS: AppSettings = {
   isDarkMode: false,
   notifications: true,
   privacy: true,
-  devSkipAuth: false,
   enableEnhancedUI: false,
   fontFamily: 'default',
 };
 
+function SessionPill({ session, lang, isDark, onExtend }: { session: TipsStatus | null; lang: Language; isDark: boolean; onExtend: (m: number) => Promise<void> }) {
+  if (!session || session.state !== 'signed_in' || !session.hubExpiresAt) return null;
+  const low = session.minutesLeft <= 15;
+  const h = Math.floor(session.minutesLeft / 60);
+  const m = session.minutesLeft % 60;
+  const left = h ? `${h}h ${m}m` : `${m}m`;
+  return (
+    <div className={`mt-3 flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-xs font-bold ${low ? 'bg-red-500/10 text-red-500' : isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+      <span className="flex items-center gap-1.5">
+        <Clock className="w-3.5 h-3.5" />
+        {lang === 'en' ? `Session ${left} left` : `セッション残り ${left}`}
+      </span>
+      <button
+        onClick={() => onExtend(60)}
+        aria-label={lang === 'en' ? 'Extend session by 60 minutes' : 'セッションを60分延長'}
+        className={`flex items-center gap-0.5 px-2 py-1 rounded-lg transition-colors ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-white hover:bg-gray-100 text-brand-black shadow-sm'}`}
+      >
+        <Plus className="w-3 h-3" />60m
+      </button>
+    </div>
+  );
+}
 
 interface MainAppContentProps {
   screenProps: ScreenProps;
@@ -134,17 +120,35 @@ interface MainAppContentProps {
   userProfile: UserProfile | undefined;
   isDark: boolean;
   setLang: (l: Language) => void;
-  handleUpdateProfile: (updated: UserProfile) => void;
-  handleDevSkipChange: (val: boolean) => void;
 }
 
-function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handleUpdateProfile, handleDevSkipChange }: MainAppContentProps) {
+/** Brief pill when a background refresh brought newer TIPS data. */
+function UpdatedPill({ lang, isDark }: { lang: Language; isDark: boolean }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let t: number | undefined;
+    const on = () => { setShow(true); clearTimeout(t); t = window.setTimeout(() => setShow(false), 2500); };
+    window.addEventListener(UPDATED_EVENT, on);
+    return () => { window.removeEventListener(UPDATED_EVENT, on); clearTimeout(t); };
+  }, []);
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-2 ${isDark ? 'bg-white text-brand-black' : 'bg-brand-black text-white'}`}>
+          <RefreshCw className="w-3.5 h-3.5" />{lang === 'en' ? 'Updated from TIPS' : 'TIPSの最新情報に更新しました'}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: MainAppContentProps) {
   const location = useLocation();
   const navigate = useNavigate();
   return (
     <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
-      {/* One-time maintenance notification — dismisses via localStorage */}
-      <MaintenanceBanner lang={lang} isDark={isDark} isAdmin={screenProps.isAdmin} />
+      <UpdatedPill lang={lang} isDark={isDark} />
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col w-72 xl:w-80 shrink-0 h-full transition-colors duration-500 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r`}>
         <div className="p-8 pb-4">
@@ -158,25 +162,26 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
           {userProfile && (
             <div className={`mt-4 flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="w-9 h-9 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-sm text-brand-black shrink-0">
-                {userProfile.name.charAt(0)}
+                {(lang === 'en' ? userProfile.givenName : userProfile.nameJp).charAt(0)}
               </div>
               <div className="min-w-0">
-                <div className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{userProfile.name}</div>
+                <div className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? userProfile.name : userProfile.nameJp}</div>
                 <div className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{userProfile.studentId}</div>
               </div>
             </div>
           )}
+          <SessionPill session={screenProps.session ?? null} lang={lang} isDark={isDark} onExtend={screenProps.onExtendSession!} />
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          {sidebarNav.map(item => {
+        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+          {NAV_ITEMS.map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${isActive
+                className={`w-full flex items-center gap-4 px-5 py-2.5 rounded-2xl font-semibold text-[15px] transition-all duration-200 ${isActive
                   ? isDark
                     ? 'bg-brand-yellow text-brand-black shadow-lg shadow-yellow-500/20'
                     : 'bg-brand-black text-white shadow-lg shadow-black/20'
@@ -237,11 +242,16 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
                 <Route path="/" element={<TokaiHome {...screenProps} />} />
                 <Route path="/course/:id" element={<TokaiCourse {...screenProps} />} />
                 <Route path="/schedule" element={<TokaiSchedule {...screenProps} />} />
-                <Route path="/settings" element={<TokaiSettings {...screenProps} onDevSkipChange={handleDevSkipChange} />} />
-                <Route path="/editProfile" element={userProfile ? <TokaiEditProfile {...screenProps} onSave={handleUpdateProfile} /> : <Navigate to="/" replace />} />
-                <Route path="/credits" element={<TokaiCredits {...screenProps} />} />
+                <Route path="/settings" element={<TokaiSettings {...screenProps} />} />
+                <Route path="/grades" element={<TokaiCredits {...screenProps} />} />
                 <Route path="/class" element={<TokaiClass {...screenProps} />} />
-                <Route path="/admin/database" element={screenProps.isAdmin ? <AdminDatabase {...screenProps} /> : <Navigate to="/" replace />} />
+                <Route path="/attendance" element={<TokaiAttendance {...screenProps} />} />
+                <Route path="/bulletins" element={<TokaiBulletins {...screenProps} />} />
+                <Route path="/bulletins/:id" element={<TokaiBulletins {...screenProps} />} />
+                <Route path="/tasks" element={<TokaiTasks {...screenProps} />} />
+                <Route path="/syllabus" element={<TokaiSyllabus {...screenProps} />} />
+                <Route path="/registration" element={<TokaiRegistration {...screenProps} />} />
+                <Route path="/cabinet" element={<TokaiCabinet {...screenProps} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
@@ -252,10 +262,71 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang, handl
   );
 }
 
+/** Everything that needs a live TIPS session lives below this component. */
+function SignedInApp({ base, session, onExtendSession }: { base: Omit<ScreenProps, 'userProfile'>; session: TipsStatus | null; onExtendSession: (m: number) => Promise<void> }) {
+  const profile = useTips<TipsProfile>('profile');
+  const grades = useTips<TipsGrades>('grades');
+  const { lang } = base;
+
+  // The local cache belongs to one student. If a different student signs in on this
+  // device, drop the previous student's cached data before anything else renders from it.
+  useEffect(() => {
+    const id = profile.data?.studentId;
+    if (!id) return;
+    let owner: string | null = null;
+    try { owner = localStorage.getItem('tokaihub_owner'); } catch { /* private mode */ }
+    if (owner && owner !== id) clearTipsStore();
+    try { localStorage.setItem('tokaihub_owner', id); } catch { /* private mode */ }
+  }, [profile.data?.studentId]);
+
+  const userProfile: UserProfile | undefined = React.useMemo(() => {
+    const p = profile.data;
+    if (!p) return undefined;
+    const names = displayName(p, lang);
+    // In English mode TIPS returns English department/campus; name stays in both scripts.
+    const gpa = grades.data?.gpa ?? [];
+    const last = gpa[gpa.length - 1];
+    return {
+      name: names.en || names.jp,
+      nameJp: names.jp || names.en,
+      givenName: names.given,
+      studentId: p.studentId ?? '',
+      campus: tidy(p.campus ?? ''),
+      department: tidy(p.department ?? ''),
+      year: p.year ?? '',
+      semester: p.semester ?? '',
+      advisor: tidy(p.advisor ?? ''),
+      cumulativeGpa: last?.cumulativeGpa ?? 0,
+      lastSemGpa: last?.termGpa ?? 0,
+      creditsEarned: grades.data?.totalEarned ?? 0,
+    };
+  }, [profile.data, grades.data, lang]);
+
+  const screenProps: ScreenProps = React.useMemo(
+    () => ({ ...base, userProfile, session, onExtendSession }),
+    [base, userProfile, session, onExtendSession],
+  );
+
+  return (
+    <BrowserRouter>
+      <MainAppContent
+        screenProps={screenProps}
+        lang={lang}
+        userProfile={userProfile}
+        isDark={base.settings.isDarkMode}
+        setLang={base.setLang}
+      />
+    </BrowserRouter>
+  );
+}
+
 export default function App() {
   const [lang, setLang] = useState<Language>(() => {
-    const browserLang = navigator.language.toLowerCase();
-    return browserLang.startsWith('ja') ? 'jp' : 'en';
+    try {
+      const stored = localStorage.getItem('tokaihub_lang');
+      if (stored === 'en' || stored === 'jp') return stored;
+    } catch { /* private mode */ }
+    return navigator.language.toLowerCase().startsWith('ja') ? 'jp' : 'en';
   });
 
   const [settings, setSettings] = useState<AppSettings>(() => {
@@ -265,16 +336,15 @@ export default function App() {
     } catch { return DEFAULT_SETTINGS; }
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('signIn');
-  const [userProfile, setUserProfile] = useState<UserProfile | undefined>(() => {
-    try {
-      const stored = localStorage.getItem('tokaihub_user_profile');
-      return stored ? (JSON.parse(stored) as UserProfile) : undefined;
-    } catch { return undefined; }
+  // Off the Mac the app opens straight from the last known status and the phone's cached
+  // data; the bridge is asked in the background. This keeps start-up instant on a phone.
+  const [session, setSession] = useState<TipsStatus | null>(() => {
+    if (IS_LOCAL || needsUnlock()) return null;
+    try { return JSON.parse(localStorage.getItem('tokaihub_status') ?? 'null'); } catch { return null; }
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSignOutLoading, setIsSignOutLoading] = useState(false);
+  const [locked, setLocked] = useState(needsUnlock);
+  const [bridgeDown, setBridgeDown] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !session && !locked);
 
   // Dynamic Font Loading & Styling
   useEffect(() => {
@@ -296,338 +366,93 @@ export default function App() {
       }
     };
 
-    const config = fontConfigs[settings.fontFamily] || fontConfigs.default;
+    const config = fontConfigs[settings.fontFamily as keyof typeof fontConfigs] || fontConfigs.default;
     document.documentElement.style.setProperty('--app-font-family', config.family);
     document.documentElement.setAttribute('data-font', settings.fontFamily);
   }, [settings.fontFamily, lang]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function resolveAuthenticatedUser() {
-      try {
-        const user = await getCurrentUser();
-
-        // fetchUserAttributes may fail for federated users lacking the
-        // aws.cognito.signin.user.admin scope — proceed with basic info
-        let attrs: Record<string, string> = {};
-        try {
-          attrs = (await fetchUserAttributes()) as Record<string, string>;
-        } catch (attrErr) {
-          console.warn('[Auth] fetchUserAttributes failed:', (attrErr as Error)?.name);
-        }
-
-        if (cancelled) return;
-
-        // Apply locale from Cognito attribute
-        if (attrs.locale) {
-          setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
-        }
-
-        const customStudentId = attrs['custom:studentId'] as string;
-
-        const initialProfile: UserProfile = {
-          name: attrs.name || attrs.given_name || user.signInDetails?.loginId || 'Student',
-          email: attrs.email || user.signInDetails?.loginId || user.username,
-          studentId: customStudentId || '',
-          campus: 'shinagawa',
-          selectedCourseIds: [],
-          cumulativeGpa: 0,
-          lastSemGpa: 0,
-          isVerified: true,
-        };
-
-        // Federated user without studentId → send to onboarding
-        if (!customStudentId || customStudentId.trim() === '' || customStudentId === 'PENDING') {
-          setUserProfile({ ...initialProfile, studentId: '' });
-          setAuthScreen('federatedOnboarding');
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-
-        // Fully set up user → go straight to dashboard
-        setUserProfile(initialProfile);
-        setIsAuthenticated(true);
-        setIsLoading(false);
-
-        // Fetch fresh academic data (GPA/Courses) from API
-        getDashboard().then(data => {
-          if (cancelled) return;
-          setUserProfile(prev => {
-            const current = (prev && prev.email) ? prev : initialProfile;
-            const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-            const rawCum = Number(profileData?.cumulativeGpa);
-            const rawLast = Number(profileData?.lastSemGpa);
-            const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
-
-            return {
-              ...current,
-              selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
-                ? apiCourseIds
-                : current.selectedCourseIds,
-              cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
-              lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
-            };
-          });
-        }).catch(err => console.error('Failed to sync profile on boot:', err));
-
-      } catch (e) {
-        const errName = (e as Error)?.name;
-        if (cancelled) return;
-
-        // If tokens are corrupted, clear them locally and let the user re-login
-        if (errName === 'NotAuthorizedException') {
-          clearCognitoTokens();
-          window.history.replaceState(null, '', '/');
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-
-        // Only give up if we are NOT in the middle of an OAuth redirect
-        const params = new URLSearchParams(window.location.search);
-        const isOAuthRedirect = params.has('code') || params.has('state');
-        if (!isOAuthRedirect) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-        }
-        // If we ARE in an OAuth redirect, keep isLoading=true and wait for Hub event
-      }
-    }
-
-    if (!settings.devSkipAuth) {
-      const unsubscribe = Hub.listen('auth', ({ payload }) => {
-        console.log('[Auth Hub]', payload.event);
-        if (payload.event === 'signInWithRedirect') {
-          // OAuth code exchange completed — now fetch the user
-          resolveAuthenticatedUser();
-        } else if (payload.event === 'signInWithRedirect_failure') {
-          console.error('OAuth sign in failed:', payload.data);
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          // Clean up the URL
-          window.history.replaceState(null, '', '/');
-        }
-      });
-
-      resolveAuthenticatedUser();
-      return () => { cancelled = true; unsubscribe(); };
-    } else {
-      preloadRoutes();
-      setIsLoading(false);
-    }
-  }, [settings.devSkipAuth]);
-
-  // Persist userProfile to localStorage whenever it changes
-  useEffect(() => {
-    if (userProfile) {
-      localStorage.setItem('tokaihub_user_profile', JSON.stringify(userProfile));
-    }
-  }, [userProfile]);
-
-  // Persist settings to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('tokaihub_settings', JSON.stringify(settings));
-  }, [settings]);
-
-  // Called after email/password sign-in completes — reuses resolveAuthenticatedUser
-  // which handles both regular and federated users uniformly.
-  const handleSignIn = async (_email: string) => {
-    setIsLoading(true);
-    // resolveAuthenticatedUser is defined inside the useEffect above but we can
-    // trigger a re-check by toggling a dependency. However, since the Cognito
-    // session is already established at this point, we inline a minimal version:
+  const refreshStatus = useCallback(async () => {
+    if (needsUnlock()) { setLocked(true); setIsLoading(false); return null; }
     try {
-      const user = await getCurrentUser();
-      let attrs: Record<string, string> = {};
-      try {
-        attrs = (await fetchUserAttributes()) as Record<string, string>;
-      } catch { /* federated users may lack scopes */ }
-
-      if (attrs.locale) setLang(attrs.locale.startsWith('ja') ? 'jp' : 'en');
-
-      const customStudentId = attrs['custom:studentId'] as string;
-      const initialProfile: UserProfile = {
-        name: attrs.name || attrs.given_name || user.signInDetails?.loginId || 'Student',
-        email: attrs.email || user.signInDetails?.loginId || user.username,
-        studentId: customStudentId || '',
-        campus: 'shinagawa',
-        selectedCourseIds: [],
-        cumulativeGpa: 0,
-        lastSemGpa: 0,
-        isVerified: true,
-      };
-
-      if (!customStudentId || customStudentId.trim() === '' || customStudentId === 'PENDING') {
-        setUserProfile({ ...initialProfile, studentId: '' });
-        setAuthScreen('federatedOnboarding');
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        return;
-      }
-
-      setUserProfile(initialProfile);
-      setIsAuthenticated(true);
-
-      getDashboard().then(data => {
-        setUserProfile(prev => {
-          const current = (prev && prev.email) ? prev : initialProfile;
-          const profileData = data.profile ?? (data as any).userProfile ?? (data as any);
-          const rawCum = Number(profileData?.cumulativeGpa);
-          const rawLast = Number(profileData?.lastSemGpa);
-          const apiCourseIds = data.enrolledCourseIds ?? profileData?.enrolledCourses ?? profileData?.selectedCourseIds;
-          return {
-            ...current,
-            selectedCourseIds: (apiCourseIds && Array.isArray(apiCourseIds))
-              ? apiCourseIds
-              : current.selectedCourseIds,
-            cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
-            lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
-          };
-        });
-      }).catch(err => console.error('Failed to sync profile after login:', err));
-    } catch (err) {
-      console.error('[Auth] handleSignIn error:', err);
+      const s = await getStatus();
+      setSession(s);
+      setLocked(false);
+      setBridgeDown(false);
+      try { localStorage.setItem('tokaihub_status', JSON.stringify(s)); } catch { /* private mode */ }
+      return s;
+    } catch (e) {
+      if (e instanceof LockedError) setLocked(true);
+      else setBridgeDown(true);
+      return null;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleSignOut = useCallback(() => {
-    clearCognitoTokens();
-    clearCoursesCache();
-    localStorage.removeItem('tokaihub_user_profile');
-    localStorage.removeItem('tokaihub_settings');
+  // Session status on boot and every minute (drives the countdown and the auto sign-out).
+  useEffect(() => {
+    refreshStatus();
+    const id = setInterval(refreshStatus, 60_000);
+    const onSignedOut = () => { refreshStatus(); };
+    const onLocked = () => setLocked(true);
+    window.addEventListener(SIGNED_OUT_EVENT, onSignedOut);
+    window.addEventListener(LOCKED_EVENT, onLocked);
+    return () => { clearInterval(id); window.removeEventListener(SIGNED_OUT_EVENT, onSignedOut); window.removeEventListener(LOCKED_EVENT, onLocked); };
+  }, [refreshStatus]);
+
+  useEffect(() => {
+    try { localStorage.setItem('tokaihub_settings', JSON.stringify(settings)); } catch { /* private mode */ }
+  }, [settings]);
+
+  useEffect(() => {
+    try { localStorage.setItem('tokaihub_lang', lang); } catch { /* private mode */ }
+    document.documentElement.lang = lang === 'jp' ? 'ja' : 'en';
+  }, [lang]);
+
+  // TIPS answers in the UI language; set before children render so first fetches match.
+  setTipsLang(lang);
+
+  const handleSignOut = useCallback(async (clearCache = false) => {
+    await bridgeSignOut(clearCache).catch(() => {});
+    clearTipsStore();
+    try { localStorage.removeItem('tokaihub_status'); } catch { /* private mode */ }
+    if (!IS_LOCAL) { setSession(null); setLocked(true); }
     window.history.replaceState(null, '', '/');
-    setIsAuthenticated(false);
-    setUserProfile(undefined);
-    setSettings(DEFAULT_SETTINGS);
-    setAuthScreen('signIn');
-  }, []);
+    await refreshStatus();
+  }, [refreshStatus]);
 
-  const handleDevSkipChange = useCallback((val: boolean) => {
-    setSettings(s => ({ ...s, devSkipAuth: val }));
-    if (val) {
-      setUserProfile(DEV_PROFILE);
-      setIsAuthenticated(true);
-    } else {
-      handleSignOut();
-    }
-  }, [handleSignOut]);
-
-  const handleUpdateProfile = useCallback((updated: UserProfile | ((prev: UserProfile | undefined) => UserProfile | undefined)) => {
-    setUserProfile(updated);
-  }, []);
-
-  const handleOnboardingComplete = useCallback((profile: UserProfile) => {
-    window.history.replaceState(null, '', '/');
-    setUserProfile(profile);
-    setIsAuthenticated(true);
-    preloadRoutes();
-  }, []);
+  const handleExtend = useCallback(async (minutes: number) => {
+    try { setSession(await extendSession(minutes)); } catch { await refreshStatus(); }
+  }, [refreshStatus]);
 
   const isDark = settings.isDarkMode;
-  const isAdmin = ADMIN_EMAILS.includes(userProfile?.email?.toLowerCase() ?? '');
 
-  // Set data-admin attribute on the root element for CSS theme override
-  useEffect(() => {
-    document.documentElement.setAttribute('data-admin', String(isAdmin));
-    return () => document.documentElement.removeAttribute('data-admin');
-  }, [isAdmin]);
-
-  const screenProps: ScreenProps = React.useMemo(() => ({
-    lang,
-    setLang,
-    settings,
-    setSettings,
-    userProfile,
-    setUserProfile: handleUpdateProfile,
-    onSignOut: handleSignOut,
-    isAdmin,
-  }), [lang, setLang, settings, userProfile, handleUpdateProfile, handleSignOut, isAdmin]);
+  const base = React.useMemo(() => ({
+    lang, setLang, settings, setSettings, onSignOut: handleSignOut,
+  }), [lang, settings, handleSignOut]);
 
   if (isLoading) {
     return <LoadingScreen lang={lang} isDark={isDark} />;
   }
 
-  if (!isAuthenticated && !settings.devSkipAuth) {
+  if ((!IS_LOCAL && locked) || session?.state !== 'signed_in') {
     return (
       <div className={`h-[100dvh] w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
-        <AnimatePresence mode="wait">
-          {authScreen === 'signIn' ? (
-            <motion.div
-              key="signIn"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0"
-            >
-              <TokaiAuth
-                onSignIn={handleSignIn}
-                onGoToSignUp={() => setAuthScreen('signUp')}
-                lang={lang}
-                setLang={setLang}
-                settings={settings}
-              />
-            </motion.div>
-          ) : authScreen === 'signUp' ? (
-            <motion.div
-              key="signUp"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0"
-            >
-              <TokaiOnboarding
-                onComplete={handleOnboardingComplete}
-                onBack={() => setAuthScreen('signIn')}
-                lang={lang}
-                setLang={setLang}
-                settings={settings}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="federatedOnboarding"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0 z-50 bg-white"
-            >
-              <TokaiFederatedOnboarding
-                onComplete={(partialProfile) => {
-                  handleOnboardingComplete({
-                    ...(userProfile as UserProfile),
-                    ...partialProfile,
-                    isVerified: true,
-                  } as UserProfile);
-                }}
-                lang={lang}
-                setLang={setLang}
-                settings={settings}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <TokaiSignIn
+          lang={lang}
+          setLang={setLang}
+          settings={settings}
+          bridgeDown={bridgeDown}
+          lastError={session?.lastError ?? null}
+          onSignedIn={s => { setSession(s); preloadRoutes(); }}
+          onRetryBridge={refreshStatus}
+          remote={!IS_LOCAL}
+          locked={locked}
+          onUnlocked={() => { setLocked(false); setIsLoading(true); refreshStatus().then(s => { if (s?.state === 'signed_in') preloadRoutes(); }); }}
+        />
       </div>
     );
   }
 
-  return (
-    <BrowserRouter>
-      <MainAppContent
-        screenProps={screenProps}
-        lang={lang}
-        userProfile={userProfile}
-        isDark={isDark}
-        setLang={setLang}
-        handleUpdateProfile={handleUpdateProfile}
-        handleDevSkipChange={handleDevSkipChange}
-      />
-    </BrowserRouter>
-  );
+  return <SignedInApp base={base} session={session} onExtendSession={handleExtend} />;
 }

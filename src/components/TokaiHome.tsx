@@ -1,13 +1,17 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Menu, Calendar, User, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, Check } from 'lucide-react';
+import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, RefreshCw } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
 import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
-import { allItems, getClassesForDate } from '../data';
-import { getDashboard, getCachedCourses } from '../lib/api';
-import type { CourseItem } from '../lib/types';
+import { useTips } from '../lib/useTips';
+import { useTimetable } from '../lib/useTerm';
+import { termLabel, academicYearOf, pct } from '../lib/tipsAdapters';
+import { useClassCalendar } from '../lib/useCalendar';
+import type { TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation } from '../lib/types';
+import { FileRow } from './TokaiCabinet';
+import { Fresh } from './ScreenHeader';
 import mascotIdle from '../assets/mascots/mascot_1_2.png';
 import mascotLogo from '../assets/mascots/mascot_1_1.png';
 
@@ -22,8 +26,8 @@ const t = {
     schedule: "Schedule",
     classesToday: "Classes Today",
     noItems: "No items found for this category.",
-    noCourses: "Select your courses in Edit Profile to see your schedule.",
-    otherInfo: "Campus News",
+    noCourses: "No registered courses for this term yet.",
+    otherInfo: "Bulletins",
     gpa: "Cumulative GPA",
     credits: "Credits (5th Sem)",
     onTrack: "On Track",
@@ -41,8 +45,8 @@ const t = {
     schedule: "スケジュール",
     classesToday: "今日の授業",
     noItems: "このカテゴリのアイテムはありません。",
-    noCourses: "プロフィール編集で履修科目を選択してください。",
-    otherInfo: "キャンパスニュース",
+    noCourses: "この学期の履修登録はまだありません。",
+    otherInfo: "掲示",
     gpa: "累積 GPA",
     credits: "履修単位数 (5セメ)",
     onTrack: "順調",
@@ -59,143 +63,50 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }
 };
 
-export default function TokaiHome({ lang, setLang, settings, userProfile, setUserProfile }: ScreenProps) {
+export default function TokaiHome({ lang, setLang, settings, userProfile }: ScreenProps) {
   const navigate = useNavigate();
 
-  // Start empty — only populate from API response. allItems is only used for color/metadata merging.
-  const [courseItems, setCourseItems] = useState<CourseItem[]>(() => getCachedCourses() || []);
-  const [isDataLoaded, setIsDataLoaded] = useState(() => getCachedCourses() !== null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    getDashboard(controller.signal)
-      .then(data => {
-        console.log("🔥 DASHBOARD RESPONSE:", data);
-
-        // ✅ Merge courses - Preserve colors from allItems
-        if (data.courses?.length) {
-          const enrolledIds = data.enrolledCourseIds ?? [];
-          console.log('🎯 ENROLLED IDs:', enrolledIds);
-          console.log('📚 API COURSE IDs:', data.courses.map(c => ({ id: c.id, code: c.code, type: c.type })));
-
-          const mergedCourses = data.courses.map(apiCourse => {
-            const local = (allItems as CourseItem[]).find(
-              item => item.id === apiCourse.id || item.code === apiCourse.code
-            );
-            if (!local) return apiCourse;
-
-            return {
-              ...local,      // Start with local (preserves color/credits/curated translations)
-              ...apiCourse,  // Overwrite with API values (isVerified, etc.)
-              // 🛡️ PROTECT SCHEDULING FIELDS: Local data.ts is the ground truth for day/period
-              dayOfWeek: local.dayOfWeek,
-              periods: local.periods,
-              time: local.time || apiCourse.time,
-              // 🛡️ PROTECT CURATED TRANSLATIONS
-              title: { ...apiCourse.title, ...local.title },
-              location: local.location?.jp ? { ...apiCourse.location, ...local.location } : apiCourse.location,
-              teacher: local.teacher?.jp ? { ...apiCourse.teacher, ...local.teacher } : apiCourse.teacher,
-              overview: local.overview || apiCourse.overview,
-              evaluation: local.evaluation || apiCourse.evaluation,
-            };
-          });
-
-          // 🔧 SUPPLEMENT: If the API missed any enrolled course IDs, add them from local data
-          const mergedCourseIds = new Set(mergedCourses.flatMap(c => [c.id, c.code].filter(Boolean)));
-          const missingLocals = (allItems as CourseItem[]).filter(local =>
-            enrolledIds.some(eid => eid === local.id || eid === local.code) &&
-            !mergedCourseIds.has(local.id) && !mergedCourseIds.has(local.code ?? '')
-          );
-          const allMerged = [...mergedCourses, ...missingLocals];
-
-          const matched = allMerged.filter(c =>
-            enrolledIds.includes(c.id) || enrolledIds.includes(c.code ?? '')
-          );
-          console.log(`✅ MATCHED ${matched.length}/${allMerged.length} courses for schedule:`, matched.map(c => ({ id: c.id, day: c.dayOfWeek, periods: c.periods })));
-
-          setCourseItems(allMerged as CourseItem[]);
-        }
-
-        // ✅ Normalize ALL possible API shapes — data.profile may be {} (empty), so
-        //    we can't rely on ?? alone; instead pick whichever shape has enrolledCourses.
-        const candidates = [data.profile, (data as any).user, (data as any).Item, data] as any[];
-        const profile = candidates.find(c =>
-          c && typeof c === 'object' &&
-          (c.enrolledCourses || c.selectedCourseIds || c.email || c.name)
-        ) ?? {};
-
-        console.log("✅ NORMALIZED PROFILE:", profile);
-
-        // ✅ Update user profile safely — PRIORITIZE API DATA
-        if (setUserProfile) {
-          setUserProfile(prev => {
-            const current = (prev && prev.email) ? prev : { email: '', name: '', studentId: '', selectedCourseIds: [], cumulativeGpa: 0, lastSemGpa: 0 };
-
-            const rawCum = Number(profile?.cumulativeGpa ?? (data as any)?.cumulativeGpa);
-            const rawLast = Number(profile?.lastSemGpa ?? (data as any)?.lastSemGpa);
-            // Check all locations for enrolled IDs
-            const apiCourseIds: string[] =
-              data.enrolledCourseIds ??
-              profile?.enrolledCourses ??
-              profile?.selectedCourseIds ?? [];
-
-            // 🔧 EXPAND: The API may only return some course codes (e.g. TTK085, TTK060).
-            // Cross-match against allItems so every enrolled course's local id AND code
-            // is included — this ensures WeeklyTimetable shows all enrolled courses.
-            const expandedIds = new Set<string>(Array.isArray(apiCourseIds) ? apiCourseIds : []);
-            for (const local of allItems) {
-              const isEnrolled = expandedIds.has(local.id) || expandedIds.has(local.code ?? '');
-              if (isEnrolled) {
-                expandedIds.add(local.id);
-                if (local.code) expandedIds.add(local.code);
-              }
-            }
-            const finalCourseIds = expandedIds.size > 0 ? Array.from(expandedIds) : current.selectedCourseIds;
-
-            return {
-              ...current,
-              selectedCourseIds: finalCourseIds,
-              cumulativeGpa: isNaN(rawCum) ? current.cumulativeGpa : rawCum,
-              lastSemGpa: isNaN(rawLast) ? current.lastSemGpa : rawLast,
-            };
-          });
-        }
-        setIsDataLoaded(true);
-      })
-      .catch(err => {
-        if (err?.name !== 'AbortError') {
-          console.error("❌ DASHBOARD ERROR:", err);
-        }
-        setIsDataLoaded(true);
-      });
-
-    return () => controller.abort();
-  }, [setUserProfile]);
+  // TIPS data: timetable for the active term, plus the small summaries shown on the dashboard.
+  const tt = useTimetable();
+  const courseItems = tt.items;
+  const termYear = tt.timetable?.year ?? academicYearOf(new Date());
+  const term = tt.timetable?.term ?? '1';
+  const attendance = useTips<{ courses: TipsAttendanceCourse[] }>('attendance', { year: termYear, term });
+  const graduation = useTips<TipsGraduation>('graduation');
+  const bulletins = useTips<TipsBulletins>('bulletins');
+  const changes = useTips<{ items: TipsChange[] }>('changes');
+  const isDataLoaded = !!tt.timetable || !!tt.error;
 
   // Derive live values from userProfile
-  const firstName = userProfile?.name?.split(' ')[0] ?? 'Student';
+  const firstName = userProfile?.givenName || (lang === 'en' ? 'Student' : '学生');
   const studentIdDisplay = userProfile?.studentId ?? '—';
   const cumGpa = userProfile?.cumulativeGpa ?? 0;
-  const lastSemGpa = userProfile?.lastSemGpa ?? 0;
-  const selectedCourseIds = userProfile?.selectedCourseIds ?? [];
-  const selectedCredits = useMemo(() =>
-    courseItems
-      .filter(item => selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''))
-      .reduce((acc, item) => acc + (item.credits || 0), 0),
-    [selectedCourseIds, courseItems]);
+  const selectedCourseIds = useMemo(() => courseItems.map(c => c.id), [courseItems]);
+  const creditsEarned = graduation.data?.total?.earned ?? userProfile?.creditsEarned ?? 0;
+  const creditsNeeded = graduation.data?.total?.required ?? null;
+  const attendanceRate = useMemo(() => {
+    const cs = attendance.data?.courses ?? [];
+    const att = cs.reduce((a, c) => a + (c.attended ?? 0), 0);
+    const abs = cs.reduce((a, c) => a + (c.absent ?? 0), 0);
+    return att + abs ? Math.round((att / (att + abs)) * 100) : null;
+  }, [attendance.data]);
+  const alerts = (changes.data?.items ?? []).filter(c => c.status !== 'normal');
+  const latestPosts = (bulletins.data?.posts ?? []).slice(0, 3);
+  // Newest cabinet files across all folders ("2025年9月19日 07:29:41" / "2025/09/19 07:29:41").
+  const cabinet = useTips<{ folders: TipsCabinetFolder[] }>('cabinet');
+  const recentFiles = useMemo(() => {
+    const all: TipsCabinetFile[] = [];
+    const walk = (fs: TipsCabinetFolder[]) => fs.forEach(f => { all.push(...f.files); walk(f.children); });
+    walk(cabinet.data?.folders ?? []);
+    const key = (d: string) => (d.match(/\d+/g) ?? []).map(n => n.padStart(2, '0')).join('');
+    return all.sort((a, b) => key(b.date).localeCompare(key(a.date))).slice(0, 4);
+  }, [cabinet.data]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
   const [isCalendarSheetOpen, setIsCalendarSheetOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-  const [selectedNews, setSelectedNews] = useState<{ title: string; detail: string; icon: any; color: string } | null>(null);
-
-  const handleImageLoad = useCallback((id: string) => {
-    setLoadedImages(prev => new Set(prev).add(id));
-  }, []);
   const handleMenuClose = useCallback(() => setIsMenuOpen(false), []);
 
   const handlePrevMonth = useCallback(() => {
@@ -209,17 +120,14 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
-  const isEnrolled = useCallback((item: CourseItem) =>
-    selectedCourseIds.includes(item.id) || selectedCourseIds.includes(item.code ?? ''),
-    [selectedCourseIds]);
-
-
-  const todayClasses = useMemo(() => getClassesForDate(new Date(), selectedCourseIds, courseItems), [selectedCourseIds, courseItems]);
-  const calendarClasses = useMemo(() => getClassesForDate(selectedDate, selectedCourseIds, courseItems), [selectedDate, selectedCourseIds, courseItems]);
+  // Real class dates: attendance sessions (past terms) or TIPS's class schedule (current term).
+  const todayCal = useClassCalendar(new Date());
+  const sheetCal = useClassCalendar(currentMonth);
+  const todayClasses = useMemo(() => todayCal.index.on(new Date(), courseItems).map(x => x.item), [todayCal.index, courseItems]);
+  const calendarClasses = useMemo(() => sheetCal.index.on(selectedDate, courseItems).map(x => x.item), [sheetCal.index, selectedDate, courseItems]);
 
   const isDark = settings.isDarkMode;
   const todayLabel = useMemo(() => new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }), [lang]);
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-brand-gray';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
   const pageBg = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
@@ -277,6 +185,39 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
             </div>
           </motion.div>
 
+          {/* At-a-glance: GPA, credits toward graduation, attendance this term */}
+          <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-8 grid grid-cols-3 gap-3">
+            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/grades')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}>
+              <div className="flex items-center gap-1.5 mb-3"><GraduationCap className="w-4 h-4 text-brand-yellow" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span></div>
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white"><Fresh value={cumGpa}>{cumGpa ? cumGpa.toFixed(2) : '—'}</Fresh></div>
+              <div className="text-[10px] font-bold text-gray-500 mt-1">{t[lang].gpa}</div>
+            </motion.div>
+            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/grades')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex items-center gap-1.5 mb-3"><Target className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Credits' : '単位'}</span></div>
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={creditsEarned}>{creditsEarned}</Fresh>{creditsNeeded !== null && <span className={`text-sm font-semibold ${textMuted}`}> / {creditsNeeded}</span>}</div>
+              <div className={`mt-2 h-1.5 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}><div className={`h-full rounded-full ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{ width: `${Math.min(pct(creditsEarned, creditsNeeded), 100)}%` }} /></div>
+            </motion.div>
+            <motion.div whileHover={{ y: -2 }} onClick={() => navigate('/attendance')} className={`p-4 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex items-center gap-1.5 mb-3"><UserCheck className="w-4 h-4 text-brand-green" /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={attendanceRate ?? -1}>{attendanceRate === null ? '—' : `${attendanceRate}%`}</Fresh></div>
+              <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{termLabel(term, termYear, lang)}</div>
+            </motion.div>
+          </motion.div>
+
+          {/* Class changes (cancellations, room changes, make-ups) for the next two weeks */}
+          {alerts.length > 0 && (
+            <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-6 space-y-2">
+              {alerts.slice(0, 3).map((a, i) => (
+                <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 text-red-600">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <div className="text-sm font-semibold min-w-0 truncate">
+                    {a.date}({a.weekday}) {a.period} · {a.title} · {{ cancelled: lang === 'en' ? 'Cancelled' : '休講', makeup: lang === 'en' ? 'Make-up class' : '補講', roomChange: lang === 'en' ? `Room → ${a.room}` : `教室変更 → ${a.room}`, cancelledMakeup: lang === 'en' ? 'Cancelled / make-up' : '休講・補講', normal: '' }[a.status]}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          )}
+
           {/* Weekly Schedule Section */}
           <motion.div variants={itemVariants} className="px-4 sm:px-6 mt-10">
             <div className="flex items-center justify-between mb-6">
@@ -292,12 +233,34 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
               </button>
             </div>
 
+            {tt.timetable?.registrationOpen && tt.timetable.term === tt.currentTerm && (
+              <button onClick={() => navigate('/registration')} className="w-full mb-4 flex items-center gap-3 p-4 rounded-2xl bg-green-500/10 text-green-700 text-left">
+                <Target className="w-5 h-5 shrink-0" />
+                <span className="flex-1 text-sm font-semibold">
+                  {lang === 'en'
+                    ? `${termLabel(term, termYear, 'en')} registration is open until ${tt.timetable.registrationStatus}. Plan your classes.`
+                    : `${termLabel(term, termYear, 'jp')}の履修登録期間中です（${tt.timetable.registrationStatus}まで）。科目を選びましょう。`}
+                </span>
+                <ChevronRight className="w-4 h-4 shrink-0" />
+              </button>
+            )}
+
+            {tt.isFallback && (
+              <p className={`text-xs font-semibold mb-3 ${textMuted}`}>
+                {lang === 'en'
+                  ? `No courses registered for ${termLabel(tt.currentTerm, termYear, 'en')} yet. Showing ${termLabel(term, termYear, 'en')}.`
+                  : `${termLabel(tt.currentTerm, termYear, 'jp')}の履修登録はまだありません。${termLabel(term, termYear, 'jp')}を表示しています。`}
+              </p>
+            )}
+
             <div className="pt-5 lg:pt-6 pb-2 sm:pb-3 rounded-[32px] sm:rounded-[40px] overflow-hidden relative" style={{ background: '#0C0C0E' }}>
               <WeeklyTimetable
                 lang={lang}
                 settings={settings}
                 selectedCourseIds={selectedCourseIds}
                 scheduleItems={courseItems}
+                semesterLabel={termLabel(term, termYear, lang)}
+                grid={tt.timetable?.grid}
               />
             </div>
 
@@ -307,59 +270,53 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                 className={`flex items-center gap-2 font-bold text-sm px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black hover:brightness-95 active:scale-95 transition-all shadow-lg shadow-yellow-500/10`}
               >
                 <Target className="w-4 h-4" />
-                {lang === 'en' ? 'Explore More Classes' : '他の授業を探す'}
+                {lang === 'en' ? 'Courses & Syllabus' : '履修科目・シラバス'}
               </button>
             </div>
           </motion.div>
 
-          {/* Two-column layout for News on desktop */}
-          <div className="lg:max-w-2xl lg:mx-auto px-4 sm:px-6 mt-8">
-            {/* Campus News Section */}
+          {/* Latest bulletins and cabinet files from TIPS */}
+          <div className="px-4 sm:px-6 mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
             <motion.div variants={itemVariants}>
-              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t[lang].otherInfo}</h2>
+                <button onClick={() => bulletins.refresh()} aria-label={lang === 'en' ? 'Refresh bulletins' : '掲示を更新'} className={`p-2 rounded-full ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                  <RefreshCw className={`w-4 h-4 ${textMuted} ${bulletins.loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
               <div className="space-y-3">
-                <motion.div
-                  whileHover={{ y: -2, scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={() => setSelectedNews({
-                    title: lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について',
-                    detail: lang === 'en' ? 'The deadline for the first semester tuition fees is April 15th. Please ensure payment is processed through the university portal or designated bank branches.' : '第1セメスターの授業料納入期限は4月15日です。大学ポータルまたは指定の銀行窓口にてお手続きをお願いいたします。',
-                    icon: Bell,
-                    color: 'bg-brand-yellow'
-                  })}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm border border-transparent hover:border-brand-yellow/30`}
-                >
-                  <div className="w-10 h-10 bg-brand-yellow rounded-full flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-brand-black" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? 'Tuition Fee Deadline' : '授業料納入期限について'}</h3>
-                    <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Due by April 15th' : '4月15日までにお願いします'}</p>
-                  </div>
-                  <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
-                </motion.div>
-                <motion.div
-                  whileHover={{ y: -2, scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={() => setSelectedNews({
-                    title: lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス',
-                    detail: lang === 'en' ? 'The main campus library will be closed this weekend for system upgrades and shelf maintenance. Online resources remain accessible 24/7.' : '今週末、システムアップデートと書架メンテナンスのため、本館は休館いたします。オンラインリソースは通常通りご利用いただけます。',
-                    icon: Calendar,
-                    color: 'bg-brand-green'
-                  })}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm border border-transparent hover:border-brand-green/30`}
-                >
-                  <div className="w-10 h-10 bg-brand-green rounded-full flex items-center justify-center shrink-0">
-                    <Calendar className="w-5 h-5 text-brand-black" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-brand-black'}`}>{lang === 'en' ? 'Library Maintenance' : '図書館メンテナンス'}</h3>
-                    <p className={`text-xs ${textMuted} mt-0.5`}>{lang === 'en' ? 'Closed this weekend' : '今週末は閉館します'}</p>
-                  </div>
-                  <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
-                </motion.div>
+                {latestPosts.map((post, i) => (
+                  <motion.div
+                    key={post.id}
+                    whileHover={{ y: -2, scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => navigate(`/bulletins/${post.id}`)}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'} rounded-2xl p-4 flex items-center gap-4 cursor-pointer shadow-sm border border-transparent ${i % 2 ? 'hover:border-brand-green/30' : 'hover:border-brand-yellow/30'}`}
+                  >
+                    <div className={`w-10 h-10 ${i % 2 ? 'bg-brand-green' : 'bg-brand-yellow'} rounded-full flex items-center justify-center shrink-0`}>
+                      {i % 2 ? <Megaphone className="w-5 h-5 text-brand-black" /> : <Bell className="w-5 h-5 text-brand-black" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-brand-black'}`}>{post.title}</h3>
+                      <p className={`text-xs ${textMuted} mt-0.5 truncate`}>{post.genre} · {post.postedAt}</p>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${textMuted} shrink-0`} />
+                  </motion.div>
+                ))}
+                {!latestPosts.length && (
+                  <p className={`text-sm font-medium ${textMuted}`}>{bulletins.loading ? (lang === 'en' ? 'Loading…' : '読み込み中…') : (lang === 'en' ? 'No bulletins.' : '掲示はありません。')}</p>
+                )}
+              </div>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === 'en' ? 'Cabinet · recently added' : 'キャビネット・新着資料'}</h2>
+                <button onClick={() => navigate('/cabinet')} className={`text-xs font-bold px-3 py-1.5 rounded-full ${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{lang === 'en' ? 'All files →' : 'すべて →'}</button>
+              </div>
+              <div className={`rounded-2xl p-1 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                {recentFiles.map((f, i) => <FileRow key={`${f.name}-${i}`} f={f} isDark={isDark} lang={lang} />)}
+                {!recentFiles.length && <p className={`p-3 text-sm font-medium ${textMuted}`}>{cabinet.loading ? (lang === 'en' ? 'Loading…' : '読み込み中…') : (lang === 'en' ? 'No files.' : '資料はありません。')}</p>}
               </div>
             </motion.div>
           </div>
@@ -431,7 +388,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
                   >
                     <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                      {cls.time.split(' ')[0]}
+                      {(cls.time ?? '').split(' ')[0]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-lg leading-tight truncate">{cls.title?.[lang]}</div>
@@ -451,14 +408,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                     <p className={`text-sm font-medium ${textMuted}`}>
                       {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                     </p>
-                    {selectedCourseIds.length === 0 && (
-                      <button
-                        onClick={() => { setIsScheduleSheetOpen(false); setTimeout(() => navigate('/editProfile'), 200); }}
-                        className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
-                      >
-                        {lang === 'en' ? 'Edit Profile' : 'プロフィール編集'}
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -571,11 +520,11 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                           onClick={() => setTimeout(() => navigate(`/course/${cls.id}`), 150)}
                         >
                           <div className="w-12 h-12 bg-white/40 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-                            {cls.time.split(' ')[0]}
+                            {(cls.time ?? '').split(' ')[0]}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-lg leading-tight truncate">{cls.title[lang]}</div>
-                            <div className="text-sm font-medium opacity-80 truncate">{cls.location[lang]}</div>
+                            <div className="font-bold text-lg leading-tight truncate">{cls.title?.[lang]}</div>
+                            <div className="text-sm font-medium opacity-80 truncate">{cls.location?.[lang]}</div>
                           </div>
                         </motion.div>
                       ))}
@@ -591,14 +540,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
                           <p className={`text-sm font-medium ${textMuted}`}>
                             {selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems}
                           </p>
-                          {selectedCourseIds.length === 0 && (
-                            <button
-                              onClick={() => { setIsCalendarSheetOpen(false); setTimeout(() => navigate('/editProfile'), 200); }}
-                              className="px-6 py-3 rounded-2xl bg-brand-yellow text-brand-black font-bold text-sm hover:brightness-95 transition-all active:scale-95"
-                            >
-                              {lang === 'en' ? 'Edit Profile' : 'プロフィール編集'}
-                            </button>
-                          )}
                         </div>
                       )}
                     </motion.div>
@@ -610,38 +551,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile, setUse
         )}
       </AnimatePresence>
 
-      {/* News Modal */}
-      <AnimatePresence>
-        {selectedNews && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedNews(null)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg ${isDark ? 'bg-gray-900' : 'bg-white'} rounded-[40px] z-[101] p-8 shadow-2xl`}
-            >
-              <div className={`w-16 h-16 ${selectedNews.color} rounded-full flex items-center justify-center mb-6`}>
-                <selectedNews.icon className="w-8 h-8 text-white shadow-sm" />
-              </div>
-              <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-brand-black'}`}>{selectedNews.title}</h2>
-              <p className={`text-base leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-8`}>{selectedNews.detail}</p>
-              <button
-                onClick={() => setSelectedNews(null)}
-                className={`w-full py-4 rounded-2xl font-bold bg-[#0B1F3A] text-white hover:brightness-110 active:scale-95 transition-all`}
-              >
-                {lang === 'en' ? 'Close' : '閉じる'}
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
       <SharedMenu
         isOpen={isMenuOpen}
         onClose={handleMenuClose}

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CourseItem } from '../lib/types';
 import { AppSettings, Language } from '../App';
+import { PERIOD_TIMES } from '../config/periods';
 
 interface WeeklyTimetableProps {
   scheduleItems: CourseItem[];
@@ -9,21 +10,17 @@ interface WeeklyTimetableProps {
   lang: Language;
   settings: AppSettings;
   forceDark?: boolean;
+  semesterLabel?: string;
+  /** Grid shape and day labels as TIPS draws them (timetable.grid). */
+  grid?: { days: string[]; periods: string[] };
 }
 
-const PERIODS = [
-  { num: 1, time: '09:00\n10:40' },
-  { num: 2, time: '10:55\n12:35' },
-  { num: 3, time: '13:25\n15:05' },
-  { num: 4, time: '15:20\n17:00' },
-  { num: 5, time: '17:15\n18:55' },
-  { num: 6, time: '19:05\n20:45' },
-];
-
-const WEEK_DAYS_JP = ['月', '火', '水', '木', '金', '土'];
-const WEEK_DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DEFAULT_DAYS = { en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], jp: ['月', '火', '水', '木', '金', '土'] };
 // Column index 0 = Monday (day 1), ..., 5 = Saturday (day 6)
 const WEEK_DAY_NUMS = [1, 2, 3, 4, 5, 6];
+
+/** TIPS day headers are "月曜日" / "Monday"; the grid shows "月" / "Mon". */
+const shortDay = (label: string, lang: Language) => (lang === 'jp' ? label.charAt(0) : label.slice(0, 3));
 
 const DAY_MAP: Record<string, number> = {
   SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
@@ -45,7 +42,14 @@ export default function WeeklyTimetable({
   lang,
   settings,
   forceDark,
+  semesterLabel,
+  grid,
 }: WeeklyTimetableProps) {
+  const periodCount = grid?.periods.length || 6;
+  const PERIODS = Array.from({ length: periodCount }, (_, i) => {
+    const t = PERIOD_TIMES[i + 1];
+    return { num: i + 1, time: t ? `${t[0]}\n${t[1]}` : '' };
+  });
   const navigate = useNavigate();
   const isDark = forceDark || settings.isDarkMode;
 
@@ -84,7 +88,7 @@ export default function WeeklyTimetable({
     return { cards: Array.from(seen.values()), occupied: occupiedSet };
   }, [scheduleItems, selectedCourseIds]);
 
-  const dayLabels = lang === 'en' ? WEEK_DAYS_EN : WEEK_DAYS_JP;
+  const dayLabels = grid?.days.length ? grid.days.slice(0, 6).map(d => shortDay(d, lang)) : DEFAULT_DAYS[lang];
   const today = new Date().getDay(); // 0=Sun … 6=Sat
 
   return (
@@ -92,7 +96,7 @@ export default function WeeklyTimetable({
       {/* Semester header */}
       <div className="flex justify-center items-center mb-3 shrink-0">
         <span className={`font-bold text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {lang === 'en' ? '2026 — 1st Semester' : '2026年 1学期'}
+          {semesterLabel ?? (lang === 'en' ? '2026 — 1st Semester' : '2026年 1学期')}
         </span>
       </div>
 
@@ -103,7 +107,7 @@ export default function WeeklyTimetable({
             display: 'grid',
             /* period-label col + 6 day cols, each at least 80px wide */
             gridTemplateColumns: '44px repeat(6, minmax(80px, 1fr))',
-            gridTemplateRows: 'auto repeat(6, minmax(88px, auto))',
+            gridTemplateRows: `auto repeat(${periodCount}, minmax(88px, auto))`,
             gap: '4px',
             padding: '0 8px 16px 4px',
             minWidth: '560px',
