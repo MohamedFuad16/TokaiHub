@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Bell, Moon, Shield, LogOut,
-  Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound,
+  Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound, Cloud,
 } from 'lucide-react';
-import { IS_LOCAL, createSetupCode, listDevices, removeDevice, type HubDevice } from '../lib/api';
+import { IS_LOCAL, createSetupCode, listDevices, removeDevice, removeSession, type HubDevice } from '../lib/api';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -26,13 +26,22 @@ const t = {
     staysSignedIn: 'Stays signed in on your Mac',
     addPhone: 'Add a device',
     addPhoneSub: 'On the phone or MacBook, open tokaihub.mohamedfuad.com, choose "Set up this device" and enter:',
-    devices: 'Devices with a passkey',
+    devices: 'Passkeys and signed-in devices',
     noDevices: 'No devices yet.',
     thisDevice: 'This device',
     added: 'Added',
     lastUsed: 'last used',
     remove: 'Remove',
     confirmRemove: 'Remove?',
+    passkeyFrom: (d: string) => `Passkey created on ${d}`,
+    synced: 'Synced with iCloud Keychain, works on your other Apple devices',
+    notSynced: 'Stored on that device only',
+    unknownDevice: 'Device signed in earlier',
+    signOut: 'Sign out',
+    confirmSignOut: 'Sign out?',
+    removePasskey: 'Remove passkey',
+    confirmRemovePasskey: 'Remove passkey and sign out all?',
+    noSessions: 'No device signed in with it right now.',
     codeValid: 'Valid for 10 minutes, once.',
     enhancedUI: 'Enhanced UI',
     enhancedUISub: 'Enable enhanced animations and visual upgrades',
@@ -69,13 +78,22 @@ const t = {
     staysSignedIn: 'Macでサインインしたままです',
     addPhone: '端末を追加',
     addPhoneSub: 'スマホやMacBookでtokaihub.mohamedfuad.comを開き「この端末を設定」を選んで入力：',
-    devices: 'パスキー登録済みの端末',
+    devices: 'パスキーとサインイン中の端末',
     noDevices: 'まだ端末はありません。',
     thisDevice: 'この端末',
     added: '追加',
     lastUsed: '最終使用',
     remove: '削除',
     confirmRemove: '削除しますか？',
+    passkeyFrom: (d: string) => `${d}で作成したパスキー`,
+    synced: 'iCloudキーチェーンで同期、他のApple端末でも使えます',
+    notSynced: 'その端末にのみ保存',
+    unknownDevice: '以前サインインした端末',
+    signOut: 'サインアウト',
+    confirmSignOut: 'サインアウトしますか？',
+    removePasskey: 'パスキーを削除',
+    confirmRemovePasskey: '削除して全端末をサインアウト？',
+    noSessions: '現在このパスキーでサインイン中の端末はありません。',
     codeValid: '10分間、1回だけ有効です。',
     enhancedUI: '強化UI',
     enhancedUISub: '拡張アニメーションとビジュアルアップグレードを有効化',
@@ -160,47 +178,61 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
     let count = -1;
     const load = () => listDevices().then(d => {
       if (!alive) return;
-      if (count >= 0 && d.length > count) onNewDevice();
-      count = d.length;
+      const n = d.reduce((a, p) => a + 1 + p.sessions.length, 0);
+      if (count >= 0 && n > count) onNewDevice();
+      count = n;
       setDevices(d);
     }).catch(() => {});
     load();
-    const id = watching ? setInterval(load, 3000) : undefined;
-    return () => { alive = false; if (id) clearInterval(id); };
+    const id = setInterval(load, watching ? 3000 : 30_000);
+    return () => { alive = false; clearInterval(id); };
   }, [watching, onNewDevice]);
 
-  const date = (iso: string) => new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short', day: 'numeric' });
-  const phone = (label: string) => /iPhone|Android/.test(label);
+  const date = (iso: string | null) => iso ? new Date(iso).toLocaleString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const phone = (label: string | null) => /iPhone|iPad|Android/.test(label ?? '');
+  // Two taps: the first arms the button, the second acts.
+  const twoTap = (key: string, act: () => Promise<HubDevice[]>) => async () => {
+    if (confirming !== key) { setConfirming(key); return; }
+    setConfirming(null);
+    try { setDevices(await act()); } catch { /* signing out this device locks it */ }
+  };
+  const btn = (armed: boolean) => `shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${armed ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`;
 
   return (
     <div className={`mt-4 pt-4 border-t ${borderClass}`}>
       <div className="flex items-center gap-2 mb-2 text-xs font-bold"><KeyRound className="w-3.5 h-3.5 text-brand-yellow" />{tx.devices}</div>
       {devices?.length === 0 && <p className={`text-xs font-medium ${textMuted}`}>{tx.noDevices}</p>}
-      <div className="space-y-1.5">
-        {devices?.map(d => (
-          <div key={d.id} className={`flex items-center gap-3 p-2.5 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-            {phone(d.label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate flex items-center gap-2">
-                {d.label}
-                {d.current && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
+      <div className="space-y-2">
+        {devices?.map(p => (
+          <div key={p.id} className={`rounded-xl p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+            <div className="flex items-center gap-3 px-1 pb-1.5">
+              {p.synced ? <Cloud className="w-4 h-4 shrink-0 text-brand-yellow" /> : <KeyRound className="w-4 h-4 shrink-0 text-brand-yellow" />}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold truncate">{tx.passkeyFrom(p.label)}</div>
+                <div className={`text-[11px] font-medium ${textMuted}`}>{p.synced ? tx.synced : tx.notSynced}</div>
               </div>
-              <div className={`text-[11px] font-medium ${textMuted}`}>
-                {tx.added} {date(d.createdAt)}{d.lastUsedAt ? ` · ${tx.lastUsed} ${date(d.lastUsedAt)}` : ''}
-              </div>
+              <button onClick={twoTap(`p:${p.id}`, () => removeDevice(p.id))} onBlur={() => setConfirming(null)} aria-label={tx.removePasskey} className={btn(confirming === `p:${p.id}`)}>
+                {confirming === `p:${p.id}` ? tx.confirmRemovePasskey : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                if (confirming !== d.id) { setConfirming(d.id); return; }
-                setConfirming(null);
-                try { setDevices(await removeDevice(d.id)); } catch { /* removing this device locks it */ }
-              }}
-              onBlur={() => setConfirming(c => (c === d.id ? null : c))}
-              aria-label={`${tx.remove} ${d.label}`}
-              className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${confirming === d.id ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`}
-            >
-              {confirming === d.id ? tx.confirmRemove : <Trash2 className="w-3.5 h-3.5" />}
-            </button>
+            <div className="space-y-1">
+              {p.sessions.length === 0 && <p className={`px-1 text-[11px] font-medium ${textMuted}`}>{tx.noSessions}</p>}
+              {p.sessions.map(d => (
+                <div key={d.id} className={`flex items-center gap-3 p-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                  {phone(d.label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold truncate flex items-center gap-2">
+                      {d.label ?? tx.unknownDevice}
+                      {d.current && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
+                    </div>
+                    <div className={`text-[11px] font-medium ${textMuted}`}>{d.lastUsedAt ? `${tx.lastUsed} ${date(d.lastUsedAt)}` : `${tx.added} ${date(d.createdAt)}`}</div>
+                  </div>
+                  <button onClick={twoTap(`s:${d.id}`, () => removeSession(d.id))} onBlur={() => setConfirming(null)} aria-label={`${tx.signOut} ${d.label ?? ''}`} className={btn(confirming === `s:${d.id}`)}>
+                    {confirming === `s:${d.id}` ? tx.confirmSignOut : tx.signOut}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

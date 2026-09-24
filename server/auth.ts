@@ -28,8 +28,10 @@ const FILE = path.join(os.homedir(), '.tokaihub', 'owner.json');
 const TOKEN_DAYS = 30;
 const CODE_MINUTES = 10;
 
-interface Credential { id: string; publicKey: string; counter: number; transports?: AuthenticatorTransportFuture[]; label: string; createdAt: string; lastUsedAt?: string }
-interface Token { hash: string; credentialId: string; expiresAt: number }
+/** label: the device the passkey was created on. synced: backed up (iCloud Keychain, Google), so other devices can use it. */
+interface Credential { id: string; publicKey: string; counter: number; transports?: AuthenticatorTransportFuture[]; label: string; createdAt: string; lastUsedAt?: string; synced?: boolean }
+/** One signed-in device: the token a passkey unlock issued to it. */
+interface Token { hash: string; credentialId: string; expiresAt: number; label?: string; createdAt?: number; lastUsedAt?: number }
 interface Store { ownerId: string; credentials: Credential[]; tokens: Token[] }
 
 function load(): Store {
@@ -91,12 +93,13 @@ export async function registerDevice(code: unknown, response: any, label: unknow
   });
   if (!v.verified || !v.registrationInfo) throw httpError(403, 'passkey not verified');
   setup = null; // single use
-  const { credential } = v.registrationInfo;
+  const { credential, credentialBackedUp } = v.registrationInfo;
   store.credentials.push({
     id: credential.id, publicKey: Buffer.from(credential.publicKey).toString('base64url'), counter: credential.counter,
     transports: credential.transports, label: String(label ?? 'device').slice(0, 60), createdAt: new Date().toISOString(),
+    synced: credentialBackedUp,
   });
-  return issueToken(credential.id);
+  return issueToken(credential.id, label);
 }
 
 // ── Unlock with a passkey ──────────────────────────────────────────────────────────────────
@@ -114,7 +117,7 @@ export async function authenticationOptions() {
   return options;
 }
 
-export async function unlock(response: any) {
+export async function unlock(response: any, label?: unknown) {
   const cred = store.credentials.find(c => c.id === response?.id);
   if (!cred) throw httpError(403, 'unknown passkey');
   const v = await verifyAuthenticationResponse({
@@ -126,15 +129,16 @@ export async function unlock(response: any) {
   if (!v.verified) throw httpError(403, 'passkey not verified');
   cred.counter = v.authenticationInfo.newCounter;
   cred.lastUsedAt = new Date().toISOString();
-  return issueToken(cred.id);
+  if (v.authenticationInfo.credentialBackedUp) cred.synced = true;
+  return issueToken(cred.id, label);
 }
 
 // ── Device tokens ──────────────────────────────────────────────────────────────────────────
-function issueToken(credentialId: string) {
+function issueToken(credentialId: string, label?: unknown) {
   const token = crypto.randomBytes(32).toString('base64url');
   const now = Date.now();
   store.tokens = store.tokens.filter(t => t.expiresAt > now);
-  store.tokens.push({ hash: sha(token), credentialId, expiresAt: now + TOKEN_DAYS * 86_400_000 });
+  store.tokens.push({ hash: sha(token), credentialId, expiresAt: now + TOKEN_DAYS * 86_400_000, label: String(label ?? '').slice(0, 60) || undefined, createdAt: now, lastUsedAt: now });
   save();
   return { token, ownerId: OWNER_ID };
 }
@@ -149,6 +153,7 @@ export function checkToken(header: string | undefined) {
   if (!t || t.expiresAt < Date.now()) return false;
   if (!store.credentials.some(c => c.id === t.credentialId)) return false; // passkey removed
   t.expiresAt = Date.now() + TOKEN_DAYS * 86_400_000;
+  t.lastUsedAt = Date.now();
   if (Date.now() - lastRenewSave > 3_600_000) { lastRenewSave = Date.now(); save(); }
   return true;
 }
@@ -165,10 +170,29 @@ const tokenOf = (header: string | undefined) => {
   return token ? store.tokens.find(t => t.hash === sha(token)) : undefined;
 };
 
-/** Enrolled passkeys for the Settings screen; `current` marks the device making the request. */
+/**
+ * Passkeys and, under each, the devices signed in with it (one synced passkey can serve an
+ * iPhone and a Mac). `current` marks the device making the request.
+ */
 export function listDevices(header: string | undefined) {
-  const current = tokenOf(header)?.credentialId;
-  return store.credentials.map(c => ({ id: c.id, label: c.label, createdAt: c.createdAt, lastUsedAt: c.lastUsedAt ?? null, current: c.id === current }));
+  const current = tokenOf(header)?.hash;
+  const now = Date.now();
+  const iso = (ms?: number) => (ms ? new Date(ms).toISOString() : null);
+  return store.credentials.map(c => ({
+    id: c.id, label: c.label, createdAt: c.createdAt, lastUsedAt: c.lastUsedAt ?? null, synced: Boolean(c.synced),
+    sessions: store.tokens
+      .filter(t => t.credentialId === c.id && t.expiresAt > now)
+      .map(t => ({ id: t.hash.slice(0, 16), label: t.label ?? null, createdAt: iso(t.createdAt), lastUsedAt: iso(t.lastUsedAt), current: t.hash === current }))
+      .sort((x, y) => (y.lastUsedAt ?? '').localeCompare(x.lastUsedAt ?? '')),
+  }));
+}
+
+/** Signs one device out (its token); the passkey stays. */
+export function removeSession(id: unknown) {
+  const before = store.tokens.length;
+  store.tokens = store.tokens.filter(t => typeof id !== 'string' || id.length !== 16 || !t.hash.startsWith(id));
+  if (store.tokens.length === before) throw httpError(404, 'unknown device');
+  save();
 }
 
 /** Forgets one passkey and signs out every device token it issued. */

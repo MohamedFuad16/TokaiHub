@@ -58,14 +58,19 @@ export const createSetupCode = () => call<{ code: string; expiresAt: string }>('
 export async function unlockWithPasskey() {
   const options = await call<any>('/auth/options', { method: 'POST', timeoutMs: 15_000 });
   const response = await startAuthentication({ optionsJSON: options });
-  const { token } = await call<{ token: string }>('/auth/unlock', { method: 'POST', body: JSON.stringify({ response }), timeoutMs: 15_000 });
+  const { token } = await call<{ token: string }>('/auth/unlock', { method: 'POST', body: JSON.stringify({ response, label: deviceLabel() }), timeoutMs: 15_000 });
   setDeviceToken(token);
 }
 
-export interface HubDevice { id: string; label: string; createdAt: string; lastUsedAt: string | null; current: boolean }
+/** A device signed in with a passkey (one synced passkey can serve an iPhone and a Mac). */
+export interface HubSession { id: string; label: string | null; createdAt: string | null; lastUsedAt: string | null; current: boolean }
+/** A passkey; `label` is the device it was created on. */
+export interface HubDevice { id: string; label: string; createdAt: string; lastUsedAt: string | null; synced: boolean; sessions: HubSession[] }
 export const listDevices = () => call<HubDevice[]>('/auth/devices', { timeoutMs: 10_000 });
-/** Forgets a passkey. Removing the device you are on locks it. */
+/** Forgets a passkey and signs out every device using it. */
 export const removeDevice = (id: string) => call<HubDevice[]>('/auth/devices/remove', { method: 'POST', body: JSON.stringify({ id }), timeoutMs: 10_000 });
+/** Signs one device out; its passkey stays. Signing out the device you are on locks it. */
+export const removeSession = (id: string) => call<HubDevice[]>('/auth/sessions/remove', { method: 'POST', body: JSON.stringify({ id }), timeoutMs: 10_000 });
 
 /** A readable name for this device, e.g. "iPhone · Safari" or "Mac · Chrome". */
 export function deviceLabel() {

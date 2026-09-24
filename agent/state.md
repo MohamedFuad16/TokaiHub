@@ -13,6 +13,13 @@ Open: owner's first TIPS sign-in on the Mac (TIPS down on 2026-09-24), real-devi
 passkey test. No automated tests beyond the passkey/access probes noted below.
 
 ## Recent changes
+- **2026-09-24 (ninth pass) — signed-in devices per passkey** (by: Claude). Owner's iPhone
+  unlocked with the Mac-created passkey (iCloud Keychain sync), so the passkey list showed one
+  entry for two devices. Tokens now carry the unlocking device's label and last use; Settings
+  groups devices under each passkey with per-device sign-out (POST /auth/sessions/remove) and a
+  synced badge. The two existing tokens were labelled by hand (Mac · Chrome from registration,
+  iPhone from the owner's report). Passkey tests 16/16 incl. second-device unlock and single
+  sign-out.
 - **2026-09-24 (eighth pass) — passkey device list** (by: Claude). Owner signed in on the Mac
   and enrolled a Mac passkey; Settings had no device list, only a stale count. Added
   GET /tips-api/auth/devices and POST /auth/devices/remove (token required on 8792), lastUsedAt,

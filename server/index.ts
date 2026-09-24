@@ -120,13 +120,16 @@ app.post('/tips-api/auth/options', async (_req, res) => {
   try { res.json(await auth.authenticationOptions()); } catch (e) { authError(res, e); }
 });
 app.post('/tips-api/auth/unlock', async (req, res) => {
-  try { res.json(await auth.unlock(req.body?.response)); } catch (e) { authError(res, e); }
+  try { res.json(await auth.unlock(req.body?.response, req.body?.label)); } catch (e) { authError(res, e); }
 });
 
 // Listed from any unlocked device (and the Mac). Removing the device you are on locks it.
 app.get('/tips-api/auth/devices', (req, res) => res.json(auth.listDevices(req.headers.authorization)));
 app.post('/tips-api/auth/devices/remove', (req, res) => {
   try { auth.removeDevice(req.body?.id); res.json(auth.listDevices(req.headers.authorization)); } catch (e) { authError(res, e); }
+});
+app.post('/tips-api/auth/sessions/remove', (req, res) => {
+  try { auth.removeSession(req.body?.id); res.json(auth.listDevices(req.headers.authorization)); } catch (e) { authError(res, e); }
 });
 
 // ── TIPS data ──────────────────────────────────────────────────────────────────────────────
