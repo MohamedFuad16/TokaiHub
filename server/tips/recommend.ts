@@ -16,7 +16,7 @@ import * as cache from './cache';
 import { handbookFor, normTitle, type HandbookCourse } from './handbook';
 import { evaluate, jevEnabled, type Question } from './jev';
 import { parseSlots } from '../../src/lib/slots';
-import { assessmentOf, continuesFrom, deliveryKind, styleOf, type Assessment } from '../../src/lib/courseFeatures';
+import { assessmentOf, continuesFrom, deliveryKind, levelOf, styleOf, type Assessment } from '../../src/lib/courseFeatures';
 import type { Offering, RecommendData, RecommendStatus, RequiredCourse } from '../../src/lib/recommendTypes';
 
 type Lang = 'en' | 'jp';
@@ -63,6 +63,8 @@ async function build(lang: Lang): Promise<RecommendData> {
   if (cc.data.courses.length && cc.data.courses[0].fall === undefined) cc = await q<any>('course-categories', { refresh: '1' });
   const ccJa = lang === 'jp' ? cc : await q<any>('course-categories', { lang: 'jp' });
   const grades = await q<any>('grades');
+  // "Next level" is matched on Japanese titles; the English ones do not follow the levels.
+  const gradesJa = lang === 'jp' ? grades : await q<any>('grades', { lang: 'jp' });
   const tt = await q<any>('timetable');
   const profile = await q<any>('profile');
 
@@ -77,6 +79,9 @@ async function build(lang: Lang): Promise<RecommendData> {
   const passedCourses = (grades.data.courses ?? []).filter((c: any) => c.passed);
   const passed = new Set<string>(passedCourses.map((c: any) => normTitle(c.title)));
   const passedTitles: string[] = passedCourses.map((c: any) => c.title);
+  // The same passed courses in Japanese, with each one's title in the UI language.
+  const passedJa = new Map<string, string>();
+  (gradesJa.data.courses ?? []).forEach((c: any, i: number) => { if (c.passed) passedJa.set(c.title, grades.data.courses?.[i]?.title ?? c.title); });
   const registered = (tt.data.courses ?? []).map((c: any) => ({ code: c.code, title: c.title, slots: (c.periods ?? []).map((p: number) => ({ day: c.day, period: p })) }));
   const registeredTitles = new Set(registered.map((r: any) => normTitle(r.title)));
 
@@ -105,7 +110,7 @@ async function build(lang: Lang): Promise<RecommendData> {
   };
 
   // 1) Which curriculum courses are worth looking at this term.
-  const picks = cc.data.courses.map((c: any, i: number) => ({ c, i, row: hbRow(i) }))
+  const picks = cc.data.courses.map((c: any, i: number) => ({ c, i, row: hbRow(i), ja: jaTitleOf(i) }))
     .filter(({ c, row }: any) => helps(c.section) && !passed.has(normTitle(c.title)) && !registeredTitles.has(normTitle(c.title)) && !row?.closed && c.kamoku);
 
   // 2) Required courses and their state, from the handbook (TIPS does not mark them).
@@ -132,9 +137,16 @@ async function build(lang: Lang): Promise<RecommendData> {
   // 3) Sections of each course offered now: slots and TIPS's own eligibility.
   const now = picks.filter(({ c }: any) => offeredNow(c));
   const offerings: Offering[] = [];
+  // Courses in a leveled series the student has taken: the title rule decides continuation, and
+  // the model is not asked (it would call 中級 a continuation of 入門).
+  const passedRoots = new Set([...passedJa.keys()].map(t => levelOf(t)?.root).filter(Boolean));
+  const judged = new Set<string>();
   for (let k = 0; k < now.length; k++) {
-    const { c, row } = now[k];
+    const { c, row, ja } = now[k];
     step('sections', k, now.length);
+    const follows = continuesFrom(ja, [...passedJa.keys()]);
+    const lv = levelOf(ja);
+    if (lv && passedRoots.has(lv.root)) judged.add(c.kamoku);
     const pre = prereqOf(row);
     // Not takeable yet by the handbook's rules: no need to ask TIPS for its sections.
     if (!pre.ok) continue;
@@ -152,7 +164,7 @@ async function build(lang: Lang): Promise<RecommendData> {
         prereq: { ok: pre.ok, note: pre.note },
         delivery: { kind: 'unknown', label: '' },
         assessment: { style: 'unknown', examShare: 0, assignmentShare: 0, source: 'none' },
-        continues: continuesFrom(c.title, passedTitles), workload: null,
+        continues: follows ? passedJa.get(follows) ?? follows : null, workload: null,
       });
       const req = required.find(r => normTitle(r.title) === normTitle(c.title));
       if (req) req.offerings.push(x.code);
@@ -202,7 +214,7 @@ async function build(lang: Lang): Promise<RecommendData> {
         if (o.delivery.kind === 'unknown' || o.delivery.kind === 'hybrid') {
           questions.remote = { type: 'noul', instructions: 'Is this course taught online or on-demand rather than in a classroom?' };
         }
-        if (!o.continues && passedTitles.length) {
+        if (!o.continues && passedTitles.length && !judged.has(o.kamoku)) {
           questions.continues = {
             type: 'noul',
             instructions: { passed_courses: passedTitles.slice(0, 120), question: 'Is this course the next level or a direct continuation of a course in `passed_courses` (same subject, e.g. the next level of the same language)?' },
@@ -219,7 +231,7 @@ async function build(lang: Lang): Promise<RecommendData> {
         }
         if (typeof ans.workload?.score === 'number') o.workload = ans.workload.score;
         if (typeof ans.remote?.noul === 'number' && o.delivery.kind === 'unknown') o.delivery.kind = ans.remote.noul > 0.6 ? 'online' : ans.remote.noul < 0.4 ? 'in_person' : 'unknown';
-        if (!o.continues && typeof ans.continues?.noul === 'number' && ans.continues.noul > 0.7) o.continues = lang === 'en' ? 'a course you passed' : '修得済みの科目';
+        if (!o.continues && !judged.has(o.kamoku) && typeof ans.continues?.noul === 'number' && ans.continues.noul > 0.7) o.continues = lang === 'en' ? 'a course you passed' : '修得済みの科目';
       }
       step('model', ++doneCount, todo.length);
     };

@@ -26,7 +26,7 @@ const t = {
     status: { earned: 'Earned', registered: 'Chosen', available: 'Take this term', locked: 'Not yet', not_offered: 'Not offered this term' } as Record<string, string>,
     reason: { remote: 'Online', in_person: 'In person', assignment: 'Assignment-based', exam: 'Exam-based', continues: 'Next level', light: 'Light workload', required: 'Required', required_elective: 'Required elective', first_period: '1st period' } as Record<Reason, string>,
     next: (x: string) => `after ${x}`, model: 'Jev read the syllabi', noModel: 'Add a TypeSafe key on the Mac for Jev to read grading style and workload.',
-    refresh: 'Rebuild', failed: 'Could not finish reading TIPS', cr: 'cr',
+    refresh: 'Rebuild', failed: 'Could not finish reading TIPS', signedOut: 'The Mac is signed out of TIPS. Sign in again from Settings, then rebuild.', cr: 'cr',
   },
   jp: {
     title: 'あなたへのおすすめ', building: 'TIPSを読み込んで、最適な科目を探しています…',
@@ -44,7 +44,7 @@ const t = {
     status: { earned: '修得済', registered: '登録済み', available: '今学期に履修', locked: '条件未達', not_offered: '今学期は開講なし' } as Record<string, string>,
     reason: { remote: 'オンライン', in_person: '対面', assignment: '課題中心', exam: '試験中心', continues: '次のレベル', light: '負担が軽い', required: '必修', required_elective: '選択必修', first_period: '1限' } as Record<Reason, string>,
     next: (x: string) => `${x}の次`, model: 'Jevがシラバスを分析済み', noModel: 'MacにTypeSafeのキーを設定すると、Jevが評価方法や負担を読み取ります。',
-    refresh: '再作成', failed: 'TIPSの読み込みが完了しませんでした', cr: '単位',
+    refresh: '再作成', failed: 'TIPSの読み込みが完了しませんでした', signedOut: 'MacがTIPSからサインアウトしています。設定から再度サインインしてから再作成してください。', cr: '単位',
   },
 };
 
@@ -163,7 +163,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
     return (
       <div className={`rounded-3xl p-5 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
         <div className="font-bold flex items-center gap-2"><Sparkles className="w-5 h-5 text-brand-yellow" />{tx.title}</div>
-        <p className={`text-sm font-medium mt-2 ${muted}`}>{st?.error ? `${tx.failed}: ${st.error}` : tx.building}</p>
+        <p className={`text-sm font-medium mt-2 ${muted}`}>{st?.error === 'signed_out' ? tx.signedOut : st?.error ? `${tx.failed}: ${st.error}` : tx.building}</p>
         {p && (
           <div className="mt-4">
             <div className="flex justify-between text-xs font-bold mb-1.5"><span>{tx.steps[p.step] ?? p.step}</span><span className={muted}>{p.total ? `${p.done}/${p.total}` : ''}</span></div>

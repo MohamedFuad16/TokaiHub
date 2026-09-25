@@ -52,35 +52,41 @@ export function assessmentOf(gradingText: string | null | undefined): Assessment
   return { style: styleOf(examShare, assignmentShare), examShare, assignmentShare, source: a.mode === 'weighted' || a.mode === 'single' ? 'stated' : 'named' };
 }
 
-// Level words in order, Japanese and English, and the tracks a language series runs in.
+// Level words in order, Japanese and English, and the tracks a language series runs in. Compare
+// Japanese titles where possible: TIPS's English titles do not follow the Japanese levels
+// (ドイツ語入門1A is "ELEMENTARY GERMAN 1A").
 const LEVELS: [RegExp, number][] = [[/入門|beginning|introductory/i, 1], [/初級|elementary/i, 2], [/中級|intermediate/i, 3], [/上級|advanced/i, 4]];
-const TRACK = /(会話|講読|文法|作文|演習|conversation|reading|grammar|writing)\s*$/i;
+const TRACKS = /会話|講読|文法|作文|演習|conversation|reading|grammar|writing/gi;
 
 /** The series a course belongs to and its place in it, or null when the title has no level. */
 export function levelOf(title: string): { root: string; rank: number } | null {
-  const t = title.normalize('NFKC').replace(/\s+/g, ' ').trim();
-  let word = 0, cut = t.length;
+  let t = title.normalize('NFKC').replace(/\s+/g, ' ').trim();
+  let word = 0;
   for (const [re, n] of LEVELS) {
-    const m = re.exec(t);
-    if (m && m.index < cut) { word = n; cut = m.index; }
+    if (re.test(t)) { if (!word) word = n; t = t.replace(re, ' '); }
   }
   const tail = /(\d{1,2})\s*([A-D])?\s*$/i.exec(t);
   if (!word && !tail) return null;
-  const root = t.slice(0, word ? cut : tail!.index).trim().replace(TRACK, '').trim().toUpperCase();
+  const root = (tail ? t.slice(0, tail.index) : t).replace(TRACKS, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
   if (root.length < 2) return null;
   const num = tail ? Number(tail[1]) : 0;
   const letter = tail?.[2] ? tail[2].toUpperCase().charCodeAt(0) - 64 : 0;
   return { root, rank: word * 1000 + num * 10 + letter };
 }
 
-/** The highest passed course this one follows on from (same series, lower level), if any. */
+/**
+ * The highest passed course this one follows on from (same series, lower level), if any. Only
+ * the next step counts: at most one level word above the highest passed, so 入門 leads to 初級,
+ * not straight to 中級 or 上級.
+ */
 export function continuesFrom(title: string, passed: string[]): string | null {
   const l = levelOf(title);
   if (!l) return null;
   let best: { title: string; rank: number } | null = null;
   for (const p of passed) {
     const lp = levelOf(p);
-    if (lp && lp.root === l.root && lp.rank < l.rank && (!best || lp.rank > best.rank)) best = { title: p, rank: lp.rank };
+    if (lp && lp.root === l.root && (!best || lp.rank > best.rank)) best = { title: p, rank: lp.rank };
   }
-  return best?.title ?? null;
+  if (!best || best.rank >= l.rank) return null;
+  return Math.floor(l.rank / 1000) - Math.floor(best.rank / 1000) <= 1 ? best.title : null;
 }

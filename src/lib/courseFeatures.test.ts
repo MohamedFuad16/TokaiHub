@@ -45,3 +45,24 @@ describe('levels', () => {
     expect(levelOf('データ分析')).toBeNull();
   });
 });
+
+describe('levels in TIPS title styles', () => {
+  it('links a later level across tracks and letter suffixes', () => {
+    expect(continuesFrom('ドイツ語初級1A', ['ドイツ語入門1A', 'ドイツ語入門1B'])).toBe('ドイツ語入門1B');
+    expect(continuesFrom('ドイツ語会話初級2', ['ドイツ語入門1B'])).toBe('ドイツ語入門1B');
+  });
+  it('reads a level word at the start of an English title', () => {
+    expect(levelOf('Elementary Korean 2A')!.root).toBe('KOREAN');
+    expect(continuesFrom('Elementary Korean 2A', ['Elementary Korean 1B'])).toBe('Elementary Korean 1B');
+  });
+  it('only suggests the next level, not one beyond it', () => {
+    expect(continuesFrom('ドイツ語中級2', ['ドイツ語入門1B'])).toBeNull();
+    expect(continuesFrom('スペイン語上級2', ['スペイン語入門1A'])).toBeNull();
+    expect(continuesFrom('ドイツ語中級2', ['ドイツ語入門1B', 'ドイツ語初級2B'])).toBe('ドイツ語初級2B');
+    // Already past this level: nothing to continue.
+    expect(continuesFrom('韓国語初級1A', ['韓国語初級2B'])).toBeNull();
+  });
+  it('does not link unrelated courses that share a level word', () => {
+    expect(continuesFrom('入門ゼミナールB', ['入門ゼミナールA'])).toBeNull();
+  });
+});
