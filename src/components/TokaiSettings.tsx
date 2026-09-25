@@ -4,7 +4,7 @@ import {
   Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound, Cloud,
 } from 'lucide-react';
 import NotificationSettings from './NotificationSettings';
-import { IS_LOCAL, createSetupCode, listDevices, removeDevice, removeSession, type HubDevice } from '../lib/api';
+import { IS_LOCAL, createSetupCode, listDevices, removeDevice, removeSession, type HubDevice, type HubSession } from '../lib/api';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,6 +31,7 @@ const t = {
     devices: 'Passkeys and signed-in devices',
     noDevices: 'No devices yet.',
     thisDevice: 'This device',
+    signIns: (n: number) => `${n} sign-ins`, signedIn: 'Signed in', from: 'from',
     added: 'Added',
     lastUsed: 'last used',
     remove: 'Remove',
@@ -83,6 +84,7 @@ const t = {
     devices: 'パスキーとサインイン中の端末',
     noDevices: 'まだ端末はありません。',
     thisDevice: 'この端末',
+    signIns: (n: number) => `${n}件のサインイン`, signedIn: 'サインイン', from: '',
     added: '追加',
     lastUsed: '最終使用',
     remove: '削除',
@@ -167,6 +169,13 @@ type SettingsProps = ScreenProps;
 
 // ─── Passkey devices ──────────────────────────────────────────────────────────
 
+/** Sign-ins grouped by device name, in the order they first appear (most recently used first). */
+function groupByLabel(sessions: HubSession[]): [string, HubSession[]][] {
+  const groups = new Map<string, HubSession[]>();
+  for (const d of sessions) groups.set(d.label ?? '', [...(groups.get(d.label ?? '') ?? []), d]);
+  return [...groups];
+}
+
 function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewDevice }: {
   lang: 'en' | 'jp'; isDark: boolean; tx: typeof t['en']; borderClass: string; textMuted: string;
   /** A setup code is on screen: poll so the new device shows up as soon as it registers. */
@@ -174,6 +183,7 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
 }) {
   const [devices, setDevices] = useState<HubDevice[] | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -198,6 +208,24 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
     setConfirming(null);
     try { setDevices(await act()); } catch { /* signing out this device locks it */ }
   };
+  const sessionRow = (d: HubSession, nested: boolean) => (
+    <div key={d.id} className={`flex items-center gap-3 p-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      {!nested && (phone(d.label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />)}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold truncate flex items-center gap-2">
+          {nested ? `${tx.signedIn} ${date(d.createdAt)}` : d.label ?? tx.unknownDevice}
+          {d.current && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
+        </div>
+        <div className={`text-[11px] font-medium truncate ${textMuted}`}>
+          {d.lastUsedAt ? `${tx.lastUsed} ${date(d.lastUsedAt)}` : `${tx.added} ${date(d.createdAt)}`}
+          {d.site && d.site !== window.location.host ? ` · ${tx.from} ${d.site}` : ''}
+        </div>
+      </div>
+      <button onClick={twoTap(`s:${d.id}`, () => removeSession(d.id))} onBlur={() => setConfirming(null)} aria-label={`${tx.signOut} ${d.label ?? ''}`} className={btn(confirming === `s:${d.id}`)}>
+        {confirming === `s:${d.id}` ? tx.confirmSignOut : tx.signOut}
+      </button>
+    </div>
+  );
   const btn = (armed: boolean) => `shrink-0 h-10 min-w-10 px-2.5 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${armed ? 'bg-red-500 text-white' : isDark ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-500 hover:bg-gray-200'}`;
 
   return (
@@ -219,21 +247,30 @@ function DeviceList({ lang, isDark, tx, borderClass, textMuted, watching, onNewD
             </div>
             <div className="space-y-1">
               {p.sessions.length === 0 && <p className={`px-1 text-[11px] font-medium ${textMuted}`}>{tx.noSessions}</p>}
-              {p.sessions.map(d => (
-                <div key={d.id} className={`flex items-center gap-3 p-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                  {phone(d.label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold truncate flex items-center gap-2">
-                      {d.label ?? tx.unknownDevice}
-                      {d.current && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
-                    </div>
-                    <div className={`text-[11px] font-medium ${textMuted}`}>{d.lastUsedAt ? `${tx.lastUsed} ${date(d.lastUsedAt)}` : `${tx.added} ${date(d.createdAt)}`}</div>
+              {groupByLabel(p.sessions).map(([label, list]) => {
+                if (list.length === 1) return sessionRow(list[0], false);
+                // The same device name signed in more than once (another browser profile, a
+                // private window, another address): one row, expanded on tap.
+                const key = `${p.id}:${label}`;
+                const expanded = open === key;
+                const last = list.map(d => d.lastUsedAt ?? '').sort().pop() || null;
+                return (
+                  <div key={key} className={`rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                    <button onClick={() => setOpen(expanded ? null : key)} aria-expanded={expanded} className="w-full flex items-center gap-3 p-2 text-left">
+                      {phone(label) ? <Smartphone className="w-4 h-4 shrink-0" /> : <Laptop className="w-4 h-4 shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold truncate flex items-center gap-2">
+                          {label || tx.unknownDevice}
+                          {list.some(d => d.current) && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-600">{tx.thisDevice}</span>}
+                        </div>
+                        <div className={`text-[11px] font-medium ${textMuted}`}>{tx.signIns(list.length)}{last ? ` · ${tx.lastUsed} ${date(last)}` : ''}</div>
+                      </div>
+                      <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''} ${textMuted}`} />
+                    </button>
+                    {expanded && <div className="pl-7 pb-1 space-y-1">{list.map(d => sessionRow(d, true))}</div>}
                   </div>
-                  <button onClick={twoTap(`s:${d.id}`, () => removeSession(d.id))} onBlur={() => setConfirming(null)} aria-label={`${tx.signOut} ${d.label ?? ''}`} className={btn(confirming === `s:${d.id}`)}>
-                    {confirming === `s:${d.id}` ? tx.confirmSignOut : tx.signOut}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

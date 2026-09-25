@@ -31,7 +31,8 @@ const CODE_MINUTES = 10;
 /** label: the device the passkey was created on. synced: backed up (iCloud Keychain, Google), so other devices can use it. */
 interface Credential { id: string; publicKey: string; counter: number; transports?: AuthenticatorTransportFuture[]; label: string; createdAt: string; lastUsedAt?: string; synced?: boolean }
 /** One signed-in device: the token a passkey unlock issued to it. */
-interface Token { hash: string; credentialId: string; expiresAt: number; label?: string; createdAt?: number; lastUsedAt?: number }
+/** site: the web address the device signed in from (two browsers on one Mac look alike otherwise). */
+interface Token { hash: string; credentialId: string; expiresAt: number; label?: string; site?: string; createdAt?: number; lastUsedAt?: number }
 interface Store { ownerId: string; credentials: Credential[]; tokens: Token[] }
 
 function load(): Store {
@@ -85,7 +86,7 @@ export async function registrationOptions(code: unknown) {
   return options;
 }
 
-export async function registerDevice(code: unknown, response: any, label: unknown) {
+export async function registerDevice(code: unknown, response: any, label: unknown, site?: unknown) {
   const s = checkCode(code);
   if (!s.challenge) throw httpError(400, 'ask for registration options first');
   const v = await verifyRegistrationResponse({
@@ -99,7 +100,7 @@ export async function registerDevice(code: unknown, response: any, label: unknow
     transports: credential.transports, label: String(label ?? 'device').slice(0, 60), createdAt: new Date().toISOString(),
     synced: credentialBackedUp,
   });
-  return issueToken(credential.id, label);
+  return issueToken(credential.id, label, site);
 }
 
 // ── Unlock with a passkey ──────────────────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ export async function authenticationOptions() {
   return options;
 }
 
-export async function unlock(response: any, label?: unknown) {
+export async function unlock(response: any, label?: unknown, site?: unknown) {
   const cred = store.credentials.find(c => c.id === response?.id);
   if (!cred) throw httpError(403, 'unknown passkey');
   const v = await verifyAuthenticationResponse({
@@ -130,15 +131,17 @@ export async function unlock(response: any, label?: unknown) {
   cred.counter = v.authenticationInfo.newCounter;
   cred.lastUsedAt = new Date().toISOString();
   if (v.authenticationInfo.credentialBackedUp) cred.synced = true;
-  return issueToken(cred.id, label);
+  return issueToken(cred.id, label, site);
 }
 
 // ── Device tokens ──────────────────────────────────────────────────────────────────────────
-function issueToken(credentialId: string, label?: unknown) {
+const siteOf = (origin: unknown) => { try { return new URL(String(origin)).host || undefined; } catch { return undefined; } };
+
+function issueToken(credentialId: string, label?: unknown, site?: unknown) {
   const token = crypto.randomBytes(32).toString('base64url');
   const now = Date.now();
   store.tokens = store.tokens.filter(t => t.expiresAt > now);
-  store.tokens.push({ hash: sha(token), credentialId, expiresAt: now + TOKEN_DAYS * 86_400_000, label: String(label ?? '').slice(0, 60) || undefined, createdAt: now, lastUsedAt: now });
+  store.tokens.push({ hash: sha(token), credentialId, expiresAt: now + TOKEN_DAYS * 86_400_000, label: String(label ?? '').slice(0, 60) || undefined, site: siteOf(site), createdAt: now, lastUsedAt: now });
   save();
   return { token, ownerId: OWNER_ID };
 }
@@ -182,7 +185,7 @@ export function listDevices(header: string | undefined) {
     id: c.id, label: c.label, createdAt: c.createdAt, lastUsedAt: c.lastUsedAt ?? null, synced: Boolean(c.synced),
     sessions: store.tokens
       .filter(t => t.credentialId === c.id && t.expiresAt > now)
-      .map(t => ({ id: t.hash.slice(0, 16), label: t.label ?? null, createdAt: iso(t.createdAt), lastUsedAt: iso(t.lastUsedAt), current: t.hash === current }))
+      .map(t => ({ id: t.hash.slice(0, 16), label: t.label ?? null, site: t.site ?? null, createdAt: iso(t.createdAt), lastUsedAt: iso(t.lastUsedAt), current: t.hash === current }))
       .sort((x, y) => (y.lastUsedAt ?? '').localeCompare(x.lastUsedAt ?? '')),
   }));
 }

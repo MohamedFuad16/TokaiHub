@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, SlidersHorizontal, CheckCircle2, Lock, CalendarX, Circle, ListPlus, ListChecks, Plus, RefreshCw, ChevronDown, Snowflake } from 'lucide-react';
+import { Sparkles, CheckCircle2, Lock, CalendarX, Circle, ListPlus, ListChecks, Plus, RefreshCw, ChevronLeft, Pencil, AlertTriangle } from 'lucide-react';
 import type { Language } from '../App';
 import { EASE, TAP, Skeleton } from './ScreenHeader';
 import { SectionChip } from './CreditsNeeded';
 import { getRecommend } from '../lib/api';
 import { tidy } from '../lib/tipsAdapters';
-import { buildPlan, scoreOf, usable, DEFAULT_PREFS, type Prefs, type Ranked, type Reason, type DeliveryPref, type AssessmentPref } from '../lib/recommend';
+import { buildPlan, campusKey, misfitOf, scoreOf, usable, DEFAULT_PREFS, type Prefs, type Ranked, type Reason, type DeliveryPref, type AssessmentPref, type Misfit } from '../lib/recommend';
+import { PERIOD_TIMES } from '../config/periods';
 import type { Offering, RecommendStatus, RequiredCourse } from '../lib/recommendTypes';
 
 const t = {
@@ -16,16 +17,29 @@ const t = {
     firstTime: 'The first look takes a few minutes; after that it is instant. You can keep using the app.',
     target: (n: number) => `Plan ${n} more credit${n === 1 ? '' : 's'} this term`,
     termTotal: (reg: number, n: number) => `${reg + n} this term with the ${reg} already registered`,
-    frozen: (n: number) => `${n} credits wait for later`, cap: (n: number) => `Room for ${n} under your credit limit`,
-    prefs: 'Preferences', delivery: 'Class format', assessment: 'Graded on',
-    any: 'Any', remote: 'Online', inPerson: 'In person', assignments: 'Assignments', exams: 'Exams',
-    continueSeries: 'Next level of what I studied', lighter: 'Lighter workload', avoidFirst: 'Avoid 1st period',
+    cap: (n: number) => `Room for ${n} under your credit limit`,
+    any: 'Either', remote: 'Online', inPerson: 'In person', assignments: 'Assignments', exams: 'Exams',
+    continueSeries: 'Next level of a language or series I studied', lighter: 'Lighter workload',
+    intro: 'Answer five quick questions to see the courses that fit your week.', start: 'Start', change: 'Change answers', yourAnswers: 'Your answers',
+    stepOf: (i: number, n: number) => `${i} of ${n}`, back: 'Back', nextStep: 'Next', finish: 'Show my courses',
+    q: {
+      days: ['Which days do you want off?', 'Tap every day you want free.'],
+      format: ['Online or in person?', 'Online classes work from any campus.'],
+      campus: ['Which campus can you get to?', 'Online classes are included wherever they run from.'],
+      periods: ['When can you be in class?', 'Tap a period to rule it out.'],
+      style: ['How do you like to be graded?', ''],
+    } as Record<string, [string, string]>,
+    hasClasses: 'classes', bothCampuses: 'Both', noDaysOff: 'No days off', allPeriods: 'Any period',
+    off: (d: string) => `Off ${d}`, periodsOnly: (p: string) => `Periods ${p}`,
+    unfit: (x: string) => `${x} is required, but no section fits your answers:`,
+    why: { day_off: 'it meets on a day you want off', period: 'it meets in a period you ruled out', campus: 'it runs at another campus', format: 'its format does not match' } as Record<Misfit, string>,
+    hidden: (n: number) => `${n} section${n === 1 ? '' : 's'} left out by your answers`,
     required: 'Required courses', plan: 'Best plan', total: (c: number, tgt: number) => `${c} of ${tgt} credits`,
     planAll: 'Plan all', others: 'More good options', showMore: 'Show more', register: 'Register', planned: 'Planned', add: 'Plan',
     noPlan: 'Nothing registrable fits right now. Try other preferences, or check the slot view.',
     status: { earned: 'Earned', registered: 'Chosen', available: 'Take this term', locked: 'Not yet', not_offered: 'Not offered this term' } as Record<string, string>,
-    reason: { remote: 'Online', in_person: 'In person', assignment: 'Assignment-based', exam: 'Exam-based', continues: 'Next level', light: 'Light workload', required: 'Required', required_elective: 'Required elective', first_period: '1st period' } as Record<Reason, string>,
-    next: (x: string) => `after ${x}`, model: 'Jev read the syllabi', noModel: 'Add a TypeSafe key on the Mac for Jev to read grading style and workload.',
+    reason: { remote: 'Online', in_person: 'In person', assignment: 'Assignment-based', exam: 'Exam-based', continues: 'Next level', light: 'Light workload', required: 'Required', required_elective: 'Required elective' } as Record<Reason, string>,
+    next: (x: string) => `after ${x}`,
     refresh: 'Rebuild', failed: 'Could not finish reading TIPS', signedOut: 'The Mac is signed out of TIPS. Sign in again from Settings, then rebuild.', cr: 'cr',
   },
   jp: {
@@ -34,39 +48,159 @@ const t = {
     firstTime: '初回は数分かかります。以降はすぐに表示されます。このままアプリを使えます。',
     target: (n: number) => `今学期あと${n}単位を計画`,
     termTotal: (reg: number, n: number) => `登録済み${reg}単位と合わせて今学期${reg + n}単位`,
-    frozen: (n: number) => `${n}単位は来年度以降`, cap: (n: number) => `登録上限まであと${n}単位`,
-    prefs: '希望', delivery: '授業形態', assessment: '評価方法',
-    any: '指定なし', remote: 'オンライン', inPerson: '対面', assignments: '課題中心', exams: '試験中心',
-    continueSeries: '履修済み科目の次のレベル', lighter: '負担が軽い', avoidFirst: '1限を避ける',
+    cap: (n: number) => `登録上限まであと${n}単位`,
+    any: 'どちらでも', remote: 'オンライン', inPerson: '対面', assignments: '課題中心', exams: '試験中心',
+    continueSeries: '履修済みの語学・シリーズ科目の次のレベル', lighter: '負担が軽い',
+    intro: '5つの質問に答えると、あなたの1週間に合う科目を表示します。', start: 'はじめる', change: '回答を変更', yourAnswers: 'あなたの回答',
+    stepOf: (i: number, n: number) => `${i} / ${n}`, back: '戻る', nextStep: '次へ', finish: '科目を表示',
+    q: {
+      days: ['休みにしたい曜日は？', '空けたい曜日をすべて選んでください。'],
+      format: ['オンラインと対面、どちらがいいですか？', 'オンライン授業はどのキャンパスからでも受けられます。'],
+      campus: ['通えるキャンパスは？', 'オンライン授業は開講キャンパスに関係なく含めます。'],
+      periods: ['授業を受けられる時限は？', '受けられない時限をタップして外してください。'],
+      style: ['評価方法の好みは？', ''],
+    } as Record<string, [string, string]>,
+    hasClasses: '授業あり', bothCampuses: 'どちらも', noDaysOff: '休みの曜日なし', allPeriods: '時限の指定なし',
+    off: (d: string) => `${d}は休み`, periodsOnly: (p: string) => `${p}限のみ`,
+    unfit: (x: string) => `${x}は必修ですが、回答に合うクラスがありません：`,
+    why: { day_off: '休みにした曜日に開講', period: '外した時限に開講', campus: '別キャンパスで開講', format: '授業形態が合わない' } as Record<Misfit, string>,
+    hidden: (n: number) => `回答に合わない${n}クラスを除外`,
     required: '必修科目', plan: 'おすすめの組み合わせ', total: (c: number, tgt: number) => `${tgt}単位中${c}単位`,
     planAll: 'すべて計画に追加', others: 'その他のおすすめ', showMore: 'もっと見る', register: '登録', planned: '計画済み', add: '計画',
     noPlan: '今登録できる科目で条件に合うものがありません。希望を変えるか、コマから探してください。',
     status: { earned: '修得済', registered: '登録済み', available: '今学期に履修', locked: '条件未達', not_offered: '今学期は開講なし' } as Record<string, string>,
-    reason: { remote: 'オンライン', in_person: '対面', assignment: '課題中心', exam: '試験中心', continues: '次のレベル', light: '負担が軽い', required: '必修', required_elective: '選択必修', first_period: '1限' } as Record<Reason, string>,
-    next: (x: string) => `${x}の次`, model: 'Jevがシラバスを分析済み', noModel: 'MacにTypeSafeのキーを設定すると、Jevが評価方法や負担を読み取ります。',
+    reason: { remote: 'オンライン', in_person: '対面', assignment: '課題中心', exam: '試験中心', continues: '次のレベル', light: '負担が軽い', required: '必修', required_elective: '選択必修' } as Record<Reason, string>,
+    next: (x: string) => `${x}の次`,
     refresh: '再作成', failed: 'TIPSの読み込みが完了しませんでした', signedOut: 'MacがTIPSからサインアウトしています。設定から再度サインインしてから再作成してください。', cr: '単位',
   },
 };
 
-const PREFS_KEY = 'tokaihub_smart_prefs';
-function loadPrefs(): Prefs {
-  try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }; } catch { return DEFAULT_PREFS; }
+// Answers stay on this device. The key changed with the question flow; the old one is dropped.
+const ANSWERS_KEY = 'tokaihub_for_you';
+interface Answers { prefs: Prefs; answered: boolean }
+function loadAnswers(): Answers {
+  try {
+    localStorage.removeItem('tokaihub_smart_prefs');
+    const x = JSON.parse(localStorage.getItem(ANSWERS_KEY) ?? 'null');
+    if (x?.prefs) return { prefs: { ...DEFAULT_PREFS, ...x.prefs }, answered: !!x.answered };
+  } catch { /* private mode */ }
+  return { prefs: DEFAULT_PREFS, answered: false };
 }
 
-function Segmented<T extends string>({ id, value, options, onChange, isDark }: { id: string; value: T; options: [T, string][]; onChange: (v: T) => void; isDark: boolean }) {
+const CAMPUS: Record<string, { en: string; jp: string }> = {
+  shonan: { en: 'Shonan', jp: '湘南' }, shinagawa: { en: 'Shinagawa', jp: '品川' }, takanawa: { en: 'Takanawa', jp: '高輪' },
+  yoyogi: { en: 'Yoyogi', jp: '代々木' }, kumamoto: { en: 'Kumamoto', jp: '熊本' }, sapporo: { en: 'Sapporo', jp: '札幌' },
+  isehara: { en: 'Isehara', jp: '伊勢原' }, shimizu: { en: 'Shimizu', jp: '清水' },
+};
+const campusName = (key: string, lang: Language) => CAMPUS[key]?.[lang] ?? key;
+const PERIODS = [1, 2, 3, 4, 5, 6];
+const DAYS = [1, 2, 3, 4, 5, 6];
+
+const DAY = { en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], jp: ['日', '月', '火', '水', '木', '金', '土'] };
+
+const Chip: React.FC<{ on: boolean; onClick: () => void; children: React.ReactNode; isDark: boolean }> = ({ on, onClick, children, isDark }) => (
+  <motion.button whileTap={TAP} onClick={onClick} aria-pressed={on}
+    className={`min-h-11 px-3 rounded-xl text-sm font-bold flex flex-col items-center justify-center transition-colors ${on ? 'bg-brand-yellow text-brand-black' : isDark ? 'bg-gray-900 text-gray-300' : 'bg-white border border-gray-200 text-gray-700'}`}>
+    {children}
+  </motion.button>
+);
+
+/** The five questions, one per screen. Every answer has a sensible default, so Next never blocks. */
+function Questions({ prefs, onChange, onDone, campuses, busyDays, lang, isDark }: {
+  prefs: Prefs; onChange: (p: Prefs) => void; onDone: () => void; campuses: string[]; busyDays: Set<number>; lang: Language; isDark: boolean;
+}) {
+  const tx = t[lang];
+  const muted = isDark ? 'text-gray-400' : 'text-gray-500';
+  // The campus question only when there is a choice to make.
+  const steps = ['days', 'format', ...(campuses.length > 1 ? ['campus'] : []), 'periods', 'style'];
+  const [i, setI] = useState(0);
+  const id = steps[i];
+  const toggle = (list: number[], x: number) => (list.includes(x) ? list.filter(y => y !== x) : [...list, x].sort());
+  const allowed = prefs.periods.length ? prefs.periods : PERIODS;
+  const [title, hint] = tx.q[id];
+
   return (
-    <div className={`flex p-1 rounded-xl ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)} className={`relative flex-1 min-h-9 px-2 rounded-lg text-xs font-bold transition-colors ${value === v ? (isDark ? 'text-brand-black' : 'text-brand-black') : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {value === v && <motion.span layoutId={`seg-${id}`} className="absolute inset-0 -z-0 rounded-lg bg-brand-yellow" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
-          <span className="relative">{label}</span>
-        </button>
-      ))}
-    </div>
+    <section className={`rounded-3xl p-5 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+      <div className="flex items-center gap-2">
+        {i > 0 && (
+          <button onClick={() => setI(i - 1)} aria-label={tx.back} className={`-ml-2 w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>{tx.stepOf(i + 1, steps.length)}</span>
+        <div className="flex gap-1 ml-auto">
+          {steps.map((s, k) => <span key={s} className={`h-1.5 rounded-full transition-all ${k <= i ? 'w-5 bg-brand-yellow' : `w-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}`} />)}
+        </div>
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2, ease: EASE }}>
+          <div className="text-xl font-bold leading-tight mt-3">{title}</div>
+          {hint && <div className={`text-xs font-medium mt-1 ${muted}`}>{hint}</div>}
+          <div className="mt-4">
+            {id === 'days' && (
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {DAYS.map(d => (
+                  <Chip key={d} isDark={isDark} on={prefs.daysOff.includes(d)} onClick={() => onChange({ ...prefs, daysOff: toggle(prefs.daysOff, d) })}>
+                    {DAY[lang][d]}
+                    {busyDays.has(d) && <span className="text-[10px] font-semibold opacity-70">{tx.hasClasses}</span>}
+                  </Chip>
+                ))}
+              </div>
+            )}
+            {id === 'format' && (
+              <div className="grid grid-cols-3 gap-2">
+                {([['remote', tx.remote], ['in_person', tx.inPerson], ['any', tx.any]] as [DeliveryPref, string][]).map(([v, label]) => (
+                  <Chip key={v} isDark={isDark} on={prefs.delivery === v} onClick={() => onChange({ ...prefs, delivery: v })}>{label}</Chip>
+                ))}
+              </div>
+            )}
+            {id === 'campus' && (
+              <div className="grid grid-cols-3 gap-2">
+                {campuses.map(c => (
+                  <Chip key={c} isDark={isDark} on={prefs.campuses.length === 1 && prefs.campuses[0] === c} onClick={() => onChange({ ...prefs, campuses: [c] })}>{campusName(c, lang)}</Chip>
+                ))}
+                <Chip isDark={isDark} on={prefs.campuses.length === 0} onClick={() => onChange({ ...prefs, campuses: [] })}>{campuses.length === 2 ? tx.bothCampuses : tx.any}</Chip>
+              </div>
+            )}
+            {id === 'periods' && (
+              <div className="grid grid-cols-3 gap-2">
+                {PERIODS.map(n => (
+                  <Chip key={n} isDark={isDark} on={allowed.includes(n)} onClick={() => {
+                    const next = toggle(allowed, n);
+                    onChange({ ...prefs, periods: next.length === PERIODS.length ? [] : next });
+                  }}>
+                    {lang === 'en' ? `Period ${n}` : `${n}限`}
+                    <span className="text-[10px] font-semibold opacity-70">{PERIOD_TIMES[n][0]}</span>
+                  </Chip>
+                ))}
+              </div>
+            )}
+            {id === 'style' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {([['assignment', tx.assignments], ['exam', tx.exams], ['any', tx.any]] as [AssessmentPref, string][]).map(([v, label]) => (
+                    <Chip key={v} isDark={isDark} on={prefs.assessment === v} onClick={() => onChange({ ...prefs, assessment: v })}>{label}</Chip>
+                  ))}
+                </div>
+                {([['continueSeries', tx.continueSeries], ['lighter', tx.lighter]] as const).map(([k, label]) => (
+                  <label key={k} className="flex items-center justify-between gap-3 min-h-11 text-sm font-semibold cursor-pointer">
+                    {label}
+                    <input type="checkbox" checked={prefs[k]} onChange={e => onChange({ ...prefs, [k]: e.target.checked })} className="w-5 h-5 accent-black shrink-0" />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+      <motion.button whileTap={TAP} onClick={() => (i < steps.length - 1 ? setI(i + 1) : onDone())}
+        className={`mt-5 w-full h-12 rounded-2xl text-sm font-bold ${isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'}`}>
+        {i < steps.length - 1 ? tx.nextStep : tx.finish}
+      </motion.button>
+    </section>
   );
 }
 
-const DAY = { en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], jp: ['日', '月', '火', '水', '木', '金', '土'] };
 const slotLabel = (o: Offering, lang: Language) => o.slots.length ? o.slots.map(s => `${DAY[lang][s.day]}${s.period}`).join(' ') : (o.slotText || '—');
 
 const PickCard: React.FC<{
@@ -85,7 +219,7 @@ const PickCard: React.FC<{
           <div className={`text-xs font-medium mt-1 ${muted}`}>{[tidy(o.teacher), o.delivery.label].filter(Boolean).join(' · ')}</div>
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             <SectionChip section={o.section} needed={needed} done={done} isDark={isDark} lang={lang} />
-            {r.reasons.filter(x => x !== 'first_period').map(x => (
+            {r.reasons.map(x => (
               <span key={x} className={`h-6 px-2 rounded-full text-[11px] font-bold flex items-center ${x === 'required' ? 'bg-red-500/15 text-red-600' : 'bg-green-500/15 text-green-700'}`}>
                 {x === 'continues' && o.continues ? tx.next(tidy(o.continues)) : tx.reason[x]}
               </span>
@@ -116,9 +250,10 @@ const PickCard: React.FC<{
 const STATUS_ICON = { earned: CheckCircle2, registered: CheckCircle2, available: Circle, locked: Lock, not_offered: CalendarX };
 
 /**
- * "For you": required courses first (already registered ones shown as chosen), the best plan for
- * this term's credits under the student's preferences, then more options per section. Data from
- * the bridge's recommender; ranking happens here, so preference changes are instant.
+ * "For you": nothing is suggested until the student answers a few questions (days off, format,
+ * campus, periods, grading). Then: required courses (registered ones shown as chosen), the best
+ * plan for this term's credits within those answers, and more options. Data from the bridge's
+ * recommender; filtering and ranking happen here, so changed answers apply instantly.
  */
 export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, onPlan, onPlanAll, onRegister }: {
   lang: Language; isDark: boolean; needed: Set<string>; done: Set<string>;
@@ -127,8 +262,9 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
   const tx = t[lang];
   const muted = isDark ? 'text-gray-400' : 'text-gray-500';
   const [st, setSt] = useState<RecommendStatus | null>(null);
-  const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
-  const [showPrefs, setShowPrefs] = useState(false);
+  const [answers, setAnswers] = useState<Answers>(loadAnswers);
+  const [asking, setAsking] = useState(false);
+  const prefs = answers.prefs;
   const [more, setMore] = useState(8);
 
   useEffect(() => {
@@ -146,14 +282,14 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
     return () => { alive = false; clearTimeout(timer); };
   }, [lang]);
 
-  const save = (p: Prefs) => { setPrefs(p); try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* private mode */ } };
+  const save = (a: Answers) => { setAnswers(a); try { localStorage.setItem(ANSWERS_KEY, JSON.stringify(a)); } catch { /* private mode */ } };
   const data = st?.data ?? null;
   const plan = useMemo(() => (data ? buildPlan(data, prefs) : null), [data, prefs]);
   const others = useMemo(() => {
     if (!data || !plan) return [];
     const inPlan = new Set(plan.picks.map(p => p.o.code));
     const seen = new Set(plan.picks.map(p => p.o.title));
-    return data.offerings.filter(o => usable(o) && !inPlan.has(o.code) && (o.section ? needed.has(o.section) || o.mark === 'elective' : false))
+    return data.offerings.filter(o => usable(o) && !misfitOf(o, prefs) && !inPlan.has(o.code) && (o.section ? needed.has(o.section) || o.mark === 'elective' : false))
       .map(o => scoreOf(o, prefs)).sort((a, b) => b.score - a.score)
       .filter(r => (seen.has(r.o.title) ? false : (seen.add(r.o.title), true)));
   }, [data, plan, prefs, needed]);
@@ -179,8 +315,19 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
   }
 
   const c = data.credits;
-  const frozenCredits = c.frozen.reduce((a, f) => a + f.credits, 0);
-  const sectionsNeeded = data.sections.filter(s => s.remaining > 0).map(s => s.section);
+  const campuses = [...new Set<string>(data.offerings.map(o => o.campus).filter(Boolean).map(campusKey))].sort();
+  const busyDays = new Set<number>(data.registered.flatMap(r => r.slots.map(x => x.day)));
+  const showPlan = answers.answered && !asking;
+  const range = (ns: number[]) => (ns.length > 1 && ns[ns.length - 1] - ns[0] === ns.length - 1 ? `${ns[0]}–${ns[ns.length - 1]}` : ns.join(', '));
+  const summary = [
+    prefs.daysOff.length ? tx.off(prefs.daysOff.map(d => DAY[lang][d]).join(', ')) : tx.noDaysOff,
+    prefs.delivery === 'remote' ? tx.remote : prefs.delivery === 'in_person' ? tx.inPerson : null,
+    campuses.length > 1 ? (prefs.campuses.length ? prefs.campuses.map(c => campusName(c, lang)).join(', ') : null) : null,
+    prefs.periods.length ? tx.periodsOnly(range(prefs.periods)) : tx.allPeriods,
+    prefs.assessment === 'assignment' ? tx.assignments : prefs.assessment === 'exam' ? tx.exams : null,
+    prefs.continueSeries ? tx.reason.continues : null,
+    prefs.lighter ? tx.lighter : null,
+  ].filter(Boolean) as string[];
   const statusOrder: RequiredCourse['status'][] = ['available', 'registered', 'locked', 'not_offered', 'earned'];
 
   return (
@@ -197,49 +344,33 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
             className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}><RefreshCw className={`w-4 h-4 ${st?.building ? 'animate-spin' : ''}`} /></button>
         </div>
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {frozenCredits > 0 && (
-            <span title={c.frozen.map(f => `${tidy(f.title)} (${f.reason})`).join('\n')} className={`h-7 px-2.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-              <Snowflake className="w-3.5 h-3.5" />{tx.frozen(frozenCredits)}: {c.frozen.map(f => tidy(f.title)).join(', ')}
-            </span>
-          )}
           {c.limit !== null && <span className={`h-7 px-2.5 rounded-full text-[11px] font-bold flex items-center ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{tx.cap(c.limit - c.registered)}</span>}
-          <span className={`h-7 px-2.5 rounded-full text-[11px] font-bold flex items-center ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-white border border-gray-200 text-gray-600'}`}>{data.model ? tx.model : tx.noModel}</span>
         </div>
       </section>
 
-      {/* Preferences */}
-      <section className={`rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-        <button onClick={() => setShowPrefs(v => !v)} aria-expanded={showPrefs} className="w-full min-h-12 px-5 flex items-center gap-2 font-bold text-sm">
-          <SlidersHorizontal className="w-4 h-4 text-brand-yellow" />{tx.prefs}<ChevronDown className={`w-4 h-4 ml-auto transition-transform ${showPrefs ? 'rotate-180' : ''}`} />
-        </button>
-        <AnimatePresence initial={false}>
-          {showPrefs && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: EASE }} className="overflow-hidden">
-              <div className="px-5 pb-5 space-y-4">
-                {sectionsNeeded.map(sec => {
-                  const p = prefs.sections[sec] ?? { delivery: 'any' as DeliveryPref, assessment: 'any' as AssessmentPref };
-                  const set = (patch: Partial<typeof p>) => save({ ...prefs, sections: { ...prefs.sections, [sec]: { ...p, ...patch } } });
-                  return (
-                    <div key={sec} className="space-y-2">
-                      <div className="text-xs font-bold flex items-center gap-2"><SectionChip section={sec} needed done={false} isDark={isDark} lang={lang} />{tidy(data.sections.find(s => s.section === sec)?.name ?? '')}</div>
-                      <div className={`text-[11px] font-bold ${muted}`}>{tx.delivery}</div>
-                      <Segmented<DeliveryPref> id={`d-${sec}`} isDark={isDark} value={p.delivery} onChange={v => set({ delivery: v })} options={[['any', tx.any], ['remote', tx.remote], ['in_person', tx.inPerson]]} />
-                      <div className={`text-[11px] font-bold ${muted}`}>{tx.assessment}</div>
-                      <Segmented<AssessmentPref> id={`a-${sec}`} isDark={isDark} value={p.assessment} onChange={v => set({ assessment: v })} options={[['any', tx.any], ['assignment', tx.assignments], ['exam', tx.exams]]} />
-                    </div>
-                  );
-                })}
-                {([['continueSeries', tx.continueSeries], ['lighter', tx.lighter], ['avoidFirstPeriod', tx.avoidFirst]] as const).map(([k, label]) => (
-                  <label key={k} className="flex items-center justify-between gap-3 min-h-10 text-sm font-semibold cursor-pointer">
-                    {label}
-                    <input type="checkbox" checked={prefs[k]} onChange={e => save({ ...prefs, [k]: e.target.checked })} className="w-5 h-5 accent-black" />
-                  </label>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
+      {/* Questions, or a summary of the answers */}
+      {asking ? (
+        <Questions prefs={prefs} onChange={p => save({ ...answers, prefs: p })} onDone={() => { save({ prefs, answered: true }); setAsking(false); }}
+          campuses={campuses} busyDays={busyDays} lang={lang} isDark={isDark} />
+      ) : !answers.answered ? (
+        <section className={`rounded-3xl p-5 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <p className="text-sm font-semibold">{tx.intro}</p>
+          <motion.button whileTap={TAP} onClick={() => setAsking(true)}
+            className={`mt-4 w-full h-12 rounded-2xl text-sm font-bold ${isDark ? 'bg-brand-yellow text-brand-black' : 'bg-brand-black text-white'}`}>{tx.start}</motion.button>
+        </section>
+      ) : (
+        <section className={`rounded-3xl p-4 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>{tx.yourAnswers}</span>
+            <button onClick={() => setAsking(true)} className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>
+              <Pencil className="w-3.5 h-3.5" />{tx.change}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {summary.map(x => <span key={x} className={`h-7 px-2.5 rounded-full text-[11px] font-bold flex items-center ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{x}</span>)}
+          </div>
+        </section>
+      )}
 
       {/* Required */}
       {data.required.length > 0 && (
@@ -266,7 +397,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
       )}
 
       {/* Best plan */}
-      {plan && (
+      {showPlan && plan && (
         <section>
           <div className="flex items-center justify-between gap-3 mb-2">
             <div className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>{tx.plan}<span className="ml-2 normal-case tracking-normal">{tx.total(plan.credits, plan.target)}</span></div>
@@ -274,6 +405,11 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
               <button onClick={() => onPlanAll(plan.picks.map(p => p.o))} className={`h-9 px-3 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>{tx.planAll}</button>
             )}
           </div>
+          {plan.unfit.map(u => (
+            <p key={u.title} className={`mb-2 p-3 rounded-2xl text-xs font-semibold flex gap-2 ${isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-50 text-amber-800'}`}>
+              <AlertTriangle className="w-4 h-4 shrink-0" />{tx.unfit(tidy(u.title))} {tx.why[u.why]}
+            </p>
+          ))}
           {plan.picks.length === 0 && <p className={`text-sm font-medium ${muted}`}>{tx.noPlan}</p>}
           <div className="space-y-2">
             <AnimatePresence initial={false}>
@@ -287,7 +423,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
       )}
 
       {/* More options */}
-      {others.length > 0 && (
+      {showPlan && others.length > 0 && (
         <section>
           <div className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${muted}`}>{tx.others}</div>
           <div className="space-y-2">
@@ -299,6 +435,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
           {others.length > more && <button onClick={() => setMore(m => m + 8)} className={`mt-2 w-full h-10 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>{tx.showMore}</button>}
         </section>
       )}
+      {showPlan && plan && plan.hidden > 0 && <p className={`text-center text-[11px] font-semibold ${muted}`}>{tx.hidden(plan.hidden)}</p>}
     </div>
   );
 }

@@ -94,7 +94,8 @@ export async function unlockWithPasskey() {
 }
 
 /** A device signed in with a passkey (one synced passkey can serve an iPhone and a Mac). */
-export interface HubSession { id: string; label: string | null; createdAt: string | null; lastUsedAt: string | null; current: boolean }
+/** site: the address it signed in from; null for sign-ins made before the bridge recorded it. */
+export interface HubSession { id: string; label: string | null; site: string | null; createdAt: string | null; lastUsedAt: string | null; current: boolean }
 /** A passkey; `label` is the device it was created on. */
 export interface HubDevice { id: string; label: string; createdAt: string; lastUsedAt: string | null; synced: boolean; sessions: HubSession[] }
 export const listDevices = () => call<HubDevice[]>('/auth/devices', { timeoutMs: 10_000 });

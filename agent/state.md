@@ -14,6 +14,17 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — "For you" asks first; device list groups repeat sign-ins** (by: Claude).
+  SmartPicks shows no picks until the owner answers five questions (days off, online or in
+  person, campus, periods, grading plus next level and lighter workload). Answers are hard
+  filters (recommend.ts misfitOf, campusKey), and ranking stays as before. A required course with no fitting
+  section is named in the plan. Answers are kept per device (localStorage tokaihub_for_you). The
+  frozen-credits and Jev chips were removed at the owner's request. Settings groups sign-ins
+  with the same device name under one expandable row. New sign-ins record the site they came from
+  (auth.ts Token.site). The duplicate "Mac · Chrome" was two live sign-ins (9/24 11:58 and 9/25
+  13:01) used the same afternoon, so two separate browser storages; which one is unknown because
+  older tokens have no site. Verified in the browser pane at 375 px: all five steps, plan with
+  Mon off + Shinagawa = seminar + Cyber Security, grouped device row expands. 79 tests pass.
 - **2026-09-25 — push notifications (not deployed yet)** (by: Claude). ADR-0013.
   server/tips/push.ts (VAPID keys ~/.tokaihub/vapid.json, subscriptions push.json, sent state
   push-state.json; declarative Web Push payloads), index.ts (/tips-api/push/key|subscribe|prefs|

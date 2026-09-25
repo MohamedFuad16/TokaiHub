@@ -116,13 +116,13 @@ app.post('/tips-api/auth/register/options', async (req, res) => {
   try { res.json(await auth.registrationOptions(req.body?.code)); } catch (e) { authError(res, e); }
 });
 app.post('/tips-api/auth/register', async (req, res) => {
-  try { res.json(await auth.registerDevice(req.body?.code, req.body?.response, req.body?.label)); } catch (e) { authError(res, e); }
+  try { res.json(await auth.registerDevice(req.body?.code, req.body?.response, req.body?.label, req.get('origin'))); } catch (e) { authError(res, e); }
 });
 app.post('/tips-api/auth/options', async (_req, res) => {
   try { res.json(await auth.authenticationOptions()); } catch (e) { authError(res, e); }
 });
 app.post('/tips-api/auth/unlock', async (req, res) => {
-  try { res.json(await auth.unlock(req.body?.response, req.body?.label)); } catch (e) { authError(res, e); }
+  try { res.json(await auth.unlock(req.body?.response, req.body?.label, req.get('origin'))); } catch (e) { authError(res, e); }
 });
 
 // Listed from any unlocked device (and the Mac). Removing the device you are on locks it.
