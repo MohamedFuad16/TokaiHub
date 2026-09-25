@@ -134,3 +134,12 @@ export function toIcs(list: ClassMeeting[], info: (code: string) => { title: str
   lines.push('END:VCALENDAR');
   return lines.join('\r\n') + '\r\n';
 }
+
+/** The Japan-time calendar day of an instant, as a local midnight Date (the calendar index's key). */
+export function jstDate(d: Date): Date {
+  const s = new Date(d.getTime() + 9 * 3_600_000);
+  return new Date(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate());
+}
+
+/** Classes still to come (or in progress) on the same Japan-time day as `now`. */
+export const leftToday = (list: ClassMeeting[], now: Date) => list.filter(m => jstDay(m.start) === jstDay(now) && m.end > now);

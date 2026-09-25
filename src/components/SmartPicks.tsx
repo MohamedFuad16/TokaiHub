@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, CheckCircle2, Lock, CalendarX, Circle, ListPlus, ListChecks, Plus, RefreshCw, ChevronLeft, Pencil, AlertTriangle } from 'lucide-react';
+import { Sparkles, ListPlus, ListChecks, Plus, RefreshCw, ChevronLeft, Pencil, AlertTriangle } from 'lucide-react';
 import type { Language } from '../App';
 import { EASE, TAP, Skeleton, LoadError } from './ScreenHeader';
 import { SectionChip } from './CreditsNeeded';
@@ -8,7 +8,7 @@ import { getRecommend } from '../lib/api';
 import { tidy } from '../lib/tipsAdapters';
 import { buildPlan, campusKey, misfitOf, scoreOf, usable, DEFAULT_PREFS, type Prefs, type Ranked, type Reason, type DeliveryPref, type AssessmentPref, type Misfit } from '../lib/recommend';
 import { PERIOD_TIMES } from '../config/periods';
-import type { Offering, RecommendStatus, RequiredCourse } from '../lib/recommendTypes';
+import type { Offering, RecommendStatus } from '../lib/recommendTypes';
 
 const t = {
   en: {
@@ -34,10 +34,9 @@ const t = {
     unfit: (x: string) => `${x} is required, but no section fits your answers:`,
     why: { day_off: 'it meets on a day you want off', period: 'it meets in a period you ruled out', campus: 'it runs at another campus', format: 'its format does not match' } as Record<Misfit, string>,
     hidden: (n: number) => `${n} section${n === 1 ? '' : 's'} left out by your answers`,
-    required: 'Required courses', plan: 'Best plan', total: (c: number, tgt: number) => `${c} of ${tgt} credits`,
+    plan: 'Best plan', total: (c: number, tgt: number) => `${c} of ${tgt} credits`,
     planAll: 'Plan all', others: 'More good options', showMore: 'Show more', register: 'Register', planned: 'Planned', add: 'Plan',
     noPlan: 'Nothing registrable fits right now. Try other preferences, or check the slot view.',
-    status: { earned: 'Earned', registered: 'Chosen', available: 'Take this term', locked: 'Not yet', not_offered: 'Not offered this term' } as Record<string, string>,
     reason: { remote: 'Online', in_person: 'In person', assignment: 'Assignment-based', exam: 'Exam-based', continues: 'Next level', light: 'Light workload', required: 'Required', required_elective: 'Required elective' } as Record<Reason, string>,
     next: (x: string) => `after ${x}`,
     refresh: 'Rebuild', failed: 'Could not finish reading TIPS', signedOut: 'The Mac is signed out of TIPS. Sign in again from Settings, then rebuild.', cr: 'cr',
@@ -65,10 +64,9 @@ const t = {
     unfit: (x: string) => `${x}は必修ですが、回答に合うクラスがありません：`,
     why: { day_off: '休みにした曜日に開講', period: '外した時限に開講', campus: '別キャンパスで開講', format: '授業形態が合わない' } as Record<Misfit, string>,
     hidden: (n: number) => `回答に合わない${n}クラスを除外`,
-    required: '必修科目', plan: 'おすすめの組み合わせ', total: (c: number, tgt: number) => `${tgt}単位中${c}単位`,
+    plan: 'おすすめの組み合わせ', total: (c: number, tgt: number) => `${tgt}単位中${c}単位`,
     planAll: 'すべて計画に追加', others: 'その他のおすすめ', showMore: 'もっと見る', register: '登録', planned: '計画済み', add: '計画',
     noPlan: '今登録できる科目で条件に合うものがありません。希望を変えるか、コマから探してください。',
-    status: { earned: '修得済', registered: '登録済み', available: '今学期に履修', locked: '条件未達', not_offered: '今学期は開講なし' } as Record<string, string>,
     reason: { remote: 'オンライン', in_person: '対面', assignment: '課題中心', exam: '試験中心', continues: '次のレベル', light: '負担が軽い', required: '必修', required_elective: '選択必修' } as Record<Reason, string>,
     next: (x: string) => `${x}の次`,
     refresh: '再作成', failed: 'TIPSの読み込みが完了しませんでした', signedOut: 'MacがTIPSからサインアウトしています。設定から再度サインインしてから再作成してください。', cr: '単位',
@@ -248,8 +246,6 @@ const PickCard: React.FC<{
   );
 };
 
-const STATUS_ICON = { earned: CheckCircle2, registered: CheckCircle2, available: Circle, locked: Lock, not_offered: CalendarX };
-
 /**
  * "For you": nothing is suggested until the student answers a few questions (days off, format,
  * campus, periods, grading). Then: required courses (registered ones shown as chosen), the best
@@ -340,7 +336,6 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
     prefs.continueSeries ? tx.reason.continues : null,
     prefs.lighter ? tx.lighter : null,
   ].filter(Boolean) as string[];
-  const statusOrder: RequiredCourse['status'][] = ['available', 'registered', 'locked', 'not_offered', 'earned'];
 
   return (
     <div className="space-y-4">
@@ -380,30 +375,6 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {summary.map(x => <span key={x} className={`h-7 px-2.5 rounded-full text-[11px] font-bold flex items-center ${isDark ? 'bg-gray-700' : 'bg-white border border-gray-200'}`}>{x}</span>)}
-          </div>
-        </section>
-      )}
-
-      {/* Required */}
-      {data.required.length > 0 && (
-        <section>
-          <div className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${muted}`}>{tx.required}</div>
-          <div className="space-y-1.5">
-            {[...data.required].sort((a, b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)).map(r => {
-              const Icon = STATUS_ICON[r.status];
-              const tone = r.status === 'available' ? (isDark ? 'text-red-400' : 'text-red-700') : r.status === 'earned' || r.status === 'registered' ? (isDark ? 'text-green-400' : 'text-green-700') : muted;
-              return (
-                <div key={r.title} className={`flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} ${r.status === 'earned' ? 'opacity-80' : ''}`}>
-                  <Icon className={`w-4 h-4 shrink-0 ${tone}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold leading-snug break-words">{tidy(r.title)}</div>
-                    {r.reason && r.status === 'locked' && <div className={`text-[11px] font-medium ${muted}`}>{r.reason}</div>}
-                  </div>
-                  <span className={`text-[11px] font-bold shrink-0 ${tone}`}>{tx.status[r.status]}</span>
-                  <span className={`text-xs font-bold shrink-0 ${muted}`}>{r.credits}</span>
-                </div>
-              );
-            })}
           </div>
         </section>
       )}

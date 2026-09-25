@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blocks, closesIn, meetings, nextMeeting, parseDeadline, toIcs, untilLabel } from './schedule';
+import { blocks, closesIn, jstDate, leftToday, meetings, nextMeeting, parseDeadline, toIcs, untilLabel } from './schedule';
 import type { TipsAttendanceCourse, TipsChange } from './types';
 
 const session = (month: number, day: number, period: number) => ({ no: 1, month, day, period, mark: '/', status: 'unrecorded' as const });
@@ -34,6 +34,15 @@ describe('blocks', () => {
     const list = blocks(meetings(2026, [course('W', [session(10, 1, 1), session(10, 1, 2), session(10, 8, 1)]), course('X', [session(10, 1, 3)])]));
     expect(list.map(m => `${m.code}:${m.periods ?? 1}`)).toEqual(['W:2', 'X:1', 'W:1']);
     expect(list[0].end.toISOString()).toBe('2026-10-01T03:35:00.000Z'); // 12:35 JST
+  });
+});
+
+describe('today', () => {
+  it('counts classes left today and keys the next day in Japan time', () => {
+    const list = blocks(meetings(2026, [course('A', [session(9, 29, 1), session(9, 29, 3), session(10, 6, 1)])]));
+    expect(leftToday(list, new Date('2026-09-29T03:00:00Z')).map(m => m.period)).toEqual([3]); // 12:00 JST
+    // 23:30 UTC on 9/28 is 8:30 JST on 9/29.
+    expect(jstDate(new Date('2026-09-28T23:30:00Z')).getDate()).toBe(29);
   });
 });
 

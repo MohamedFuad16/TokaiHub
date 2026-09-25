@@ -14,6 +14,14 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-26 — Home floating bar shows the next class; Required courses list removed** (by: Claude).
+  The bar shows the next class (title, countdown, date, time, room; "now · until" during a
+  class); its circle counts classes left today, or shows the next class day's date. Tapping it
+  opens today's classes, or the next class day's list when today has none. The calendar button
+  opens on that day, with dots on class days and a ring on today. The next-class strip under the
+  tiles is gone. "For you" no longer lists required courses (the plan still notes a required
+  course that no section fits). schedule.ts gains jstDate and leftToday (tested). Verified in the
+  browser pane at 375 px; 90 tests pass.
 - **2026-09-26 — audit items 1 to 6, owner's UI fixes, notification icon and language** (by: Claude).
   Owner confirmed push delivery to the iPhone on 2026-09-25 (test notification arrived; icon
   was iOS's letter placeholder). Changes: Syllabus and Bulletins page 20 at a time

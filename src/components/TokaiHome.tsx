@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, FolderOpen, Clock } from 'lucide-react';
+import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, FolderOpen } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -7,8 +7,8 @@ import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { termLabel, academicYearOf, pct, termStart, monthDay, colorFor } from '../lib/tipsAdapters';
-import { blocks, meetings, nextMeeting, untilLabel, parseDeadline, closesIn } from '../lib/schedule';
+import { termLabel, academicYearOf, pct, termStart, monthDay } from '../lib/tipsAdapters';
+import { blocks, meetings, nextMeeting, untilLabel, parseDeadline, closesIn, jstDate, leftToday } from '../lib/schedule';
 import { PERIOD_TIMES } from '../config/periods';
 import { useClassCalendar } from '../lib/useCalendar';
 import type { CourseItem, TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation, TipsGrades } from '../lib/types';
@@ -92,11 +92,13 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   // A clock for the countdowns; one tick a minute is enough.
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(id); }, []);
-  const next = useMemo(
-    () => nextMeeting(blocks(meetings(termYear, attendance.data?.courses, changes.data?.items)), now),
-    [termYear, attendance.data, changes.data, now],
-  );
+  const termBlocks = useMemo(() => blocks(meetings(termYear, attendance.data?.courses, changes.data?.items)), [termYear, attendance.data, changes.data]);
+  const next = useMemo(() => nextMeeting(termBlocks, now), [termBlocks, now]);
   const nextItem = next ? courseItems.find(i => i.code === next.code) : undefined;
+  const remaining = useMemo(() => leftToday(termBlocks, now).length, [termBlocks, now]);
+  const nextDay = next ? jstDate(next.start) : null;
+  const nextIsToday = !!nextDay && nextDay.toDateString() === new Date().toDateString();
+  const fmtDay = (d: Date, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ja-JP', { timeZone: 'Asia/Tokyo', ...opts }).format(d);
   const regCloses = closesIn(parseDeadline(tt.timetable?.registrationStatus), now, lang);
 
   // Derive live values from userProfile
@@ -150,6 +152,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const sheetCal = useClassCalendar(currentMonth);
   const todayClasses = useMemo(() => todayCal.index.on(new Date(), courseItems), [todayCal.index, courseItems]);
   const calendarClasses = useMemo(() => sheetCal.index.on(selectedDate, courseItems), [sheetCal.index, selectedDate, courseItems]);
+  // No classes today: the bar's sheet shows the next class day instead of an empty list.
+  const showNextDay = todayClasses.length === 0 && !!nextDay;
+  const sheetClasses = useMemo(() => (showNextDay ? todayCal.index.on(nextDay!, courseItems) : todayClasses), [showNextDay, nextDay, todayCal.index, courseItems, todayClasses]);
+  // The calendar opens on the day that matters: today if it has classes, else the next class day.
+  const openCalendar = () => {
+    const d = showNextDay ? nextDay! : new Date();
+    setSelectedDate(d);
+    setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    setIsCalendarSheetOpen(true);
+  };
   // A short pause lets the tap feedback show before the route changes.
   const openCourse = (id: string) => setTimeout(() => navigate(`/course/${id}`), 150);
   const emptyDay = selectedCourseIds.length === 0 ? t[lang].noCourses : t[lang].noItems;
@@ -246,29 +258,6 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{attendanceRate === null && classesStart ? (lang === 'en' ? 'First class' : '初回授業') : tt.timetable ? termLabel(term, termYear, lang) : '\u00a0'}</div>
             </motion.div>
           </motion.div>
-
-          {/* Next class: the one in progress or the next to start, from TIPS's planned sessions. */}
-          {next && (
-            <motion.div variants={itemVariants} className={`${CONTAINER} mt-6`}>
-              <motion.button whileTap={TAP} onClick={() => navigate(`/course/${next.code}`)}
-                className={`w-full flex items-center gap-3 p-4 rounded-3xl text-left ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <span className={`w-1.5 self-stretch rounded-full ${colorFor(next.code)}`} />
-                <div className="flex-1 min-w-0">
-                  <div className={`text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${textMuted}`}>
-                    <Clock className="w-3.5 h-3.5" />{lang === 'en' ? 'Next class' : '次の授業'}
-                    {next.status === 'makeup' && <span className="normal-case tracking-normal text-blue-500">{lang === 'en' ? 'make-up' : '補講'}</span>}
-                    {next.status === 'roomChange' && <span className="normal-case tracking-normal text-orange-500">{lang === 'en' ? 'room changed' : '教室変更'}</span>}
-                  </div>
-                  <div className="font-bold text-[15px] leading-snug truncate mt-0.5">{nextItem?.title[lang] ?? next.code}</div>
-                  <div className={`text-xs font-semibold mt-0.5 truncate ${textMuted}`}>
-                    {[new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short', month: 'numeric', day: 'numeric' }).format(next.start),
-                      PERIOD_TIMES[next.period]?.[0], next.room ?? nextItem?.location?.[lang]].filter(Boolean).join(' · ')}
-                  </div>
-                </div>
-                <span className="text-sm font-bold shrink-0 text-right">{untilLabel(next.start, now, lang)}</span>
-              </motion.button>
-            </motion.div>
-          )}
 
           {/* Class changes (cancellations, room changes, make-ups) for the next two weeks */}
           {alerts.length > 0 && (
@@ -402,23 +391,35 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
           transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8, delay: 0.4 }}
           onClick={() => setIsScheduleSheetOpen(true)}
           role="button"
-          aria-label={`${t[lang].classesToday}: ${todayClasses.length}`}
-          className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between cursor-pointer shadow-2xl"
+          aria-label={next ? `${lang === 'en' ? 'Next class' : '次の授業'}: ${nextItem?.title[lang] ?? next.code}, ${untilLabel(next.start, now, lang)}` : t[lang].classesToday}
+          className="bg-brand-black rounded-[40px] p-2 flex items-center justify-between gap-3 cursor-pointer shadow-2xl"
         >
-          <div className="flex items-center gap-4 pl-2">
-            <div className="w-12 h-12 bg-brand-yellow rounded-full flex items-center justify-center font-bold text-lg text-brand-black">
-              {todayClasses.length}
+          <div className="flex items-center gap-3 pl-1 min-w-0">
+            {/* Classes left today, or the date of the next class day. */}
+            <div className="w-12 h-12 bg-brand-yellow rounded-full flex flex-col items-center justify-center font-bold text-brand-black shrink-0 leading-none">
+              {remaining > 0 || !nextDay ? <span className="text-lg">{remaining}</span> : (<>
+                <span className="text-[9px] uppercase tracking-wide">{fmtDay(next!.start, { month: 'short' })}</span>
+                <span className="text-lg">{nextDay.getDate()}</span>
+              </>)}
             </div>
-            <div className="text-white">
-              <div className="font-bold text-base leading-tight">{t[lang].schedule}</div>
-              <div className="text-xs opacity-60 font-medium">{t[lang].classesToday}</div>
+            <div className="text-white min-w-0">
+              {next ? (<>
+                <div className="font-bold text-[15px] leading-tight truncate">{nextItem?.title[lang] ?? next.code}</div>
+                <div className="text-xs font-medium truncate">
+                  <span className="text-brand-yellow font-bold">{now >= next.start ? `${untilLabel(next.start, now, lang)} · ${lang === 'en' ? 'until' : ''}${PERIOD_TIMES[next.period + (next.periods ?? 1) - 1]?.[1] ?? ''}${lang === 'en' ? '' : 'まで'}` : untilLabel(next.start, now, lang)}</span>
+                  <span className="opacity-60">{[nextIsToday ? null : fmtDay(next.start, { weekday: 'short', month: 'numeric', day: 'numeric' }), now >= next.start ? null : PERIOD_TIMES[next.period]?.[0], next.room ?? nextItem?.location?.[lang]].filter(Boolean).map(x => ` · ${x}`).join('')}</span>
+                </div>
+              </>) : (<>
+                <div className="font-bold text-base leading-tight">{t[lang].schedule}</div>
+                <div className="text-xs opacity-60 font-medium">{t[lang].classesToday}</div>
+              </>)}
             </div>
           </div>
           <motion.button
             whileTap={TAP}
-            onClick={(e) => { e.stopPropagation(); setIsCalendarSheetOpen(true); }}
+            onClick={(e) => { e.stopPropagation(); openCalendar(); }}
             aria-label={lang === 'en' ? 'Open calendar' : 'カレンダーを開く'}
-            className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center text-brand-black hover:bg-gray-100 transition-colors"
+            className="w-14 h-14 bg-white rounded-full p-2 flex items-center justify-center text-brand-black hover:bg-gray-100 transition-colors shrink-0"
           >
             <Calendar className="w-6 h-6" />
           </motion.button>
@@ -445,7 +446,10 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
               className={`absolute bottom-0 left-0 right-0 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'} rounded-t-[40px] z-50 p-6 flex flex-col max-h-[80%] lg:max-w-2xl lg:mx-auto lg:rounded-[40px] lg:bottom-8 lg:left-auto lg:right-8`}
             >
               <div className="flex justify-between items-center mb-6 shrink-0">
-                <h2 className="text-2xl font-bold">{t[lang].classesToday}</h2>
+                <div>
+                  <h2 className="text-2xl font-bold">{showNextDay ? (lang === 'en' ? 'Next class day' : '次の授業日') : t[lang].classesToday}</h2>
+                  {showNextDay && next && <p className={`text-sm font-semibold ${textMuted}`}>{fmtDay(next.start, { weekday: 'long', month: 'long', day: 'numeric' })} · {untilLabel(next.start, now, lang)}</p>}
+                </div>
                 <button
                   onClick={() => setIsScheduleSheetOpen(false)}
                   aria-label={lang === 'en' ? 'Close schedule' : 'スケジュールを閉じる'}
@@ -455,7 +459,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-8">
-                <ClassList classes={todayClasses} lang={lang} empty={emptyDay} onOpen={openCourse} />
+                <ClassList classes={sheetClasses} lang={lang} empty={emptyDay} onOpen={openCourse} />
               </div>
             </motion.div>
           </>
@@ -525,18 +529,23 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                     {Array.from({ length: daysInMonth }).map((_, i) => {
                       const dateNum = i + 1;
                       const isSelected = selectedDate.getDate() === dateNum && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
+                      const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum);
+                      const hasClass = sheetCal.index.has(day);
+                      const isToday = day.toDateString() === new Date().toDateString();
                       return (
                         <button
                           key={i}
                           onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum))}
                           aria-label={new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNum).toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', { month: 'long', day: 'numeric' })}
                           aria-pressed={isSelected}
-                          className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${isSelected
+                          className={`relative w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold text-sm transition-all active:scale-95 ${isToday && !isSelected ? 'ring-2 ring-brand-yellow' : ''} ${isSelected
                             ? (isDark ? 'bg-white text-brand-black shadow-lg shadow-white/10' : 'bg-[#0B1F3A] text-white shadow-lg shadow-black/20')
                             : (isDark ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900')
                             }`}
                         >
                           {dateNum}
+                          {/* A dot under days with classes. */}
+                          {hasClass && <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSelected ? 'bg-brand-yellow' : isDark ? 'bg-white/70' : 'bg-[#0B1F3A]'}`} />}
                         </button>
                       );
                     })}
