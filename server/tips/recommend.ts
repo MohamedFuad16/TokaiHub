@@ -23,9 +23,9 @@ type Lang = 'en' | 'jp';
 const KEY = (lang: Lang) => `recommend:v1@${lang}`;
 const FRESH_MS = 6 * 60 * 60_000;
 
-const state: Record<Lang, { building: Promise<void> | null; progress: RecommendStatus['progress']; error: string | null }> = {
-  en: { building: null, progress: null, error: null },
-  jp: { building: null, progress: null, error: null },
+const state: Record<Lang, { building: Promise<void> | null; progress: RecommendStatus['progress']; error: string | null; failedAt: number }> = {
+  en: { building: null, progress: null, error: null, failedAt: 0 },
+  jp: { building: null, progress: null, error: null, failedAt: 0 },
 };
 
 export function recommendStatus(lang: Lang): RecommendStatus {
@@ -39,10 +39,12 @@ export function ensureBuilt(lang: Lang, force = false) {
   if (s.building) return;
   const saved = cache.read<RecommendData>(KEY(lang));
   if (!force && saved && Date.now() - saved.cachedAt < FRESH_MS) return;
+  // A failed build is not retried on every poll for a minute, so the app sees why it failed.
+  if (!force && s.error && Date.now() - s.failedAt < 60_000) return;
   s.error = null;
   s.building = build(lang)
     .then(data => { cache.write(KEY(lang), data); })
-    .catch(e => { s.error = (e as Error).message.split('\n')[0]; console.error('[recommend]', s.error); })
+    .catch(e => { s.error = (e as Error).message.split('\n')[0]; s.failedAt = Date.now(); console.error('[recommend]', s.error); })
     .finally(() => { s.building = null; s.progress = null; });
 }
 
@@ -116,6 +118,14 @@ async function build(lang: Lang): Promise<RecommendData> {
       : !pre.ok ? 'locked' : offeredNow(c) ? 'available' : 'not_offered';
     required.push({ title: c.title, number: row.number, section: c.section, credits: c.credits ?? row.credits, status, reason: pre.note, offerings: [] });
   });
+  // TIPS's curriculum lists leave out passed courses; the handbook still names them.
+  const listed = new Set(required.map(r => normTitle(r.title)));
+  for (const row of hb.values()) {
+    if (row.mark !== 'required' || listed.has(normTitle(row.title)) || !passed.has(normTitle(row.title))) continue;
+    const sec = /^(Ⅰ|Ⅱ|Ⅲ|Ⅳ|Ⅴ|Ⅵ)/.exec(row.number)?.[1];
+    const section = sec ? ({ Ⅰ: 'I', Ⅱ: 'II', Ⅲ: 'III', Ⅳ: 'IV', Ⅴ: 'V', Ⅵ: 'VI' } as Record<string, string>)[sec] : null;
+    if (helps(section)) required.push({ title: row.title, number: row.number, section, credits: row.credits, status: 'earned', reason: null, offerings: [] });
+  }
   const frozen = required.filter(r => r.status === 'locked' && prereqOf(hbRow(cc.data.courses.findIndex((c: any) => c.title === r.title))).later)
     .map(r => ({ title: r.title, credits: r.credits, reason: r.reason ?? '' }));
 
@@ -126,6 +136,8 @@ async function build(lang: Lang): Promise<RecommendData> {
     const { c, row } = now[k];
     step('sections', k, now.length);
     const pre = prereqOf(row);
+    // Not takeable yet by the handbook's rules: no need to ask TIPS for its sections.
+    if (!pre.ok) continue;
     let found: any;
     try { found = await q<any>('registration-candidates', { d: c.cat.d, s: c.cat.s, m: c.cat.m, name: c.cat.name, kamoku: c.kamoku }); }
     catch { continue; }

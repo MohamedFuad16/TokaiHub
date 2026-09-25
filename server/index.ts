@@ -138,6 +138,8 @@ app.get('/tips-api/recommend', async (req, res) => {
   if (!ownerGuard(req, res)) return;
   const lang = req.query.lang === 'en' ? 'en' : 'jp';
   const { ensureBuilt, recommendStatus } = await import('./tips/recommend');
+  // Nothing to read while TIPS is signed out; keep any saved result and say why.
+  if (session.status().state !== 'signed_in') return res.json({ ...recommendStatus(lang), error: 'signed_out' });
   ensureBuilt(lang, req.query.refresh === '1');
   res.json(recommendStatus(lang));
 });
