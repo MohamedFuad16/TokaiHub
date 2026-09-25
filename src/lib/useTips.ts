@@ -3,7 +3,7 @@
  * refreshes from TIPS. Screens share one in-memory store, so switching routes does not refetch.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { getCached, getFeature, SignedOutError, type FeatureParams } from './api';
+import { getCached, getFeature, SignedOutError, MfaPendingError, type FeatureParams } from './api';
 import { readLocal, writeLocal, clearLocal } from './localCache';
 
 interface Entry { data: unknown; cachedAt: number; stale: boolean; changedAt?: number }
@@ -55,6 +55,9 @@ function load(feature: string, params: FeatureParams | undefined, refresh: boole
 
 export function clearTipsStore() { store.clear(); void clearLocal(); notify(); }
 
+/** Ask every open screen to fetch again (after the Mac finished signing in). */
+export const REFETCH_EVENT = 'tokaihub:refetch';
+
 /** Fired when a background refresh brought different data (App shows a small indicator). */
 export const UPDATED_EVENT = 'tokaihub:updated';
 /** Background refresh interval while the tab is visible. */
@@ -102,7 +105,8 @@ export function useTips<T>(feature: string, params?: FeatureParams, opts: { enab
       } catch (e) {
         if (cancelled) return;
         if (e instanceof SignedOutError) window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
-        setError(e as Error);
+        // The Mac is waiting on a sign-in approval; App shows it and refetches afterwards.
+        if (!(e instanceof MfaPendingError)) setError(e as Error);
       }
     })();
     // Keep pulling in the background while visible, and when the tab comes back.
@@ -110,7 +114,8 @@ export function useTips<T>(feature: string, params?: FeatureParams, opts: { enab
     const id = window.setInterval(tick, REFRESH_MS);
     document.addEventListener('visibilitychange', tick);
     window.addEventListener('focus', tick);
-    return () => { cancelled = true; clearInterval(id); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick); };
+    window.addEventListener(REFETCH_EVENT, tick);
+    return () => { cancelled = true; clearInterval(id); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick); window.removeEventListener(REFETCH_EVENT, tick); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled, tipsLang]);
 
@@ -119,7 +124,7 @@ export function useTips<T>(feature: string, params?: FeatureParams, opts: { enab
     try { await load(feature, params, true); }
     catch (e) {
       if (e instanceof SignedOutError) window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
-      setError(e as Error);
+      if (!(e instanceof MfaPendingError)) setError(e as Error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

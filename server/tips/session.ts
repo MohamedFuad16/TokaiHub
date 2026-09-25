@@ -14,8 +14,10 @@
  * restored on restart, so the Mac keeps working for the owner until Microsoft asks for a
  * password again. The session never expires on the Hub side.
  */
-import { chromium, type Browser, type BrowserContext } from 'playwright';
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import * as cache from './cache';
+import { driveMicrosoftLogin, needsMicrosoftInput, type MfaPrompt } from './msLogin';
+import { autoLoginConfigured, autoLoginKnown } from './keychain';
 
 export const TIPS_ORIGIN = 'https://tips.u-tokai.ac.jp';
 export const PORTAL_URL = `${TIPS_ORIGIN}/campusweb/portal.do?page=main`;
@@ -33,6 +35,28 @@ let hubExpiresAt = 0;
 let expiryTimer: NodeJS.Timeout | null = null;
 let loginPromise: Promise<void> | null = null;
 let lastError: string | null = null;
+/**
+ * Second factor waiting on the owner during an unattended sign-in (msLogin.ts): the number to
+ * enter in Microsoft Authenticator, a push to approve, or a one-time code to type in the app.
+ */
+let mfa: MfaPrompt | null = null;
+let codeWaiter: ((code: string | null) => void) | null = null;
+export function submitMfaCode(code: string) {
+  if (!codeWaiter || !/^\d{6,8}$/.test(code)) return false;
+  codeWaiter(code);
+  codeWaiter = null;
+  return true;
+}
+const mfaHooks = {
+  prompt: (p: MfaPrompt | null) => { mfa = p; },
+  code: () => new Promise<string | null>(resolve => {
+    codeWaiter = resolve;
+    setTimeout(() => { if (codeWaiter === resolve) { codeWaiter = null; resolve(null); } }, 120_000);
+  }),
+};
+// Headless Chromium says so in its user agent; Microsoft treats that as a bot on its sign-in pages.
+const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+
 /** Student ID the signed-in TIPS session belongs to, once checked (see index.ts). */
 let accountId: string | null = null;
 export const getAccountId = () => accountId;
@@ -83,6 +107,8 @@ export function status() {
     hubExpiresAt: timed ? new Date(hubExpiresAt).toISOString() : null,
     minutesLeft: timed ? Math.max(0, Math.round((hubExpiresAt - Date.now()) / 60_000)) : 0,
     lastError,
+    /** Unattended sign-in: running, what it waits on, and whether the Keychain account is set up. */
+    signin: { busy: !!(reauthPromise || loginPromise), mfa, auto: autoLoginKnown() },
   };
 }
 
@@ -103,7 +129,7 @@ type Storage = Awaited<ReturnType<BrowserContext['storageState']>>;
 
 async function adopt(storage: Storage) {
   browser ??= await chromium.launch({ headless: true });
-  context = await browser.newContext({ storageState: storage, locale: 'ja-JP' });
+  context = await browser.newContext({ storageState: storage, locale: 'ja-JP', userAgent: DESKTOP_UA });
   state = 'signed_in';
   hubExpiresAt = Date.now() + DEFAULT_HUB_MINUTES * 60_000;
   armExpiry();
@@ -200,9 +226,18 @@ export function reauthenticate(): Promise<void> {
         const where = await Promise.race([
           page.waitForURL(isPortal, { timeout: 20_000 }).then(() => 'portal' as const),
           page.waitForURL(u => u.hostname === 'tips.u-tokai.ac.jp' && !isPortal(u) && !u.pathname.includes('ssologin'), { timeout: 20_000 }).then(() => 'tips' as const),
+          waitForMicrosoftInput(page, 20_000),
         ].map(w => w.catch(() => 'timeout' as const)).map(w => w.then(r => (r === 'timeout' ? new Promise<never>(() => {}) : r)))
           .concat(new Promise<'timeout'>(r => setTimeout(() => r('timeout'), 21_000))));
         if (where === 'portal') break;
+        // Microsoft wants the password or a second factor: fill it from the Keychain and relay
+        // the second factor to the app, when the owner has set that up. Otherwise this ends the
+        // session below, as before.
+        if (where === 'microsoft') {
+          if (!(await autoLoginConfigured())) throw new Error('Microsoft asked for sign-in');
+          await driveMicrosoftLogin(page, mfaHooks);
+          continue;
+        }
         if (where === 'timeout' || attempt >= 3) throw new Error(`TIPS did not return to the portal (${where})`);
       }
       console.log('[tips] silent re-auth OK');
@@ -211,9 +246,12 @@ export function reauthenticate(): Promise<void> {
       const text = (await page.locator('body').innerText().catch(() => '')).slice(0, 80);
       // Only a Microsoft page asking for credentials ends the session. A network blip must not
       // throw away the saved sign-in of a machine that runs unattended.
-      if (!page.url().includes('login.microsoftonline.com')) throw new Error(`re-auth did not finish: ${(e as Error).message.split('\n')[0]}`);
+      const reason = (e as Error).message.split('\n')[0];
+      if (!page.url().includes('login.microsoftonline.com') && !reason.startsWith('Microsoft') && !/password|approved|code|set up/.test(reason)) {
+        throw new Error(`re-auth did not finish: ${reason}`);
+      }
       await signOut();
-      lastError = 'Microsoft asked for sign-in again';
+      lastError = reason.startsWith('Microsoft asked') ? 'Microsoft asked for sign-in again' : reason;
       throw new SessionExpiredError(`silent re-auth failed (${text.replace(/\s+/g, ' ')})`);
     } finally {
       await page.close().catch(() => {});
@@ -224,6 +262,64 @@ export function reauthenticate(): Promise<void> {
 }
 
 export class SessionExpiredError extends Error { name = 'SessionExpiredError'; }
+
+/** Resolves 'microsoft' once a Microsoft page is waiting for input (not just redirecting). */
+async function waitForMicrosoftInput(page: Page, ms: number): Promise<'microsoft'> {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    if (await needsMicrosoftInput(page)) return 'microsoft';
+    await page.waitForTimeout(700);
+  }
+  throw new Error('timeout');
+}
+
+/**
+ * Signs in from scratch without a window: the Keychain account and password, the second factor
+ * relayed to the app. For when the bridge is signed out and the owner is away from the Mac.
+ * index.ts checks the account against the owner ID afterwards, as for a window sign-in.
+ */
+export function autoSignIn(): Promise<void> {
+  if (loginPromise) return loginPromise;
+  if (reauthPromise) return reauthPromise;
+  lastError = null;
+  state = 'signing_in';
+  loginPromise = (async () => {
+    browser ??= await chromium.launch({ headless: true });
+    const ctx = await browser.newContext({ locale: 'ja-JP', userAgent: DESKTOP_UA });
+    const page = await ctx.newPage();
+    try {
+      if (!(await autoLoginConfigured())) throw new Error('auto sign-in is not set up');
+      await page.goto(PORTAL_URL, { timeout: 45_000 }).catch(() => {});
+      await waitForMicrosoftInput(page, 20_000).catch(() => {});
+      await driveMicrosoftLogin(page, mfaHooks);
+      // The SAML return can land on TIPS's 403 root; the portal opens on the next visit.
+      for (let i = 0; i < 3 && !isPortal(new URL(page.url())); i++) {
+        await page.goto(PORTAL_URL, { timeout: 45_000 }).catch(() => {});
+        await page.waitForTimeout(2500);
+      }
+      if (!isPortal(new URL(page.url()))) throw new Error('TIPS did not open after Microsoft sign-in');
+      await context?.close().catch(() => {});
+      context = ctx;
+      worker = null;
+      sessionLocale = null;
+      accountId = null;
+      state = 'signed_in';
+      hubExpiresAt = Date.now() + DEFAULT_HUB_MINUTES * 60_000;
+      armExpiry();
+      await persist();
+      console.log('[tips] signed in without a window (Keychain + relayed second factor)');
+    } catch (e) {
+      state = context ? 'signed_in' : 'signed_out';
+      lastError = (e as Error).message.split('\n')[0];
+      await ctx.close().catch(() => {});
+      throw e;
+    } finally {
+      await page.close().catch(() => {});
+      loginPromise = null;
+    }
+  })();
+  return loginPromise;
+}
 
 /**
  * A headless page parked on a static TIPS URL. Requests run as fetch() inside it, because the

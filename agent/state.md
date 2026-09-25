@@ -14,6 +14,15 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — unattended Microsoft sign-in with relayed second factor** (by: Claude). ADR-0012.
+  server/tips/keychain.ts, server/tips/msLogin.ts, session.ts (reauth hands Microsoft input pages
+  to the driver when the Keychain is set up; autoSignIn()), index.ts (/tips-api/reauth,
+  /tips-api/mfa/code, 503 mfa_pending on reads), app SignInPrompt + 2 s status follow + refetch.
+  Verified: token gates 401 on the public port; Keychain detection false before setup; Microsoft
+  email page detected as input, TIPS page not; prompt renders number and code variants at 375px.
+  NOT verified: a real sign-in through the driver (needs the owner's Keychain entry and phone).
+  Found signed out after a restart: the saved session was deleted by the old code when Microsoft
+  asked for the password again (no log line; likely cause, not proven).
 - **2026-09-25 — drawer, installed-app layout, images, precache** (by: Claude). Mobile drawer
   items no longer animate on their own (only the panel slides); drawer and app root are fixed to
   the screen, so the language switch sits at the true bottom in the iOS standalone app. Course

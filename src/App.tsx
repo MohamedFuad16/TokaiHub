@@ -4,8 +4,9 @@ import { Clock, Plus, RefreshCw, PanelLeftClose, PanelLeftOpen } from 'lucide-re
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
 import TokaiSignIn, { LoadingScreen } from './components/TokaiSignIn';
-import { getStatus, signOut as bridgeSignOut, extendSession, needsUnlock, IS_LOCAL, LOCKED_EVENT, LockedError } from './lib/api';
-import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT } from './lib/useTips';
+import { getStatus, signOut as bridgeSignOut, extendSession, needsUnlock, IS_LOCAL, LOCKED_EVENT, LockedError, MFA_EVENT, startAutoSignIn } from './lib/api';
+import SignInPrompt from './components/SignInPrompt';
+import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT, REFETCH_EVENT } from './lib/useTips';
 import { displayName, tidy } from './lib/tipsAdapters';
 import { NAV_ITEMS } from './lib/nav';
 import type { TipsGrades, TipsProfile, TipsStatus } from './lib/types';
@@ -476,6 +477,35 @@ export default function App() {
     return () => { clearInterval(id); window.removeEventListener(SIGNED_OUT_EVENT, onSignedOut); window.removeEventListener(LOCKED_EVENT, onLocked); };
   }, [refreshStatus]);
 
+  // Unattended sign-in on the Mac: follow it closely (2 s) while it runs or waits on a second
+  // factor, then have every screen fetch again once it is done.
+  const [mfaHint, setMfaHint] = useState<import('./lib/types').MfaPrompt | null>(null);
+  const signin = session?.signin;
+  const following = !!(signin?.busy || signin?.mfa || mfaHint);
+  const wasFollowing = React.useRef(false);
+  useEffect(() => {
+    const onMfa = (e: Event) => { setMfaHint((e as CustomEvent).detail ?? { kind: 'approve' }); void refreshStatus(); };
+    window.addEventListener(MFA_EVENT, onMfa);
+    return () => window.removeEventListener(MFA_EVENT, onMfa);
+  }, [refreshStatus]);
+  useEffect(() => {
+    if (!following) {
+      if (wasFollowing.current) { wasFollowing.current = false; setMfaHint(null); window.dispatchEvent(new Event(REFETCH_EVENT)); }
+      return;
+    }
+    wasFollowing.current = true;
+    const id = setInterval(refreshStatus, 2000);
+    // A hint from a data request that the Mac never confirms clears itself.
+    const stop = setTimeout(() => setMfaHint(null), 180_000);
+    return () => { clearInterval(id); clearTimeout(stop); };
+  }, [following, refreshStatus]);
+  useEffect(() => { if (signin && !signin.busy && !signin.mfa) setMfaHint(null); }, [signin]);
+  const startSignIn = useCallback(async () => {
+    try { setSession(await startAutoSignIn()); } catch { /* shown by the next status */ }
+    setMfaHint(null);
+    void refreshStatus();
+  }, [refreshStatus]);
+
   useEffect(() => {
     try { localStorage.setItem('tokaihub_settings', JSON.stringify(settings)); } catch { /* private mode */ }
   }, [settings]);
@@ -511,10 +541,16 @@ export default function App() {
     return <LoadingScreen lang={lang} isDark={isDark} />;
   }
 
+  const prompt = <SignInPrompt mfa={signin?.mfa ?? mfaHint} lang={lang} isDark={isDark} />;
+
   if ((!IS_LOCAL && locked) || session?.state !== 'signed_in') {
     return (
       <div className={`h-full w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+        {!locked && prompt}
         <TokaiSignIn
+          autoSignIn={!!signin?.auto}
+          signingIn={!!signin?.busy}
+          onAutoSignIn={startSignIn}
           lang={lang}
           setLang={setLang}
           settings={settings}
@@ -530,5 +566,5 @@ export default function App() {
     );
   }
 
-  return <SignedInApp base={base} session={session} onExtendSession={handleExtend} />;
+  return <>{prompt}<SignedInApp base={base} session={session} onExtendSession={handleExtend} /></>;
 }

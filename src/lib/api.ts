@@ -14,6 +14,10 @@ export const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.ho
 const BASE = IS_LOCAL ? '/tips-api' : ((import.meta.env.VITE_TIPS_BRIDGE_URL as string | undefined) ?? '/tips-api');
 
 export class SignedOutError extends Error { name = 'SignedOutError'; }
+/** The Mac is signing in again and waits on the owner's second factor (App shows it). */
+export class MfaPendingError extends Error { name = 'MfaPendingError'; }
+export const MFA_EVENT = 'tokaihub:mfa';
+
 /** The device has no valid token: unlock with the passkey. */
 export class LockedError extends Error { name = 'LockedError'; }
 export const LOCKED_EVENT = 'tokaihub:locked';
@@ -49,6 +53,10 @@ async function call<T>(path: string, init?: RequestInit & { timeoutMs?: number }
     throw new LockedError('locked');
   }
   if (res.status === 401) throw new SignedOutError('signed out');
+  if (res.status === 503 && body.error === 'mfa_pending') {
+    window.dispatchEvent(new CustomEvent(MFA_EVENT, { detail: body.mfa }));
+    throw new MfaPendingError('mfa_pending');
+  }
   if (!res.ok) throw Object.assign(new Error(body.error ?? `bridge ${res.status}`), { status: res.status });
   return body as T;
 }
@@ -57,6 +65,11 @@ export const getStatus = () => call<TipsStatus>('/status', { timeoutMs: 8_000 })
 
 /** Opens the Microsoft sign-in window on the Mac; resolves once TIPS is reached. Mac only. */
 export const signIn = () => call<TipsStatus>('/signin', { method: 'POST', timeoutMs: 6 * 60_000 });
+
+/** Starts the Mac's unattended sign-in (Keychain account); follow it through getStatus(). */
+export const startAutoSignIn = () => call<TipsStatus>('/reauth', { method: 'POST', timeoutMs: 15_000 });
+/** The one-time code Microsoft asked for during an unattended sign-in. */
+export const sendMfaCode = (code: string) => call<{ ok: boolean }>('/mfa/code', { method: 'POST', body: JSON.stringify({ code }), timeoutMs: 15_000 });
 
 /** Mac only: a one-time code for adding a phone's passkey (valid 10 minutes). */
 export const createSetupCode = () => call<{ code: string; expiresAt: string }>('/auth/setup-code', { method: 'POST', timeoutMs: 10_000 });

@@ -46,7 +46,12 @@ export interface TipsStatus {
   accountId?: string | null;
   ownerId?: string | null;
   devices?: number;
+  /** Unattended sign-in on the Mac: running, the second factor it waits on, whether it is set up. */
+  signin?: { busy: boolean; mfa: MfaPrompt | null; auto: boolean };
 }
+
+/** What Microsoft waits on during an unattended sign-in (see server/tips/msLogin.ts). */
+export type MfaPrompt = { kind: 'number'; number: string } | { kind: 'approve' } | { kind: 'code' };
 
 export interface TipsEnvelope<T> {
   data: T;

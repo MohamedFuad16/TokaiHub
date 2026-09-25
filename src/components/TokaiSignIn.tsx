@@ -20,6 +20,10 @@ interface SignInProps {
   remote: boolean;
   locked: boolean;
   onUnlocked: () => void;
+  /** The Mac can sign in to TIPS by itself (Keychain account); the app relays the second factor. */
+  autoSignIn?: boolean;
+  signingIn?: boolean;
+  onAutoSignIn?: () => void;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -157,7 +161,7 @@ function MicrosoftLogo() {
 /* ═══════════════════════════════════════════════════
    Sign-in Screen — university Microsoft account via TIPS
    ═══════════════════════════════════════════════════ */
-export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastError, onSignedIn, onRetryBridge, remote, locked, onUnlocked }: SignInProps) {
+export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastError, onSignedIn, onRetryBridge, remote, locked, onUnlocked, autoSignIn, signingIn, onAutoSignIn }: SignInProps) {
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState('');
   const [setupOpen, setSetupOpen] = useState(false);
@@ -180,9 +184,12 @@ export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastE
       unlockFailed: 'Unlock did not finish. Try again.',
       macTitle: 'Sign in on your Mac',
       macSub: 'The TIPS session on your Mac has ended. Open TokaiHub on the Mac and sign in with Microsoft, then retry here.',
+      autoTitle: 'Sign in to TIPS again',
+      autoSub: 'Your Mac signs in with the account saved in its Keychain. Keep Microsoft Authenticator at hand: the number to enter will appear here.',
+      autoButton: 'Sign in again', autoBusy: 'Signing in on your Mac…',
       serverTitle: 'Your TokaiHub server is offline',
       serverSub: 'The Mac may be asleep or offline. Retry when it is back.',
-      privacy: 'Your password goes only to Microsoft. TokaiHub never sees or stores it.',
+      privacy: 'Your password goes only to Microsoft, and to your Mac\'s Keychain if you turn on automatic sign-in there. It never leaves your Mac.',
       bridgeTitle: 'TIPS bridge is not running',
       bridgeSub: 'Start it in a terminal in the TokaiHub folder, then retry:',
       retry: 'Retry',
@@ -205,9 +212,12 @@ export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastE
       unlockFailed: 'ロック解除が完了しませんでした。もう一度お試しください。',
       macTitle: 'Macでサインインしてください',
       macSub: 'MacのTIPSセッションが終了しました。MacでTokaiHubを開いてMicrosoftでサインインしてから、ここで再試行してください。',
+      autoTitle: 'TIPSに再サインイン',
+      autoSub: 'Macがキーチェーンのアカウントでサインインします。Microsoft Authenticatorを用意してください。入力する番号がここに表示されます。',
+      autoButton: '再サインイン', autoBusy: 'Macでサインイン中…',
       serverTitle: 'TokaiHubサーバーがオフラインです',
       serverSub: 'Macがスリープ中かオフラインの可能性があります。復帰したら再試行してください。',
-      privacy: 'パスワードはMicrosoftにのみ送信され、TokaiHubが見たり保存したりすることはありません。',
+      privacy: 'パスワードはMicrosoftにのみ送信されます。Macで自動サインインを設定した場合はMacのキーチェーンにも保存されますが、Macの外に出ることはありません。',
       bridgeTitle: 'TIPSブリッジが起動していません',
       bridgeSub: 'TokaiHubフォルダのターミナルで起動してから、再試行してください：',
       retry: '再試行',
@@ -330,6 +340,15 @@ export default function TokaiSignIn({ lang, setLang, settings, bridgeDown, lastE
                 <button onClick={() => { setSetupOpen(o => !o); setError(''); }} className={`mt-4 w-full text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   {setupOpen ? tx.unlock : tx.setup}
                 </button>
+              </>
+            ) : remote && autoSignIn && !bridgeDown ? (
+              <>
+                <h2 className={`${heading} flex items-center gap-2`}><ShieldCheck className="w-5 h-5 text-brand-yellow" /> {tx.autoTitle}</h2>
+                <p className={subText}>{tx.autoSub}</p>
+                {lastError && !signingIn && <p className="text-xs font-bold px-1 mb-3 text-red-500">{lastError}</p>}
+                <motion.button whileTap={!signingIn ? { scale: 0.97 } : {}} disabled={signingIn} onClick={onAutoSignIn} className={primaryBtn}>
+                  {signingIn ? <><Loader2 className="w-4 h-4 animate-spin" /> {tx.autoBusy}</> : <><MicrosoftLogo /> {tx.autoButton}</>}
+                </motion.button>
               </>
             ) : remote ? (
               <>

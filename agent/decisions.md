@@ -215,3 +215,24 @@ link text hides it; the app linkifies in one place (`linkify` + `Linked`/`RichTe
 **Consequences:** Opening a file costs 2–4 TIPS page loads (and re-marks a bulletin as read,
 which it already is). Cache keys were versioned (`syllabus:v2`, `bulletin:v3`) so old copies
 without file references are not served.
+
+---
+
+## ADR-0012 · 2026-09-25 · Unattended Microsoft sign-in from the Keychain, second factor relayed
+**Status:** Accepted (branch `tips-wrapper`); owner-requested, reverses ADR-0009's "no stored password"
+**Context:** When Microsoft asks for the password again (password change, policy, long idle),
+the bridge signed out and the owner had to be at the Mac. The owner asked for the Mac to fill
+in the account itself and to show the Authenticator number in the app.
+**Decision:** Opt-in. The owner stores the account in the macOS login Keychain
+(`security add-generic-password -s tokaihub-microsoft -a <email> -w`, which prompts, so the
+password never reaches shell history). server/tips/msLogin.ts drives Microsoft's pages in the
+headless browser: account, password (read from the Keychain only when the field is on screen,
+never logged or cached), "Stay signed in" = yes. The second factor stays with the owner: the
+number-match value, a push wait, or a code request is published in /status (device-token
+gated) and shown full screen in the app; a code typed in the app is relayed once. Data reads
+answer 503 mfa_pending instead of waiting past Cloudflare's 100 s. POST /tips-api/reauth starts
+a sign-in when fully signed out.
+**Consequences:** The password now lives on the Mac (Keychain, encrypted by macOS). Anyone who
+can run commands as the owner on the Mac can read it; that was already true of the sealed TIPS
+cookies. Microsoft may still require the owner at the Mac for new-device or risk prompts the
+driver does not know; those end in "sign in on your Mac" as before.

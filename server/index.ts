@@ -16,6 +16,7 @@ import * as session from './tips/session';
 import { SessionExpiredError } from './tips/session';
 import * as cache from './tips/cache';
 import * as auth from './auth';
+import { autoLoginConfigured } from './tips/keychain';
 
 const PORT = Number(process.env.TIPS_BRIDGE_PORT ?? 8791);
 const PUBLIC_PORT = Number(process.env.TIPS_PUBLIC_PORT ?? 8792);
@@ -132,6 +133,23 @@ app.post('/tips-api/auth/sessions/remove', (req, res) => {
   try { auth.removeSession(req.body?.id); res.json(auth.listDevices(req.headers.authorization)); } catch (e) { authError(res, e); }
 });
 
+// ── Unattended sign-in (Keychain account, second factor relayed to the app) ────────────────
+/** Starts a sign-in without a window; the app follows it through /status (signin.mfa, busy). */
+app.post('/tips-api/reauth', async (_req, res) => {
+  if (ownerSignedIn()) return res.json(session.status());
+  if (!(await autoLoginConfigured())) return res.status(409).json({ error: 'auto sign-in is not set up on the Mac' });
+  session.autoSignIn()
+    .then(() => verifyOwner())
+    .catch(e => console.error('[tips] auto sign-in failed:', (e as Error).message.split('\n')[0]));
+  res.status(202).json(session.status());
+});
+
+/** The one-time code Microsoft asked for, typed by the owner in the app. */
+app.post('/tips-api/mfa/code', (req, res) => {
+  const ok = session.submitMfaCode(String(req.body?.code ?? '').replace(/\s/g, ''));
+  res.status(ok ? 200 : 409).json({ ok });
+});
+
 // ── TIPS data ──────────────────────────────────────────────────────────────────────────────
 // Feature routes live in routes.ts and are re-imported on every request in dev, so parser
 // edits apply without restarting the bridge (a restart would drop the in-memory session).
@@ -145,13 +163,34 @@ function ownerGuard(req: Request, res: Response) {
   return true;
 }
 
+/**
+ * A read that runs into an unattended Microsoft sign-in would wait for the owner's approval,
+ * longer than Cloudflare holds a request (100 s). Answer "approval pending" as soon as a second
+ * factor is waiting, so the app can show it; the sign-in and the read carry on in the background.
+ */
+function unlessMfaPending<T>(work: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let done = false;
+    const timer = setInterval(() => {
+      if (!done && session.status().signin.mfa) {
+        done = true; clearInterval(timer);
+        reject(Object.assign(new Error('mfa_pending'), { status: 503 }));
+      }
+    }, 500);
+    work.then(v => { if (!done) { done = true; clearInterval(timer); resolve(v); } },
+      e => { if (!done) { done = true; clearInterval(timer); reject(e); } });
+  });
+}
+
 app.get('/tips-api/data/:feature', async (req, res) => {
   if (!ownerGuard(req, res)) return;
   try {
     const { handle } = await loadRoutes();
-    res.json(await handle(req.params.feature, req.query as Record<string, string>));
+    res.json(await unlessMfaPending(handle(req.params.feature, req.query as Record<string, string>)));
   } catch (e) {
-    if (e instanceof SessionExpiredError || (e as Error).name === 'SessionExpiredError') {
+    if ((e as Error).message === 'mfa_pending') {
+      res.status(503).json({ error: 'mfa_pending', mfa: session.status().signin.mfa });
+    } else if (e instanceof SessionExpiredError || (e as Error).name === 'SessionExpiredError') {
       res.status(401).json({ error: 'signed_out', detail: (e as Error).message });
     } else if ((e as any).status === 404) {
       res.status(404).json({ error: (e as Error).message });
@@ -255,6 +294,7 @@ function keepAlive() {
 }
 
 async function main() {
+  void autoLoginConfigured(); // so /status can say whether unattended sign-in is set up
   if (await session.restore().catch(() => false)) {
     if (auth.OWNER_ID && session.getAccountId() !== auth.OWNER_ID) await session.signOut();
   }
