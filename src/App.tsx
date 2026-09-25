@@ -9,6 +9,7 @@ import SignInPrompt from './components/SignInPrompt';
 import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT, REFETCH_EVENT } from './lib/useTips';
 import { displayName, tidy } from './lib/tipsAdapters';
 import { NAV_ITEMS } from './lib/nav';
+import { syncPushLanguage } from './lib/push';
 import type { TipsGrades, TipsProfile, TipsStatus } from './lib/types';
 import mascotLogo from './assets/mascots/mascot_1_1.webp';
 
@@ -344,6 +345,9 @@ function SignedInApp({ base, session, onExtendSession }: { base: Omit<ScreenProp
   const profile = useTips<TipsProfile>('profile');
   const grades = useTips<TipsGrades>('grades');
   const { lang } = base;
+
+  // Notifications follow the phone's language; it may have changed since they were turned on.
+  useEffect(() => { void syncPushLanguage().catch(() => {}); }, []);
 
   // The local cache belongs to one student. If a different student signs in on this
   // device, drop the previous student's cached data before anything else renders from it.

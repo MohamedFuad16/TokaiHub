@@ -119,6 +119,7 @@ type Handle = (feature: string, q: Record<string, string>) => Promise<{ data: an
 interface Row { date: string; period: string; code: string; title: string; room: string; status: string }
 
 const periodNo = (p: string) => Number(/\d+/.exec(p.normalize('NFKC'))?.[0]);
+const titleIn = (r: Row, lang: 'en' | 'jp') => (lang === 'en' ? english.get(classKey(r))?.title || r.title : r.title);
 const pad = (n: number) => String(n).padStart(2, '0');
 const ymd = (d: Date) => `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
 /** "9/29" (TIPS leaves the year out) and "2限" → the class's start time. */
@@ -135,6 +136,9 @@ export function startOf(row: { date: string; period: string }, from: Date): Date
 }
 
 let rows: { row: Row; start: Date }[] = [];
+// English course title and room per class, for subscribers whose phone is in English.
+let english = new Map<string, { title: string; room: string }>();
+const classKey = (r: Row) => `${/\d{1,2}\/\d{1,2}/.exec(r.date)?.[0]}|${periodNo(r.period)}|${r.code}`;
 let rowsAt = 0;
 let bulletinsAt = 0;
 let ticking = false;
@@ -158,6 +162,12 @@ async function tickOnce(handle: Handle) {
       const to = new Date(from.getTime() + 8 * 86_400_000);
       const env = await handle('changes', { lang: 'jp', from: ymd(from), to: ymd(to), all: '1', bg: '1' });
       rows = (env.data?.items ?? []).map((r: Row) => ({ row: r, start: startOf(r, from) })).filter((x: any) => x.start) as typeof rows;
+      if (subs().some(s => s.prefs.lang === 'en')) {
+        try {
+          const en = await handle('changes', { lang: 'en', from: ymd(from), to: ymd(to), all: '1', bg: '1' });
+          english = new Map((en.data?.items ?? []).map((r: Row) => [classKey(r), { title: r.title, room: r.room }]));
+        } catch { /* Japanese titles still go out */ }
+      }
       rowsAt = Date.now();
       // Cancellations, room changes and make-ups, once each.
       for (const { row, start } of rows.filter(x => x.row.status !== 'normal')) {
@@ -170,7 +180,7 @@ async function tickOnce(handle: Handle) {
           title: lang === 'en'
             ? { cancelled: 'Class cancelled', roomChange: 'Room changed', makeup: 'Make-up class', cancelledMakeup: 'Make-up cancelled' }[row.status] ?? 'Schedule change'
             : { cancelled: '休講', roomChange: '教室変更', makeup: '補講', cancelledMakeup: '補講中止' }[row.status] ?? '授業の変更',
-          body: `${row.title} · ${md} ${lang === 'en' ? `period ${periodNo(row.period)}` : row.period}${row.room ? ` · ${row.room}` : ''}`, navigate: '/schedule', tag: `change-${key}`,
+          body: `${titleIn(row, lang)} · ${md} ${lang === 'en' ? `period ${periodNo(row.period)}` : row.period}${row.room ? ` · ${row.room}` : ''}`, navigate: '/schedule', tag: `change-${key}`,
         }));
       }
       state.changesSeeded = true;
@@ -192,7 +202,7 @@ async function tickOnce(handle: Handle) {
       if (prev) continue;
       const hm = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
       await notify('class', lang => ({
-        title: lang === 'en' ? `${row.title} at ${hm}` : `${hm}から ${row.title}`,
+        title: lang === 'en' ? `${titleIn(row, lang)} at ${hm}` : `${hm}から ${row.title}`,
         body: lang === 'en' ? `Period ${periodNo(row.period)}${row.room ? ` · room ${row.room}` : ''}${row.status === 'roomChange' ? ' (room changed)' : ''}` : `${row.period}${row.room ? ` · ${row.room}` : ''}${row.status === 'roomChange' ? '（教室変更）' : ''}`,
         navigate: '/schedule', tag: `class-${row.date}-${row.period}`,
       }), { endpoint: s.endpoint, ttl: lead * 60 });

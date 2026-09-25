@@ -22,5 +22,5 @@ export function useClassCalendar(month: Date) {
     [year, term, attendance.data, schedule.data],
   );
   const refresh = () => { if (tt.timetable && tt.items.length) attendance.refresh(); if (isCurrent) schedule.refresh(); };
-  return { index, items: tt.items, loading: attendance.loading || schedule.loading, refresh };
+  return { index, items: tt.items, year, courses: attendance.data?.courses, changes: schedule.data?.items, loading: attendance.loading || schedule.loading, refresh };
 }

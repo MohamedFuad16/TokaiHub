@@ -344,7 +344,8 @@ export default function TokaiSettings(props: SettingsProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start gap-2 mb-0.5">
-                <h2 className="min-w-0 font-bold text-lg leading-snug break-words">{(lang === 'en' ? userProfile?.name : userProfile?.nameJp) ?? 'TokaiHub User'}</h2>
+                {/* The given name fits one line; the full TIPS name can run to three at 375 px. */}
+                <h2 className="min-w-0 font-bold text-lg leading-snug truncate">{userProfile?.givenName || ((lang === 'en' ? userProfile?.name : userProfile?.nameJp) ?? 'TokaiHub User')}</h2>
                 <AnimatePresence>
                   {!!userProfile && (
                     <motion.div
@@ -360,13 +361,13 @@ export default function TokaiSettings(props: SettingsProps) {
                   )}
                 </AnimatePresence>
               </div>
-              <p className={`text-sm font-medium ${textMuted}`}>{userProfile?.studentId ?? '—'}</p>
-              <p className={`text-xs font-medium mt-0.5 ${textMuted}`}>
+              <p className={`text-sm font-medium truncate ${textMuted}`}>{[userProfile?.studentId ?? '—', lang === 'en' ? userProfile?.name : userProfile?.nameJp].filter(Boolean).join(' · ')}</p>
+              <p className={`text-xs font-medium mt-0.5 truncate ${textMuted}`}>
                 {[userProfile?.department, userProfile?.campus, userProfile?.year ? (lang === 'en' ? `Year ${userProfile.year}` : `${userProfile.year}年`) : ''].filter(Boolean).join(' · ') || '—'}
               </p>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg">
+              <div className={`text-xs font-bold px-2 py-1 rounded-lg bg-green-500/10 ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                 GPA {userProfile?.cumulativeGpa?.toFixed(2) ?? '—'}
               </div>
             </div>
@@ -429,7 +430,7 @@ export default function TokaiSettings(props: SettingsProps) {
                   style={{ width: `${Math.min((totalCredits / 124) * 100, 100)}%` }}
                 />
               </div>
-              <p className={`text-[10px] font-bold mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'} uppercase tracking-tighter`}>
+              <p className={`text-[11px] font-bold mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-tighter`}>
                 {lang === 'en' ? 'View Breakdown →' : '内訳を表示 →'}
               </p>
             </motion.div>

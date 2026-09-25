@@ -391,9 +391,9 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
           <div className="space-y-1.5">
             {[...data.required].sort((a, b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status)).map(r => {
               const Icon = STATUS_ICON[r.status];
-              const tone = r.status === 'available' ? 'text-red-600' : r.status === 'earned' || r.status === 'registered' ? 'text-green-600' : muted;
+              const tone = r.status === 'available' ? (isDark ? 'text-red-400' : 'text-red-700') : r.status === 'earned' || r.status === 'registered' ? (isDark ? 'text-green-400' : 'text-green-700') : muted;
               return (
-                <div key={r.title} className={`flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} ${r.status === 'earned' ? 'opacity-60' : ''}`}>
+                <div key={r.title} className={`flex items-center gap-3 p-3 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-50'} ${r.status === 'earned' ? 'opacity-80' : ''}`}>
                   <Icon className={`w-4 h-4 shrink-0 ${tone}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold leading-snug break-words">{tidy(r.title)}</div>

@@ -14,6 +14,24 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-26 — audit items 1 to 6, owner's UI fixes, notification icon and language** (by: Claude).
+  Owner confirmed push delivery to the iPhone on 2026-09-25 (test notification arrived; icon
+  was iOS's letter placeholder). Changes: Syllabus and Bulletins page 20 at a time
+  (ScreenHeader usePaged/ShowMore); Schedule no longer embeds the registration planner (banner
+  links to Registration); course page card compact on phones, sticky tabs, tab switch scrolls
+  to the tab start; contrast fixes (Home GPA sub-label, timetable headers and rooms, required
+  statuses, Settings GPA chip and breakdown label, dark grade letters); attendance before the
+  term shows the first class date (Home tile, Attendance page, course ring without the stray
+  dot), absences left before 80%, hollow squares for classes not held yet; new
+  src/lib/schedule.ts (meetings from attendance sessions + changes, blocks, next class,
+  countdowns, .ics) with tests: Home "next class" strip, registration countdown (Home banner,
+  Registration tile), "Add N classes to Calendar" on Schedule. Settings profile shows the given
+  name on one line; Classes cards taller. Icons are full-bleed squares (512 px icon 660 KB to
+  142 KB, ?v=2 links); iOS keeps the icon captured when the app was added, so the owner must
+  re-add the app to the Home Screen. Notifications follow the phone language (src/lib/push.ts
+  syncPushLanguage on app open); English phones get TIPS's English course titles in class
+  reminders. Verified in the browser pane at 375 px; 89 tests pass. Not verified: .ics import on
+  the iPhone, the new icon on the iPhone.
 - **2026-09-25 — audit fixes, first batch** (by: Claude). From the Fable audit (report in the
   session; screenshots in /private/tmp/claude-501/tokaihub-audit/, not kept). Fixed after checking
   each claim in code: six dead image preloads in index.html; empty `routing` chunk and dead

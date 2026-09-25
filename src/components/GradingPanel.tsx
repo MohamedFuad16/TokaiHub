@@ -24,6 +24,7 @@ const t = {
   },
 };
 
+// Letters are dark: white on these segments measures 1.7 to 3.8:1.
 const GRADE_COLOR: Record<string, string> = { S: 'bg-emerald-500', A: 'bg-green-500', B: 'bg-lime-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-red-500' };
 
 /** Same-size ring for courses whose syllabus names no weights, so every grading card lines up. */
@@ -66,7 +67,7 @@ function Scale({ bands, isDark, lang }: { bands: GradingAnalysis['scale']; isDar
       <div className="flex h-9 rounded-xl overflow-hidden">
         {asc.map((b, i) => (
           <motion.div key={b.grade} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.4, delay: 0.05 * i, ease: EASE }} style={{ flexGrow: b.max - b.min + 1, transformOrigin: 'left' }}
-            className={`${GRADE_COLOR[b.grade] ?? 'bg-gray-400'} flex items-center justify-center text-white text-sm font-black border-r border-white/40 last:border-r-0`}>
+            className={`${GRADE_COLOR[b.grade] ?? 'bg-gray-400'} flex items-center justify-center text-brand-black text-sm font-black border-r border-white/40 last:border-r-0`}>
             {b.grade}
           </motion.div>
         ))}

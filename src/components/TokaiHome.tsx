@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, FolderOpen } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Menu, Calendar, Bell, ChevronRight, X, ChevronLeft, GraduationCap, Target, AlertCircle, UserCheck, Megaphone, FolderOpen, Clock } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -7,7 +7,9 @@ import WeeklyTimetable from './WeeklyTimetable';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { termLabel, academicYearOf, pct } from '../lib/tipsAdapters';
+import { termLabel, academicYearOf, pct, termStart, monthDay, colorFor } from '../lib/tipsAdapters';
+import { blocks, meetings, nextMeeting, untilLabel, parseDeadline, closesIn } from '../lib/schedule';
+import { PERIOD_TIMES } from '../config/periods';
 import { useClassCalendar } from '../lib/useCalendar';
 import type { CourseItem, TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, TipsCabinetFolder, TipsChange, TipsGraduation, TipsGrades } from '../lib/types';
 import { FileRow } from './TokaiCabinet';
@@ -86,6 +88,16 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const changes = useTips<{ items: TipsChange[] }>('changes');
   const grades = useTips<TipsGrades>('grades');
   const isDataLoaded = !!tt.timetable || !!tt.error;
+  const classesStart = termStart(attendance.data?.courses);
+  // A clock for the countdowns; one tick a minute is enough.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(id); }, []);
+  const next = useMemo(
+    () => nextMeeting(blocks(meetings(termYear, attendance.data?.courses, changes.data?.items)), now),
+    [termYear, attendance.data, changes.data, now],
+  );
+  const nextItem = next ? courseItems.find(i => i.code === next.code) : undefined;
+  const regCloses = closesIn(parseDeadline(tt.timetable?.registrationStatus), now, lang);
 
   // Derive live values from userProfile
   const firstName = userProfile?.givenName || (lang === 'en' ? 'Student' : '学生');
@@ -221,7 +233,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-brand-black'}`}>
               <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><GraduationCap className="w-4 h-4 shrink-0 text-brand-yellow" /><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">GPA</span></div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white"><Fresh value={cumGpa}>{cumGpa ? cumGpa.toFixed(2) : '—'}</Fresh></div>
-              <div className="text-[10px] font-bold text-gray-500 mt-1">{t[lang].gpa}</div>
+              <div className="text-[11px] font-bold text-gray-400 mt-1">{t[lang].gpa}</div>
             </motion.div>
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/grades')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><Target className={`w-4 h-4 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Credits' : '単位'}</span></div>
@@ -230,10 +242,33 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
             </motion.div>
             <motion.div role="button" tabIndex={0} whileHover={{ y: -2 }} whileTap={TAP} onClick={() => navigate('/attendance')} className={`min-w-0 p-3.5 sm:p-5 rounded-3xl cursor-pointer shadow-sm ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center mb-3"><UserCheck className={`w-4 h-4 shrink-0 ${isDark ? 'text-brand-green' : 'text-green-600'}`} /><span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{lang === 'en' ? 'Attendance' : '出席率'}</span></div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={attendanceRate ?? -1}>{attendanceRate === null ? '—' : `${attendanceRate}%`}</Fresh></div>
-              <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{tt.timetable ? termLabel(term, termYear, lang) : '\u00a0'}</div>
+              <div className="text-2xl sm:text-3xl font-bold tracking-tight"><Fresh value={attendanceRate ?? -1}>{attendanceRate !== null ? `${attendanceRate}%` : classesStart ? monthDay(classesStart, lang) : '—'}</Fresh></div>
+              <div className={`text-[10px] font-bold mt-1 ${textMuted}`}>{attendanceRate === null && classesStart ? (lang === 'en' ? 'First class' : '初回授業') : tt.timetable ? termLabel(term, termYear, lang) : '\u00a0'}</div>
             </motion.div>
           </motion.div>
+
+          {/* Next class: the one in progress or the next to start, from TIPS's planned sessions. */}
+          {next && (
+            <motion.div variants={itemVariants} className={`${CONTAINER} mt-6`}>
+              <motion.button whileTap={TAP} onClick={() => navigate(`/course/${next.code}`)}
+                className={`w-full flex items-center gap-3 p-4 rounded-3xl text-left ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <span className={`w-1.5 self-stretch rounded-full ${colorFor(next.code)}`} />
+                <div className="flex-1 min-w-0">
+                  <div className={`text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${textMuted}`}>
+                    <Clock className="w-3.5 h-3.5" />{lang === 'en' ? 'Next class' : '次の授業'}
+                    {next.status === 'makeup' && <span className="normal-case tracking-normal text-blue-500">{lang === 'en' ? 'make-up' : '補講'}</span>}
+                    {next.status === 'roomChange' && <span className="normal-case tracking-normal text-orange-500">{lang === 'en' ? 'room changed' : '教室変更'}</span>}
+                  </div>
+                  <div className="font-bold text-[15px] leading-snug truncate mt-0.5">{nextItem?.title[lang] ?? next.code}</div>
+                  <div className={`text-xs font-semibold mt-0.5 truncate ${textMuted}`}>
+                    {[new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short', month: 'numeric', day: 'numeric' }).format(next.start),
+                      PERIOD_TIMES[next.period]?.[0], next.room ?? nextItem?.location?.[lang]].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <span className="text-sm font-bold shrink-0 text-right">{untilLabel(next.start, now, lang)}</span>
+              </motion.button>
+            </motion.div>
+          )}
 
           {/* Class changes (cancellations, room changes, make-ups) for the next two weeks */}
           {alerts.length > 0 && (
@@ -266,6 +301,7 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
                   {lang === 'en'
                     ? `${termLabel(term, termYear, 'en')} registration is open until ${tt.timetable.registrationStatus}. Plan your classes.`
                     : `${termLabel(term, termYear, 'jp')}の履修登録期間中です（${tt.timetable.registrationStatus}まで）。科目を選びましょう。`}
+                  {regCloses && <span className="block mt-0.5 text-xs font-bold">{regCloses}</span>}
                 </span>
                 <ChevronRight className="w-4 h-4 shrink-0" />
               </button>

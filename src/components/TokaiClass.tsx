@@ -85,15 +85,15 @@ export default function TokaiClass(props: ScreenProps) {
               onClick={() => navigate(`/course/${item.code}`)}
               className="group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] cursor-pointer bg-[#1A1D24] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-brand-yellow"
             >
-              <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#1A1D24]">
+              <div className="relative h-48 w-full shrink-0 overflow-hidden bg-[#1A1D24]">
                 <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover" />
-                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1A1D24] to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#1A1D24] to-transparent" />
                 <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-400 text-brand-black flex items-center gap-1">
                   <Check className="w-2.5 h-2.5" />{tx.enrolled}
                 </span>
                 <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 text-white backdrop-blur-sm">{item.code}</span>
               </div>
-              <div className="flex flex-1 flex-col gap-3 px-5 pb-5 pt-4">
+              <div className="flex flex-1 flex-col gap-4 px-5 pb-6 pt-5">
                 <div>
                   <h2 className="text-[17px] font-bold leading-snug text-white line-clamp-2 min-h-[2.75rem]">{item.title[lang]}</h2>
                   <p className="mt-1 text-[13px] text-white/60 truncate min-h-[1.25rem]">{item.teacher?.[lang]}</p>
@@ -103,7 +103,7 @@ export default function TokaiClass(props: ScreenProps) {
                   {item.time && <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white">{item.time}</span>}
                   {item.location?.[lang] && <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white max-w-full truncate">{item.location[lang]}</span>}
                 </div>
-                <div className="mt-auto flex items-center justify-center gap-2 w-full rounded-full bg-white py-2.5 text-[14px] font-bold text-black transition-colors group-hover:bg-brand-yellow">
+                <div className="mt-auto flex items-center justify-center gap-2 w-full rounded-full bg-white py-3 text-[14px] font-bold text-black transition-colors group-hover:bg-brand-yellow">
                   {tx.view}<ArrowRight className="w-4 h-4" />
                 </div>
               </div>

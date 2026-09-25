@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import RegistrationPlanner from './RegistrationPlanner';
 import { useTips } from '../lib/useTips';
 import { termLabel, pct } from '../lib/tipsAdapters';
+import { closesIn, parseDeadline } from '../lib/schedule';
 import type { TipsTimetable } from '../lib/types';
 
 const t = {
@@ -38,7 +39,10 @@ export default function TokaiRegistration(props: ScreenProps) {
             <motion.div {...rise(0)} className="min-w-0">
               <Card isDark={isDark} className="h-full p-4 sm:p-5">
                 <div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-1.5 sm:mb-2 ${muted}`}>{tx.status}</div>
-                <div className={`text-sm sm:text-lg font-bold leading-snug break-words ${closed ? 'text-red-500' : isDark ? 'text-green-400' : 'text-green-600'}`}>{data.registrationStatus ?? '—'}</div>
+                <div className={`text-sm sm:text-lg font-bold leading-snug break-words ${closed ? 'text-red-500' : isDark ? 'text-green-400' : 'text-green-700'}`}>{data.registrationStatus ?? '—'}</div>
+                {!closed && closesIn(parseDeadline(data.registrationStatus), new Date(), lang) && (
+                  <div className={`mt-1 text-[11px] font-bold ${muted}`}>{closesIn(parseDeadline(data.registrationStatus), new Date(), lang)}</div>
+                )}
               </Card>
             </motion.div>
             <motion.div {...rise(1)} className="min-w-0">

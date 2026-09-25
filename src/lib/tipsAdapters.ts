@@ -130,3 +130,31 @@ export function displayName(p: TipsProfile | undefined, lang: 'en' | 'jp'): Loca
 export const pct = (a?: number | null, b?: number | null) => (a && b ? Math.round((a / b) * 100) : 0);
 
 export { parseSlots } from './slots';
+
+// ── Attendance before and during the term ────────────────────────────────────────────────
+type Session = { month: number; day: number };
+// Fall runs into January: count January to March after December.
+const termOrder = (s: Session) => (s.month < 4 ? s.month + 12 : s.month) * 100 + s.day;
+
+/** The earliest planned session, or null. */
+export function firstSession(sessions?: Session[]): Session | null {
+  if (!sessions?.length) return null;
+  return sessions.reduce((a, s) => (termOrder(s) < termOrder(a) ? s : a));
+}
+
+/** The term's first class while TIPS has recorded nothing yet, so screens can say "starts 9/29". */
+export function termStart(courses?: TipsAttendanceCourse[]): Session | null {
+  if (!courses?.length) return null;
+  if (courses.some(c => (c.attended ?? 0) + (c.absent ?? 0) + (c.other ?? 0) > 0)) return null;
+  return firstSession(courses.flatMap(c => c.sessions ?? []));
+}
+
+/** Absences a course can still take before attendance drops under `floor` of its planned sessions. */
+export function absencesLeft(c: TipsAttendanceCourse, floor = 0.8): number | null {
+  const total = c.sessions?.length ?? 0;
+  if (!total) return null;
+  return Math.max(0, Math.floor(total * (1 - floor) + 1e-9) - (c.absent ?? 0));
+}
+
+export const monthDay = (s: Session, lang: 'en' | 'jp') =>
+  lang === 'en' ? `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][s.month - 1]} ${s.day}` : `${s.month}/${s.day}`;

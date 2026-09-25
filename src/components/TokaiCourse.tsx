@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Clock, MapPin, Award, CalendarDays, User, CheckCircle2, CircleSlash, Languages, ChevronDown } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -6,7 +6,7 @@ import { ScreenProps } from '../App';
 import PageShell, { Card, Loading, LoadError, Empty, Skeleton, SectionTitle, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { academicYearOf, slotLabel, tidy } from '../lib/tipsAdapters';
+import { academicYearOf, slotLabel, tidy, firstSession, monthDay } from '../lib/tipsAdapters';
 import { RichText, FileLink } from './SyllabusText';
 import GradingPanel from './GradingPanel';
 import { SectionChip } from './CreditsNeeded';
@@ -18,7 +18,7 @@ const t = {
   en: {
     registered: 'Registered', notRegistered: 'Not registered', overview: 'Overview', attendance: 'Attendance', plan: 'Class plan', details: 'Syllabus',
     time: 'Time', room: 'Room', credits: 'Credits', when: 'Day & period', summary: 'Course summary', grading: 'Grading',
-    keywords: 'Keywords', instructors: 'Instructors', rate: 'Attendance rate', attended: 'Attended', absent: 'Absent', other: 'Other',
+    keywords: 'Keywords', instructors: 'Instructors', rate: 'Attendance rate', firstClass: 'First class', attended: 'Attended', absent: 'Absent', other: 'Other',
     noAttendance: 'No attendance record for this course in the selected term.', noSyllabus: 'The syllabus for this course is not available on TIPS.',
     loading: 'Loading from TIPS…', jpOnly: 'The instructor published this syllabus in Japanese only.', prep: 'Preparation & review', method: 'Method',
     more: 'Show more', less: 'Show less', notListed: 'Not listed in the syllabus.', files: 'Attached files', gradingText: 'Syllabus wording',
@@ -28,7 +28,7 @@ const t = {
   jp: {
     registered: '履修中', notRegistered: '未履修', overview: '概要', attendance: '出欠', plan: '授業計画', details: 'シラバス',
     time: '時間', room: '教室', credits: '単位', when: '曜日・時限', summary: '科目の要旨', grading: '成績評価',
-    keywords: 'キーワード', instructors: '担当教員', rate: '出席率', attended: '出席', absent: '欠席', other: 'その他',
+    keywords: 'キーワード', instructors: '担当教員', rate: '出席率', firstClass: '初回授業', attended: '出席', absent: '欠席', other: 'その他',
     noAttendance: '選択中の学期にこの科目の出欠記録はありません。', noSyllabus: 'この科目のシラバスはTIPSにありません。',
     loading: 'TIPSから読み込み中…', jpOnly: '', prep: '予習・復習', method: '学習方法',
     more: 'もっと見る', less: '閉じる', notListed: 'シラバスに記載がありません。', files: '添付ファイル', gradingText: 'シラバスの記載',
@@ -109,6 +109,17 @@ export default function TokaiCourse(props: ScreenProps) {
   const record = attendance.data?.courses.find(c => c.code === code);
   const syl = syllabus.data;
   const [tab, setTab] = useState<Tab>('overview');
+  // Marks where the tab bar sits before it pins (a sticky element's own position moves).
+  const tabsMark = useRef<HTMLDivElement>(null);
+  // Switching tabs while the bar is pinned: start the new tab at its top, not somewhere below its end.
+  const openTab = (id: Tab) => {
+    setTab(id);
+    const mark = tabsMark.current;
+    const scroller = mark?.closest('.overflow-y-auto');
+    if (!mark || !scroller) return;
+    const top = mark.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    if (scroller.scrollTop > top) requestAnimationFrame(() => scroller.scrollTo({ top, behavior: 'smooth' }));
+  };
 
   const section = (jp: string) => syl?.sections.find(s => s.label.jp === jp)?.value;
   const title = course?.title[lang] ?? tidy(syl ? (lang === 'en' ? syl.title.en || syl.title.jp : syl.title.jp) : code);
@@ -179,9 +190,9 @@ export default function TokaiCourse(props: ScreenProps) {
       {(course || syl) && (
         <>
           {/* Summary card */}
-          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="relative overflow-hidden rounded-[32px] bg-brand-black text-white p-6 sm:p-8">
+          <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-brand-black text-white p-5 sm:p-8">
             <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-brand-yellow/10" />
-            <div className="relative flex flex-wrap items-center gap-2 mb-4">
+            <div className="relative flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
               {course
                 ? <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-400 text-brand-black flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{tx.registered}</span>
                 : <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15 flex items-center gap-1"><CircleSlash className="w-3.5 h-3.5" />{tx.notRegistered}</span>}
@@ -191,30 +202,33 @@ export default function TokaiCourse(props: ScreenProps) {
               {/* TIPS gives "講義科目 Lectures": show the half in the UI language. */}
               {syl?.creditType && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{pickLang(syl.creditType, lang)}</span>}
             </div>
-            <h2 className="relative text-[26px] sm:text-[34px] font-bold leading-tight tracking-tight break-words [overflow-wrap:anywhere]">{title}</h2>
-            {teacher && <p className="relative mt-2 text-sm text-white/70 flex items-center gap-2"><User className="w-4 h-4" />{teacher}</p>}
+            <h2 className="relative text-[22px] sm:text-[34px] font-bold leading-tight tracking-tight break-words [overflow-wrap:anywhere]">{title}</h2>
+            {teacher && <p className="relative mt-1.5 sm:mt-2 text-sm text-white/70 flex items-center gap-2"><User className="w-4 h-4" />{teacher}</p>}
             {facts.length > 0 && (
-              <div className="relative mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative mt-4 sm:mt-6 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 {facts.map(f => (
-                  <div key={f.label} className="rounded-2xl bg-white/10 px-4 py-3 min-w-0">
+                  <div key={f.label} className="rounded-2xl bg-white/10 px-3 py-2 sm:px-4 sm:py-3 min-w-0">
                     <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/60"><f.icon className="w-3.5 h-3.5 text-brand-yellow" />{f.label}</div>
-                    <div className="mt-1 text-sm font-bold line-clamp-2 break-words">{f.value}</div>
+                    <div className="mt-0.5 sm:mt-1 text-sm font-bold line-clamp-2 break-words">{f.value}</div>
                   </div>
                 ))}
               </div>
             )}
           </motion.section>
 
-          {/* Tabs */}
-          <div role="tablist" className={`mt-6 mb-5 flex gap-1 p-1 rounded-full overflow-x-auto no-scrollbar ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          {/* Tabs stay on screen while the content scrolls, so switching never means scrolling up past the card. */}
+          <div ref={tabsMark} aria-hidden />
+          <div className={`sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 pt-4 pb-3 mb-2 sm:pt-6 sm:pb-4 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+          <div role="tablist" className={`flex gap-1 p-1 rounded-full overflow-x-auto no-scrollbar ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             {tabs.filter(x => x.show).map(x => (
-              <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}
+              <button key={x.id} role="tab" aria-selected={tab === x.id} onClick={() => openTab(x.id)}
                 className={`relative isolate flex-1 min-w-fit h-10 px-2 sm:px-4 rounded-full text-[13px] sm:text-sm font-bold whitespace-nowrap transition-colors ${tab === x.id ? (isDark ? 'text-white' : 'text-brand-black') : muted}`}>
                 {/* The selected tab's background slides to the new tab. */}
                 {tab === x.id && <motion.span layoutId="course-tab" transition={{ type: 'spring', stiffness: 500, damping: 40 }} className={`absolute inset-0 -z-10 rounded-full ${isDark ? 'bg-gray-700' : 'bg-white shadow-sm'}`} />}
                 {x.label}
               </button>
             ))}
+          </div>
           </div>
 
           {lang === 'en' && syl?.contentLang === 'jp' && tab !== 'attendance' && (
@@ -281,12 +295,18 @@ export default function TokaiCourse(props: ScreenProps) {
                       <div className="relative w-36 h-36">
                         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                           <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2" className={isDark ? 'stroke-gray-700' : 'stroke-gray-200'} />
-                          <motion.circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2" strokeLinecap="round" pathLength={100} className={rate !== null && rate < 80 ? 'stroke-red-500' : 'stroke-blue-500'}
-                            strokeDasharray="100 100" initial={{ strokeDashoffset: 100 }} animate={{ strokeDashoffset: 100 - (rate ?? 0) }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                          {/* No arc before anything is recorded: a zero-length round cap draws a dot at 12 o'clock. */}
+                          {rate !== null && <motion.circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2" strokeLinecap="round" pathLength={100} className={rate < 80 ? 'stroke-red-500' : 'stroke-blue-500'}
+                            strokeDasharray="100 100" initial={{ strokeDashoffset: 100 }} animate={{ strokeDashoffset: 100 - rate }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-3xl font-bold">{rate === null ? '—' : `${rate}%`}</span>
-                          <span className={`text-[11px] font-bold ${muted}`}>{tx.rate}</span>
+                          {rate === null && firstSession(record.sessions) ? (<>
+                            <span className="text-2xl font-bold">{monthDay(firstSession(record.sessions)!, lang)}</span>
+                            <span className={`text-[11px] font-bold ${muted}`}>{tx.firstClass}</span>
+                          </>) : (<>
+                            <span className="text-3xl font-bold">{rate === null ? '—' : `${rate}%`}</span>
+                            <span className={`text-[11px] font-bold ${muted}`}>{tx.rate}</span>
+                          </>)}
                         </div>
                       </div>
                       <div className="mt-5 grid grid-cols-3 gap-2 w-full">

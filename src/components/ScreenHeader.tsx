@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, ChevronDown, ChevronLeft, Menu, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -217,3 +217,22 @@ export const Fresh: React.FC<{ value: React.Key; children: React.ReactNode; clas
     </motion.span>
   </AnimatePresence>
 );
+
+/**
+ * Long lists (98 syllabus results, 94 bulletins) render a page at a time. The count resets
+ * whenever `resetKey` changes, so a new search or filter starts from the top.
+ */
+export function usePaged<T>(items: T[], resetKey: string, size = 20) {
+  const [limit, setLimit] = useState(size);
+  useEffect(() => setLimit(size), [resetKey, size]);
+  return { shown: items.slice(0, limit), left: Math.max(0, items.length - limit), more: () => setLimit(l => l + size) };
+}
+
+export function ShowMore({ left, onClick, isDark, lang }: { left: number; onClick: () => void; isDark: boolean; lang: Language }) {
+  if (left <= 0) return null;
+  return (
+    <button onClick={onClick} className={`mt-3 w-full h-11 rounded-2xl text-sm font-bold transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
+      {lang === 'en' ? `Show more (${left} left)` : `さらに表示（残り${left}件）`}
+    </button>
+  );
+}

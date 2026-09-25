@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Bell, BellRing, Loader2, Send, Smartphone } from 'lucide-react';
 import type { Language } from '../App';
 import { deviceLabel, getPushKey, pushPrefs, pushSubscribe, pushTest, pushUnsubscribe, type PushPrefs } from '../lib/api';
+import { deviceLang, pushSupported as supported } from '../lib/push';
 
 const t = {
   en: {
@@ -28,7 +29,6 @@ const t = {
 
 const isIOS = () => /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
-const supported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
 function keyBytes(base64: string) {
   const pad = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -70,7 +70,7 @@ export default function NotificationSettings({ lang, isDark }: { lang: Language;
       const reg = await navigator.serviceWorker.ready;
       const { publicKey } = await getPushKey();
       const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
-      const saved = await pushSubscribe(sub.toJSON(), deviceLabel(), { lang });
+      const saved = await pushSubscribe(sub.toJSON(), deviceLabel(), { lang: deviceLang() });
       setEndpoint(sub.endpoint); setPrefs(saved.prefs);
     } catch (e) {
       setNote(`${tx.failed}: ${(e as Error).message}`);
@@ -89,7 +89,7 @@ export default function NotificationSettings({ lang, isDark }: { lang: Language;
 
   const change = async (patch: Partial<PushPrefs>) => {
     if (!endpoint || !prefs) return;
-    const next = { ...prefs, ...patch };
+    const next = { ...prefs, ...patch, lang: deviceLang() };
     setPrefs(next);
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { ArrowRight, CalendarPlus, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { ScreenProps } from '../App';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedMenu from './SharedMenu';
@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTimetable } from '../lib/useTerm';
 import { termLabel, academicYearOf } from '../lib/tipsAdapters';
 import { useClassCalendar } from '../lib/useCalendar';
-import RegistrationPlanner from './RegistrationPlanner';
+import { blocks, meetings, toIcs } from '../lib/schedule';
 import { CONTAINER, Pill, RefreshButton, LoadError, TAP, EASE } from './ScreenHeader';
 import { DayClassCard } from './DayClassCard';
 import type { Term } from '../lib/types';
@@ -24,7 +24,7 @@ const t = {
     loading: "Loading your timetable from TIPS…",
     noCourses: "No registered courses for this term.",
     spring: "Spring",
-    regOpen: (d: string) => `Registration is open until ${d}. Pick this term's classes below; only courses TIPS lets you take are listed.`,
+    regOpen: (d: string) => `Registration is open until ${d}. Plan and register this term's classes`,
     autumn: "Fall",
   },
   jp: {
@@ -36,7 +36,7 @@ const t = {
     loading: "TIPSから時間割を読み込み中…",
     noCourses: "この学期の履修登録はありません。",
     spring: "春学期",
-    regOpen: (d: string) => `履修登録期間中です（${d}まで）。下の時間割から今学期の科目を選べます。表示されるのはTIPSで履修できる科目のみです。`,
+    regOpen: (d: string) => `履修登録期間中です（${d}まで）。今学期の科目を計画・登録する`,
     autumn: "秋学期",
   }
 };
@@ -70,7 +70,8 @@ export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) 
   const selectedCourseIds = scheduleItems.map(c => c.id);
   const term: Term = tt.timetable?.term ?? '1';
   const termYear = tt.timetable?.year ?? academicYearOf(new Date());
-  const planning = view === 'weekly' && !!tt.timetable && tt.timetable.term === tt.currentTerm && tt.timetable.registrationOpen;
+  // Registration open for the term on screen: link to the planner rather than embed it here.
+  const regOpen = !!tt.timetable && tt.timetable.term === tt.currentTerm && tt.timetable.registrationOpen;
 
   const [monthlySelected, setMonthlySelected] = useState<Date>(new Date());
   
@@ -91,6 +92,21 @@ export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) 
   const cal = useClassCalendar(monthlySelected);
   // Refresh asks TIPS for the timetable and, for the calendar, attendance and class changes.
   const refresh = () => { tt.refresh(); cal.refresh(); };
+  const termMeetings = useMemo(() => blocks(meetings(cal.year, cal.courses, cal.changes)), [cal.year, cal.courses, cal.changes]);
+  const exportCalendar = () => {
+    const ics = toIcs(termMeetings, code => {
+      const i = scheduleItems.find(x => x.code === code);
+      return { title: i?.title[lang] ?? code, room: i?.location?.[lang], teacher: i?.teacher?.[lang] };
+    }, new Date());
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tokaihub-${termYear}-${term === '1' ? 'spring' : 'fall'}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
   const daysWithClasses = useMemo(() => {
     const year = monthlySelected.getFullYear();
     const month = monthlySelected.getMonth();
@@ -175,19 +191,15 @@ export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) 
         {tt.timetable && <span className={`ml-auto text-[11px] font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{termLabel(term, termYear, lang)}</span>}
       </div>
 
-      {/* Registration open for the term being viewed: plan and register right here. */}
-      {planning && tt.timetable && (
-        <div className="flex-1 overflow-y-auto pb-32">
-          <div className={CONTAINER}>
-            <p className={`mb-4 p-4 rounded-2xl bg-green-500/10 text-sm font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>{t[lang].regOpen(tt.timetable.registrationStatus ?? '')}</p>
-            <RegistrationPlanner lang={lang} isDark={isDark} />
-          </div>
-        </div>
-      )}
-
       {/* Dark Container */}
-      {!planning && <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
+      <div className={`flex-1 ${bgClass} rounded-t-[40px] lg:rounded-t-[32px] p-4 sm:p-6 pt-6 sm:pt-8 flex flex-col overflow-y-auto overflow-x-hidden`}>
         <motion.div variants={containerVariants} initial="hidden" animate="show" key={view} className="pb-32 max-w-4xl w-full mx-auto min-h-0">
+          {regOpen && view === 'weekly' && (
+            <motion.button variants={itemVariants} onClick={() => navigate('/registration')}
+              className="mb-4 w-full flex items-center gap-3 p-4 rounded-2xl bg-green-500/15 text-left text-sm font-semibold text-green-300 active:scale-[0.99] transition-transform">
+              <span className="flex-1">{t[lang].regOpen(tt.timetable?.registrationStatus ?? '')}</span><ArrowRight className="w-4 h-4 shrink-0" />
+            </motion.button>
+          )}
 
           {/* ─── NO COURSES REGISTERED (monthly only; weekly shows the empty grid) ─── */}
           {view === 'monthly' && selectedCourseIds.length === 0 && !!tt.timetable && (
@@ -222,6 +234,15 @@ export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) 
             </motion.div>
           )}
 
+
+          {/* Every planned class of the term as an .ics file; Calendar imports it. */}
+          {termMeetings.length > 0 && (
+            <motion.button variants={itemVariants} whileTap={{ scale: 0.98 }} onClick={exportCalendar}
+              className="mt-4 w-full h-12 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+              <CalendarPlus className="w-4 h-4 text-brand-yellow" />
+              {lang === 'en' ? `Add ${termMeetings.length} classes to Calendar` : `${termMeetings.length}回の授業をカレンダーに追加`}
+            </motion.button>
+          )}
 
           {/* ─── MONTHLY VIEW ─── */}
           {view === 'monthly' && selectedCourseIds.length > 0 && (
@@ -310,7 +331,7 @@ export default function TokaiSchedule({ lang, setLang, settings }: ScreenProps) 
           )}
 
         </motion.div>
-      </div>}
+      </div>
 
       <SharedMenu
         isOpen={isMenuOpen}

@@ -3,7 +3,7 @@ import { Search, ChevronRight, ChevronDown, SlidersHorizontal, X } from 'lucide-
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Loading, LoadError, Empty, EASE, TAP } from './ScreenHeader';
+import PageShell, { Loading, LoadError, Empty, EASE, TAP, usePaged, ShowMore } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { tidy, termLabel } from '../lib/tipsAdapters';
 import { useCourseCategories } from '../lib/courseCategories';
@@ -75,7 +75,8 @@ export default function TokaiSyllabus(props: ScreenProps) {
   // Graduation section each course counts toward, from this student's curriculum on TIPS.
   const grad = useCourseCategories();
   const [onlyNeeded, setOnlyNeeded] = useState(false);
-  const shown = (results.data?.results ?? []).filter(r => !onlyNeeded || (() => { const c = grad.sectionFor(r.title); return !!c?.section && grad.needed.has(c.section); })());
+  const matches = (results.data?.results ?? []).filter(r => !onlyNeeded || (() => { const c = grad.sectionFor(r.title); return !!c?.section && grad.needed.has(c.section); })());
+  const page = usePaged(matches, `${JSON.stringify(submitted)}|${onlyNeeded}`);
 
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -212,9 +213,9 @@ export default function TokaiSyllabus(props: ScreenProps) {
               </label>
             )}
           </div>
-          {onlyNeeded && shown.length === 0 && <Empty text={tx.noneNeeded} isDark={isDark} />}
+          {onlyNeeded && matches.length === 0 && <Empty text={tx.noneNeeded} isDark={isDark} />}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            {shown.map((r, i) => {
+            {page.shown.map((r, i) => {
               const cat = grad.sectionFor(r.title);
               return (
               <motion.button
@@ -240,6 +241,7 @@ export default function TokaiSyllabus(props: ScreenProps) {
               );
             })}
           </div>
+          <ShowMore left={page.left} onClick={page.more} isDark={isDark} lang={lang} />
         </>
       )}
     </PageShell>

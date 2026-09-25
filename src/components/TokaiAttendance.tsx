@@ -6,7 +6,7 @@ import { ScreenProps } from '../App';
 import PageShell, { Card, Pill, Select, Skeleton, Empty, LoadError, Fresh, since, EASE } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { useTimetable } from '../lib/useTerm';
-import { termLabel, academicYearOf, colorFor, slotLabel, tidy } from '../lib/tipsAdapters';
+import { termLabel, academicYearOf, colorFor, slotLabel, tidy, termStart, firstSession, absencesLeft, monthDay } from '../lib/tipsAdapters';
 import type { AttendanceStatus, Term, TipsAttendanceCourse } from '../lib/types';
 
 const t = {
@@ -14,18 +14,22 @@ const t = {
     title: 'Attendance', overall: 'Overall attendance', attended: 'Attended', absent: 'Absent', low: 'Below 80%',
     byTime: 'Timetable order', byRate: 'Lowest rate first', spring: 'Spring', fall: 'Fall', none: 'No attendance records for this term.',
     loading: 'Loading attendance from TIPS (about 15 seconds the first time)…', sessions: (a: number, r: number) => `${a} of ${r} classes`,
-    legend: { present: 'Present', absent: 'Absent', other: 'Cancelled, notice or not recorded' },
+    legend: { present: 'Present', absent: 'Absent', other: 'Cancelled or notice', upcoming: 'Not held yet' },
+    firstClass: 'First class', starts: (d: string) => `starts ${d}`, left: (n: number) => (n ? `${n} absence${n === 1 ? '' : 's'} left` : 'No absences left'),
   },
   jp: {
     title: '出欠状況', overall: '全体の出席率', attended: '出席', absent: '欠席', low: '80%未満',
     byTime: '時間割順', byRate: '出席率が低い順', spring: '春学期', fall: '秋学期', none: 'この学期の出欠記録はありません。',
     loading: 'TIPSから出欠を取得中（初回は約15秒）…', sessions: (a: number, r: number) => `${r}回中${a}回出席`,
-    legend: { present: '出席', absent: '欠席', other: '休講・欠席届・未登録' },
+    legend: { present: '出席', absent: '欠席', other: '休講・欠席届', upcoming: '未実施' },
+    firstClass: '初回授業', starts: (d: string) => `${d}開始`, left: (n: number) => (n ? `あと${n}回欠席可` : '欠席できる回数なし'),
   },
 };
 
-const dot = (s: AttendanceStatus, isDark: boolean) =>
-  s === 'present' ? 'bg-blue-500' : s === 'absent' ? 'bg-red-500' : s === 'late' || s === 'early' ? 'bg-orange-400' : isDark ? 'bg-gray-700' : 'bg-gray-200';
+// Classes not held yet are hollow, so a new term reads as planned rather than missing.
+const dot = (s: AttendanceStatus, upcoming: boolean, isDark: boolean) =>
+  s === 'present' ? 'bg-blue-500' : s === 'absent' ? 'bg-red-500' : s === 'late' || s === 'early' ? 'bg-orange-400'
+    : s === 'unrecorded' && upcoming ? `border ${isDark ? 'border-gray-600' : 'border-gray-300'}` : isDark ? 'bg-gray-700' : 'bg-gray-200';
 
 export default function TokaiAttendance(props: ScreenProps) {
   const { lang, settings } = props;
@@ -47,6 +51,10 @@ export default function TokaiAttendance(props: ScreenProps) {
     return sort === 'rate' ? [...list].sort((a, b) => (a.rate ?? 101) - (b.rate ?? 101)) : list;
   }, [att.data, tt.items, sort]);
   const totals = rows.reduce((a, r) => ({ att: a.att + (r.c.attended ?? 0), abs: a.abs + (r.c.absent ?? 0) }), { att: 0, abs: 0 });
+  const start = termStart(att.data?.courses);
+  // Academic year: January to March sessions fall in the next calendar year.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const upcoming = (m: number, d: number) => new Date(m < 4 ? year + 1 : year, m - 1, d) >= today;
   const overall = totals.att + totals.abs ? Math.round((totals.att / (totals.att + totals.abs)) * 100) : null;
   const lowCount = rows.filter(r => r.rate !== null && r.rate < 80).length;
   const days = tt.timetable?.grid.days ?? [];
@@ -84,8 +92,8 @@ export default function TokaiAttendance(props: ScreenProps) {
           {/* Phone: overall on its own row, the three counts share the next (no orphan card). */}
           <div className="grid grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
             <div className="col-span-3 md:col-span-1 rounded-3xl p-5 bg-brand-black text-white">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{tx.overall}</div>
-              <div className="text-4xl font-bold mt-1"><Fresh value={overall ?? -1}>{overall === null ? '—' : `${overall}%`}</Fresh></div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{start && overall === null ? tx.firstClass : tx.overall}</div>
+              <div className="text-4xl font-bold mt-1"><Fresh value={overall ?? -1}>{overall !== null ? `${overall}%` : start ? monthDay(start, lang) : '—'}</Fresh></div>
             </div>
             <Card isDark={isDark} className="p-4 sm:p-5 min-w-0"><div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${muted}`}>{tx.attended}</div><div className="text-2xl sm:text-3xl font-bold mt-1"><Fresh value={totals.att}>{totals.att}</Fresh></div></Card>
             <Card isDark={isDark} className="p-4 sm:p-5 min-w-0"><div className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${muted}`}>{tx.absent}</div><div className="text-2xl sm:text-3xl font-bold mt-1"><Fresh value={totals.abs}>{totals.abs}</Fresh></div></Card>
@@ -106,10 +114,17 @@ export default function TokaiAttendance(props: ScreenProps) {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className={`text-2xl font-bold leading-none flex items-center gap-1 justify-end ${rate !== null && rate < 80 ? 'text-red-500' : ''}`}>
-                        {rate !== null && rate < 80 && <AlertTriangle className="w-4 h-4" />}{rate === null ? '—' : `${rate}%`}
-                      </div>
-                      <div className={`text-[11px] font-semibold mt-1 ${muted}`}>{tx.sessions(c.attended ?? 0, recorded)}</div>
+                      {rate === null && firstSession(c.sessions) ? (
+                        <div className="text-base font-bold leading-none">{tx.starts(monthDay(firstSession(c.sessions)!, lang))}</div>
+                      ) : (
+                        <div className={`text-2xl font-bold leading-none flex items-center gap-1 justify-end ${rate !== null && rate < 80 ? 'text-red-500' : ''}`}>
+                          {rate !== null && rate < 80 && <AlertTriangle className="w-4 h-4" />}{rate === null ? '—' : `${rate}%`}
+                        </div>
+                      )}
+                      {recorded > 0 && <div className={`text-[11px] font-semibold mt-1 ${muted}`}>{tx.sessions(c.attended ?? 0, recorded)}</div>}
+                      {absencesLeft(c) !== null && (
+                        <div className={`text-[11px] font-bold mt-1 ${absencesLeft(c) === 0 ? 'text-red-500' : muted}`}>{tx.left(absencesLeft(c)!)}</div>
+                      )}
                     </div>
                     <ChevronRight className={`w-4 h-4 mt-1 shrink-0 ${muted}`} />
                   </div>
@@ -117,7 +132,7 @@ export default function TokaiAttendance(props: ScreenProps) {
                     <motion.div initial={{ width: 0 }} animate={{ width: `${rate ?? 0}%` }} transition={{ duration: 0.6, ease: EASE }} className={`h-full rounded-full ${rate !== null && rate < 80 ? 'bg-red-500' : 'bg-blue-500'}`} />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
-                    {(c.sessions ?? []).map(s => <span key={`${s.no}-${s.period}`} title={`${s.month}/${s.day} ${s.mark}`} className={`w-3 h-3 rounded-[4px] ${dot(s.status, isDark)}`} />)}
+                    {(c.sessions ?? []).map(s => <span key={`${s.no}-${s.period}`} title={`${s.month}/${s.day} ${s.mark}`} className={`w-3 h-3 rounded-[4px] ${dot(s.status, upcoming(s.month, s.day), isDark)}`} />)}
                   </div>
                 </Card>
               </motion.div>
@@ -128,6 +143,7 @@ export default function TokaiAttendance(props: ScreenProps) {
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-500" />{tx.legend.present}</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-500" />{tx.legend.absent}</span>
             <span className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />{tx.legend.other}</span>
+            <span className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded border ${isDark ? 'border-gray-600' : 'border-gray-300'}`} />{tx.legend.upcoming}</span>
           </div>
         </>
       )}

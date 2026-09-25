@@ -3,10 +3,10 @@ import { ChevronRight, Paperclip, Mail, ExternalLink } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenProps } from '../App';
-import PageShell, { Card, Pill, Select, Skeleton, Loading, LoadError, Empty, SearchField, since, EASE } from './ScreenHeader';
+import PageShell, { Card, Pill, Select, Skeleton, Loading, LoadError, Empty, SearchField, since, EASE, usePaged, ShowMore } from './ScreenHeader';
 import { RichText, Linked, FileLink } from './SyllabusText';
 import { useTips } from '../lib/useTips';
-import type { TipsBulletinDetail, TipsBulletins } from '../lib/types';
+import type { TipsBulletin, TipsBulletinDetail, TipsBulletins } from '../lib/types';
 
 const t = {
   en: {
@@ -100,6 +100,7 @@ function List(props: ScreenProps) {
       (!s || p.title.toLowerCase().includes(s) || p.poster.toLowerCase().includes(s)));
     return order === 'new' ? out : [...out].reverse();
   }, [all, category, unreadOnly, genre, order, q]);
+  const page = usePaged<TipsBulletin>(posts, `${category}|${unreadOnly}|${genre}|${order}|${q}`);
 
   return (
     <PageShell {...props} title={tx.title} subtitle={list.data ? `${tx.count(all.length, unreadCount)} · ${since(list.cachedAt, lang)}` : undefined} onRefresh={list.refresh} refreshing={list.loading}>
@@ -128,7 +129,7 @@ function List(props: ScreenProps) {
       {list.data && posts.length === 0 && <Empty text={tx.none} isDark={isDark} />}
       <div className="space-y-2">
         <AnimatePresence mode="popLayout">
-        {posts.map((p, i) => (
+        {page.shown.map((p, i) => (
           // layout: when a filter hides posts, the rest slide up instead of snapping.
           <motion.button
             key={p.id}
@@ -155,6 +156,7 @@ function List(props: ScreenProps) {
         ))}
         </AnimatePresence>
       </div>
+      <ShowMore left={page.left} onClick={page.more} isDark={isDark} lang={lang} />
       {list.data && <p className={`pt-4 text-[11px] font-medium ${muted}`}>{tx.readNote}</p>}
     </PageShell>
   );

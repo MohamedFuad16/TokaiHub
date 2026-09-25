@@ -121,7 +121,7 @@ export default function WeeklyTimetable({
               <div
                 key={label}
                 className={`text-center text-[11px] font-bold pb-1 pt-0.5 uppercase tracking-wider
-                  ${isToday ? 'text-brand-yellow' : isDark ? 'text-white/30' : 'text-gray-400'}`}
+                  ${isToday ? 'text-brand-yellow' : isDark ? 'text-white/60' : 'text-gray-500'}`}
               >
                 {label}
                 {isToday && <div className="w-1 h-1 rounded-full bg-brand-yellow mx-auto mt-0.5" />}
@@ -175,7 +175,7 @@ export default function WeeklyTimetable({
 
             const hasColor = !!item.color;
             const textCls = hasColor || !isDark ? 'text-[#0a0a0c]' : 'text-white';
-            const mutedCls = hasColor || !isDark ? 'text-[#0a0a0c]/55' : 'text-white/55';
+            const mutedCls = hasColor || !isDark ? 'text-[#0a0a0c]/70' : 'text-white/70';
             const room = (item.location?.[lang] ?? '')
               .replace('品川キャンパス ', '')
               .replace('Shinagawa Campus ', '')
@@ -204,7 +204,7 @@ export default function WeeklyTimetable({
                   {item.title?.[lang]}
                 </p>
                 {room ? (
-                  <p className={`text-[8px] font-bold text-center truncate mt-1 ${mutedCls}`}>
+                  <p className={`text-[9px] font-bold text-center truncate mt-1 ${mutedCls}`}>
                     {room}
                   </p>
                 ) : null}
