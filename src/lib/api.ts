@@ -70,6 +70,15 @@ export const signIn = () => call<TipsStatus>('/signin', { method: 'POST', timeou
 export const getRecommend = (lang: 'en' | 'jp', refresh = false) =>
   call<import('./recommendTypes').RecommendStatus>(`/recommend?lang=${lang}${refresh ? '&refresh=1' : ''}`, { timeoutMs: 20_000 });
 
+/** Push notification settings the bridge keeps per subscribed device (server/tips/push.ts). */
+export interface PushPrefs { classMinutes: number; bulletins: boolean; changes: boolean; signin: boolean; lang: 'en' | 'jp' }
+export const getPushKey = () => call<{ publicKey: string }>('/push/key', { timeoutMs: 10_000 });
+export const pushSubscribe = (subscription: PushSubscriptionJSON, label: string, prefs: Partial<PushPrefs>) =>
+  call<{ prefs: PushPrefs }>('/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription, label, prefs }), timeoutMs: 15_000 });
+export const pushPrefs = (endpoint: string) => call<{ prefs: PushPrefs | null }>('/push/prefs', { method: 'POST', body: JSON.stringify({ endpoint }), timeoutMs: 10_000 });
+export const pushUnsubscribe = (endpoint: string) => call<{ ok: true }>('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }), timeoutMs: 10_000 });
+export const pushTest = (endpoint: string) => call<{ sent: number }>('/push/test', { method: 'POST', body: JSON.stringify({ endpoint }), timeoutMs: 20_000 });
+
 /** Starts the Mac's unattended sign-in (Keychain account); follow it through getStatus(). */
 export const startAutoSignIn = () => call<TipsStatus>('/reauth', { method: 'POST', timeoutMs: 15_000 });
 

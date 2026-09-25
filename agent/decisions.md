@@ -236,3 +236,22 @@ a sign-in when fully signed out.
 can run commands as the owner on the Mac can read it; that was already true of the sealed TIPS
 cookies. Microsoft may still require the owner at the Mac for new-device or risk prompts the
 driver does not know; those end in "sign in on your Mac" as before.
+
+Correction 2026-09-25: the relay of a typed one-time code was removed the same day. Microsoft
+number matching shows the number on the sign-in page and the owner types it into Authenticator,
+so the app only displays the number (or "approve in Authenticator"). A one-time-code prompt now
+ends in "sign in on your Mac".
+
+## ADR-0013 · 2026-09-25 · Push notifications from the bridge
+**Context:** The owner wants class reminders (TIPS lists the first classes from 2026-09-29), new bulletins,
+schedule changes and the Microsoft sign-in number on the iPhone lock screen, with the app closed.
+**Decision:** Standard Web Push (VAPID) sent by the bridge, which already runs around the clock
+and holds the TIPS session. No third-party push service beyond the browser's own. Payloads use
+the declarative Web Push format (`web_push: 8030`), which iOS 18.4+ displays without running the
+service worker; sw.js handles the same JSON for other browsers. The scheduler reads TIPS's
+休補・スケジュール for the next 8 days every 3 hours (so reminders follow cancellations and room
+changes) and bulletins every 20 minutes, as background-priority work. Each stream's first
+successful read only records what exists. Preferences are per device and stored on the bridge.
+**Consequences:** Needs the app installed to the Home Screen on iPhone (iOS 16.4+) and a tap to
+allow. Notification text passes through Apple's or Google's push service encrypted end to end.
+If the Mac is off or signed out, no reminders are sent.

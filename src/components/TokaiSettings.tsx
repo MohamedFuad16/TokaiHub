@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ChevronRight, Bell, Moon, Shield, LogOut,
+  ChevronRight, Moon, Shield, LogOut,
   Code2, BadgeCheck, CheckCircle, MessageSquare, Send, Loader2, Clock, Trash2, Smartphone, Laptop, KeyRound, Cloud,
 } from 'lucide-react';
+import NotificationSettings from './NotificationSettings';
 import { IS_LOCAL, createSetupCode, listDevices, removeDevice, removeSession, type HubDevice } from '../lib/api';
 import { ScreenProps } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -451,21 +452,7 @@ export default function TokaiSettings(props: SettingsProps) {
             <h3 className={`font-bold text-xs uppercase tracking-widest px-1 ${textMuted}`}>{tx.preferences}</h3>
             <div className={`${itemBg} border ${borderClass} rounded-3xl p-2 shadow-sm`}>
 
-              {/* Notifications — disabled (coming soon) */}
-              <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl pointer-events-none opacity-50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                    <Bell className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                  </div>
-                  <div>
-                    <div className={`font-bold text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{tx.notifications}</div>
-                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase tracking-wider ${isDark ? 'text-pink-400 bg-pink-500/20' : 'text-pink-600 bg-pink-100'}`}>
-                      {tx.comingSoon}
-                    </div>
-                  </div>
-                </div>
-                <Toggle on={false} onToggle={() => {}} ariaLabel={`Enable ${tx.notifications}`} isDark={isDark} />
-              </div>
+              <NotificationSettings lang={lang} isDark={isDark} />
 
               {/* Dark mode */}
               <div

@@ -1,6 +1,6 @@
 # State
 
-> Last updated: 2026-09-24 · branch tips-wrapper (uncommitted) · bridge on the Mac Mini, frontend on Vercel
+> Last updated: 2026-09-25 · branch tips-wrapper (uncommitted) · bridge on the Mac Mini, frontend on Vercel
 
 ## Current state summary
 TIPS wrapper PWA (React+TS+Vite+Tailwind), one owner (HUB_OWNER_ID). Frontend on Vercel at
@@ -14,6 +14,20 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — push notifications (not deployed yet)** (by: Claude). ADR-0013.
+  server/tips/push.ts (VAPID keys ~/.tokaihub/vapid.json, subscriptions push.json, sent state
+  push-state.json; declarative Web Push payloads), index.ts (/tips-api/push/key|subscribe|prefs|
+  unsubscribe|test, 60 s scheduler tick), session.ts (sign-in number pushed once per number),
+  src/components/NotificationSettings.tsx replaces the Settings "coming soon" row, public/sw.js
+  (push + notificationclick, cache tokaihub-v4), manifest "id". Verified: push routes 401 on the
+  public host without a token; a scratch-HOME run against a fake https push service decrypted all
+  five kinds (class reminder once for back-to-back periods, no repeat on the next tick, first
+  read of changes/bulletins sends nothing, later room change and bulletin once each, badge 7,
+  sign-in number urgency high TTL 120). NOT verified: delivery to a real iPhone or Chrome (the
+  permission prompt needs the owner's tap).
+- **2026-09-25 — recommender verified on live data** (by: Claude). First live build 392 s
+  (sections 174 courses, 287 syllabi, Jev 283 with no errors). Continuation now matches Japanese
+  titles (English titles do not follow the Japanese levels); levelOf rewritten with tests.
 - **2026-09-25 — course recommender (not deployed yet)** (by: Claude). server/tips/handbook.ts
   (parses the saved 授業要覧 text: ○/◇/×/☆ marks and ①②③ prerequisites; 415 rows for JE 2024,
   11 required IV courses, 5 with prerequisites), server/tips/jev.ts (TypeSafe Jev client; key in

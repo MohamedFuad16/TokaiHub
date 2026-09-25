@@ -18,6 +18,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import * as cache from './cache';
 import { driveMicrosoftLogin, needsMicrosoftInput, type MfaPrompt } from './msLogin';
 import { autoLoginConfigured, autoLoginKnown } from './keychain';
+import { notifySignin } from './push';
 
 export const TIPS_ORIGIN = 'https://tips.u-tokai.ac.jp';
 export const PORTAL_URL = `${TIPS_ORIGIN}/campusweb/portal.do?page=main`;
@@ -40,7 +41,13 @@ let lastError: string | null = null;
  * enter in Microsoft Authenticator, or a push to approve.
  */
 let mfa: MfaPrompt | null = null;
-const mfaHooks = { prompt: (p: MfaPrompt | null) => { mfa = p; } };
+const mfaHooks = {
+  prompt: (p: MfaPrompt | null) => {
+    // Push the number once as it appears: the app is usually closed when the Mac re-signs in.
+    if (p?.kind === 'number' && (mfa?.kind !== 'number' || mfa.number !== p.number)) notifySignin(p.number);
+    mfa = p;
+  },
+};
 // Headless Chromium says so in its user agent; Microsoft treats that as a bot on its sign-in pages.
 const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 

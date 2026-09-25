@@ -2,6 +2,7 @@
   "name": "TokaiHub — Student Hub",
   "short_name": "TokaiHub",
   "description": "Your Tokai University student hub — classes, schedules, assignments, and more.",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

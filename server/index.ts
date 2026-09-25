@@ -17,6 +17,7 @@ import { SessionExpiredError } from './tips/session';
 import * as cache from './tips/cache';
 import * as auth from './auth';
 import { autoLoginConfigured } from './tips/keychain';
+import * as push from './tips/push';
 
 const PORT = Number(process.env.TIPS_BRIDGE_PORT ?? 8791);
 const PUBLIC_PORT = Number(process.env.TIPS_PUBLIC_PORT ?? 8792);
@@ -142,6 +143,22 @@ app.get('/tips-api/recommend', async (req, res) => {
   if (session.status().state !== 'signed_in') return res.json({ ...recommendStatus(lang), error: 'signed_out' });
   ensureBuilt(lang, req.query.refresh === '1');
   res.json(recommendStatus(lang));
+});
+
+// ── Push notifications (the installed app subscribes; the bridge sends, app open or not) ───
+app.get('/tips-api/push/key', (_req, res) => res.json({ publicKey: push.vapidPublicKey() }));
+app.post('/tips-api/push/subscribe', (req, res) => {
+  try { push.subscribe(req.body?.subscription, String(req.body?.label ?? 'device'), req.body?.prefs ?? {}); res.json({ prefs: push.prefsOf(req.body.subscription.endpoint) }); }
+  catch (e) { res.status((e as any).status ?? 400).json({ error: (e as Error).message }); }
+});
+app.post('/tips-api/push/prefs', (req, res) => res.json({ prefs: push.prefsOf(String(req.body?.endpoint ?? '')) }));
+app.post('/tips-api/push/unsubscribe', (req, res) => { push.unsubscribe(String(req.body?.endpoint ?? '')); res.json({ ok: true }); });
+app.post('/tips-api/push/test', async (req, res) => {
+  const sent = await push.notify('test', lang => ({
+    title: 'TokaiHub', body: lang === 'en' ? 'Notifications are on. Class reminders and new bulletins will show here.' : '通知がオンになりました。授業のリマインダーや新しい掲示がここに届きます。',
+    navigate: '/settings', tag: 'test',
+  }), { endpoint: String(req.body?.endpoint ?? '') });
+  res.status(sent ? 200 : 404).json({ sent });
 });
 
 // ── Unattended sign-in (Keychain account, number to match shown in the app) ────────────────
@@ -304,6 +321,13 @@ async function main() {
     if (auth.OWNER_ID && session.getAccountId() !== auth.OWNER_ID) await session.signOut();
   }
   keepAlive();
+  // Class reminders, schedule changes, new bulletins: checked every minute, TIPS read rarely.
+  setInterval(async () => {
+    try {
+      const { handle } = await loadRoutes();
+      await push.tick((f, q) => handle(f, q) as Promise<{ data: any }>, ownerSignedIn());
+    } catch (e) { console.error('[push] tick:', (e as Error).message.split('\n')[0]); }
+  }, 60_000).unref();
   const servers = [app.listen(PORT, '127.0.0.1', () => console.log(`[tips] bridge on http://127.0.0.1:${PORT}`))];
   if (auth.configured()) {
     servers.push(app.listen(PUBLIC_PORT, '127.0.0.1', () => console.log(`[tips] public listener on 127.0.0.1:${PUBLIC_PORT} for ${auth.APP_ORIGIN}, owner ${auth.OWNER_ID}`)));
