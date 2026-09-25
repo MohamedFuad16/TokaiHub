@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, CheckCircle2, Lock, CalendarX, Circle, ListPlus, ListChecks, Plus, RefreshCw, ChevronLeft, Pencil, AlertTriangle } from 'lucide-react';
 import type { Language } from '../App';
-import { EASE, TAP, Skeleton } from './ScreenHeader';
+import { EASE, TAP, Skeleton, LoadError } from './ScreenHeader';
 import { SectionChip } from './CreditsNeeded';
 import { getRecommend } from '../lib/api';
 import { tidy } from '../lib/tipsAdapters';
@@ -201,7 +201,8 @@ function Questions({ prefs, onChange, onDone, campuses, busyDays, lang, isDark }
   );
 }
 
-const slotLabel = (o: Offering, lang: Language) => o.slots.length ? o.slots.map(s => `${DAY[lang][s.day]}${s.period}`).join(' ') : (o.slotText || '—');
+// Sections outside the timetable come as "Other0" / "その他0"; the 0 is TIPS's placeholder period.
+const slotLabel = (o: Offering, lang: Language) => o.slots.length ? o.slots.map(s => `${DAY[lang][s.day]}${s.period}`).join(' ') : (o.slotText.replace(/(\D)0$/, '$1') || '—');
 
 const PickCard: React.FC<{
   r: Ranked; lang: Language; isDark: boolean; planned: boolean; onPlan: () => void; onRegister: () => void; needed: boolean; done: boolean;
@@ -267,20 +268,30 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
   const prefs = answers.prefs;
   const [more, setMore] = useState(8);
 
+  const [failed, setFailed] = useState<Error | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
     let timer: number | undefined;
+    let misses = 0;
+    setFailed(null);
     const poll = async (refresh = false) => {
       try {
         const s = await getRecommend(lang, refresh);
         if (!alive) return;
+        misses = 0;
         setSt(s);
         if (s.building) timer = window.setTimeout(() => poll(), 3000);
-      } catch { if (alive) timer = window.setTimeout(() => poll(), 8000); }
+      } catch (e) {
+        if (!alive) return;
+        // Two misses in a row: say so instead of an endless "reading TIPS".
+        if (++misses >= 2) setFailed(e as Error);
+        else timer = window.setTimeout(() => poll(), 8000);
+      }
     };
     void poll();
     return () => { alive = false; clearTimeout(timer); };
-  }, [lang]);
+  }, [lang, attempt]);
 
   const save = (a: Answers) => { setAnswers(a); try { localStorage.setItem(ANSWERS_KEY, JSON.stringify(a)); } catch { /* private mode */ } };
   const data = st?.data ?? null;
@@ -294,6 +305,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
       .filter(r => (seen.has(r.o.title) ? false : (seen.add(r.o.title), true)));
   }, [data, plan, prefs, needed]);
 
+  if (!data && failed) return <LoadError error={failed} isDark={isDark} lang={lang} onRetry={() => setAttempt(a => a + 1)} />;
   if (!data) {
     const p = st?.progress;
     return (
@@ -402,7 +414,7 @@ export default function SmartPicks({ lang, isDark, needed, done, plannedCodes, o
           <div className="flex items-center justify-between gap-3 mb-2">
             <div className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>{tx.plan}<span className="ml-2 normal-case tracking-normal">{tx.total(plan.credits, plan.target)}</span></div>
             {plan.picks.length > 0 && (
-              <button onClick={() => onPlanAll(plan.picks.map(p => p.o))} className={`h-9 px-3 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>{tx.planAll}</button>
+              <button onClick={() => onPlanAll(plan.picks.map(p => p.o))} className={`h-10 px-3 rounded-xl text-xs font-bold ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>{tx.planAll}</button>
             )}
           </div>
           {plan.unfit.map(u => (

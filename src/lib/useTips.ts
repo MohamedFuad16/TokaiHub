@@ -9,6 +9,16 @@ import { readLocal, writeLocal, clearLocal } from './localCache';
 interface Entry { data: unknown; cachedAt: number; stale: boolean; changedAt?: number }
 const store = new Map<string, Entry>();
 const inflight = new Map<string, Promise<Entry>>();
+// Cache-only reads in flight: several hooks on one screen ask for the same key at mount.
+const cachedInflight = new Map<string, Promise<unknown>>();
+function getCachedOnce<T>(key: string, feature: string, params: FeatureParams) {
+  let p = cachedInflight.get(key) as Promise<Awaited<ReturnType<typeof getCached<T>>>> | undefined;
+  if (!p) {
+    p = getCached<T>(feature, params).finally(() => cachedInflight.delete(key));
+    cachedInflight.set(key, p);
+  }
+  return p;
+}
 const listeners = new Set<() => void>();
 
 const notify = () => listeners.forEach(l => l());
@@ -96,7 +106,7 @@ export function useTips<T>(feature: string, params?: FeatureParams, opts: { enab
       // 2) the bridge's encrypted cache, 3) TIPS
       if (!store.has(key)) {
         try {
-          const env = await getCached<T>(feature, withLang(params));
+          const env = await getCachedOnce<T>(key, feature, withLang(params));
           if (!cancelled && !store.has(key)) { store.set(key, { data: env.data, cachedAt: env.cachedAt, stale: env.stale }); notify(); }
         } catch { /* nothing cached yet */ }
       }

@@ -118,7 +118,7 @@ export default function TokaiCredits(props: ScreenProps) {
                   <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-3 xl:grid-cols-5 gap-2">
                     {g.perTerm.map(x => (
                       <Card key={x.label} isDark={isDark} className="p-3 text-center">
-                        <div className={`text-[10px] font-bold ${muted}`}>{x.label}</div>
+                        <div className={`text-[10px] font-bold ${muted}`}>{x.label.replace(/^(\d{2})(?=\D)/, '$1 ')}</div>
                         <div className="text-xl font-bold">{x.earned}</div>
                         <div className={`text-[10px] font-semibold ${muted}`}>{tx.total(x.cumulative)}</div>
                       </Card>

@@ -186,7 +186,8 @@ export default function TokaiCourse(props: ScreenProps) {
                 ? <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-400 text-brand-black flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{tx.registered}</span>
                 : <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15 flex items-center gap-1"><CircleSlash className="w-3.5 h-3.5" />{tx.notRegistered}</span>}
               {cat?.section && <SectionChip section={cat.section} needed={grad.needed.has(cat.section)} done={grad.done.has(cat.section)} category={cat.category} isDark lang={lang} />}
-              {syl?.delivery?.[lang] && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{syl.delivery[lang]}</span>}
+              {/* TIPS says 面接 (face to face), which reads as "interview"; 対面 is the usual word. */}
+              {syl?.delivery?.[lang] && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{syl.delivery[lang].replace(/面接/g, '対面')}</span>}
               {/* TIPS gives "講義科目 Lectures": show the half in the UI language. */}
               {syl?.creditType && <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/15">{pickLang(syl.creditType, lang)}</span>}
             </div>

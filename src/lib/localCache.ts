@@ -10,12 +10,16 @@ let dbPromise: Promise<IDBDatabase | null> | null = null;
 function open(): Promise<IDBDatabase | null> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise(resolve => {
+    // An open can stay pending for good (a blocked delete, WebKit's first-launch bug); after
+    // 1.5 s the app runs without the local cache instead of showing skeletons forever.
+    const timer = setTimeout(() => resolve(null), 1500);
+    const done = (db: IDBDatabase | null) => { clearTimeout(timer); resolve(db); };
     try {
       const req = indexedDB.open(DB, 1);
       req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null); // private mode etc.: run without a local cache
-    } catch { resolve(null); }
+      req.onsuccess = () => done(req.result);
+      req.onerror = () => done(null); // private mode etc.: run without a local cache
+    } catch { done(null); }
   });
   return dbPromise;
 }

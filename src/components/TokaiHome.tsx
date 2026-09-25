@@ -79,7 +79,8 @@ export default function TokaiHome({ lang, setLang, settings, userProfile }: Scre
   const courseItems = tt.items;
   const termYear = tt.timetable?.year ?? academicYearOf(new Date());
   const term = tt.timetable?.term ?? '1';
-  const attendance = useTips<{ courses: TipsAttendanceCourse[] }>('attendance', { year: termYear, term });
+  // Wait for the timetable's term; the default would fetch last term's attendance first.
+  const attendance = useTips<{ courses: TipsAttendanceCourse[] }>('attendance', { year: termYear, term }, { enabled: !!tt.timetable });
   const graduation = useTips<TipsGraduation>('graduation');
   const bulletins = useTips<TipsBulletins>('bulletins');
   const changes = useTips<{ items: TipsChange[] }>('changes');

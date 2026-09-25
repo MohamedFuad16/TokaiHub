@@ -89,3 +89,11 @@
 - **No @types/react in the repo**: JSX is untyped, so `tsc` does not check component props, and
   a function component declared with a typed props object rejects `key`. Components that are
   mapped with keys are declared as `React.FC` (as elsewhere in the codebase).
+- **A pending IndexedDB open left every screen on skeletons** (2026-09-25). localCache.open()
+  waited on `indexedDB.open` with no limit; while a delete was blocked (reproduced by deleting
+  the database with the page open, then reloading) the open never settled, useTips never reached
+  the network, and Home showed skeletons with zero data requests. The open now gives up after
+  1.5 s and the app runs without the local cache. WebKit has had the same hang on first launch.
+- **"For you" showed "Reading TIPS…" for ever when the recommender request failed**
+  (2026-09-25, from the Fable audit). The poll swallowed errors; two misses in a row now show
+  LoadError with a retry.

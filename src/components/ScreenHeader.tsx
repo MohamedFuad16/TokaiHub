@@ -57,7 +57,8 @@ export default function PageShell({ title, subtitle, lang, setLang, settings, on
         </div>
       </header>
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <div className={`${CONTAINER} pb-32 lg:pb-16`}>{children}</div>
+        {/* No bottom bar on these screens: clear the home indicator and no more. */}
+        <div className={`${CONTAINER} pb-[calc(env(safe-area-inset-bottom)+2rem)] lg:pb-16`}>{children}</div>
       </div>
       <SharedMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} lang={lang} setLang={setLang} settings={settings} />
     </div>

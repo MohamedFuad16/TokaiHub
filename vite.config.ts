@@ -65,16 +65,13 @@ export default defineConfig(() => {
         output: {
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
-              if (id.includes('aws-amplify') || id.includes('@aws-amplify')) {
-                return 'aws-core';
-              }
               if (id.includes('lucide-react')) {
                 return 'icons';
               }
               if (id.includes('motion')) {
                 return 'motion';
               }
-              if (id.includes('react-router-dom') || id.includes('remix-run') || id.includes('@remix-run')) {
+              if (id.includes('/react-router')) {
                 return 'routing';
               }
               return 'vendor';

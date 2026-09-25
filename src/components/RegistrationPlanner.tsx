@@ -266,7 +266,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
                         <div className="text-[10px] font-black opacity-70">{c.code}</div>
                         <div className="text-[11px] font-bold leading-tight line-clamp-2">{tidy(c.title)}</div>
                         {c.drop && (
-                          <button onClick={() => setPending({ kind: 'drop', c })} className="mt-auto self-start text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 text-white flex items-center gap-1"><Trash2 className="w-3 h-3" />{tx.drop}</button>
+                          <button onClick={() => setPending({ kind: 'drop', c })} className="relative mt-auto self-start text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/80 text-white flex items-center gap-1 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-['']"><Trash2 className="w-3 h-3" />{tx.drop}</button>
                         )}
                       </div>
                     );

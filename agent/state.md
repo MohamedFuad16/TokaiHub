@@ -14,6 +14,16 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — audit fixes, first batch** (by: Claude). From the Fable audit (report in the
+  session; screenshots in /private/tmp/claude-501/tokaihub-audit/, not kept). Fixed after checking
+  each claim in code: six dead image preloads in index.html; empty `routing` chunk and dead
+  aws-core rule in vite.config.ts; "Other0" slot label; For you endless spinner on errors;
+  cache-only reads deduplicated in useTips (getCachedOnce); Home attendance waits for the
+  timetable's term; PageShell bottom gap 128 px to safe area + 32 px on phones; "24Spring"
+  labels; 面接 shown as 対面; Drop chip hit area and Plan all at 40 px; IndexedDB open timeout.
+  Measured: cold Home load 18 bridge requests, no duplicates (audit measured 27). Not done yet:
+  the audit's opinion items and feature ideas (listed for the owner), contrast token, list
+  paging on Syllabus/Bulletins, bridge compression, icon size.
 - **2026-09-25 — "For you" asks first; device list groups repeat sign-ins** (by: Claude).
   SmartPicks shows no picks until the owner answers five questions (days off, online or in
   person, campus, periods, grading plus next level and lighter workload). Answers are hard
