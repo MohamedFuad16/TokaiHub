@@ -31,7 +31,11 @@ export async function autoLoginConfigured(): Promise<boolean> {
   known = { at: Date.now(), value: (await storedAccount()) !== null };
   return known.value;
 }
-export const autoLoginKnown = () => known?.value ?? false;
+/** Last known answer, refreshed in the background once it is a minute old (entries added later show up). */
+export const autoLoginKnown = () => {
+  if (!known || Date.now() - known.at >= 60_000) void autoLoginConfigured();
+  return known?.value ?? false;
+};
 
 /** The stored password. Callers must not log or keep it. */
 export async function storedPassword(): Promise<string | null> {

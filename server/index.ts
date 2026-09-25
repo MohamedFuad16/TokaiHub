@@ -144,7 +144,7 @@ app.get('/tips-api/recommend', async (req, res) => {
   res.json(recommendStatus(lang));
 });
 
-// ── Unattended sign-in (Keychain account, second factor relayed to the app) ────────────────
+// ── Unattended sign-in (Keychain account, number to match shown in the app) ────────────────
 /** Starts a sign-in without a window; the app follows it through /status (signin.mfa, busy). */
 app.post('/tips-api/reauth', async (_req, res) => {
   if (ownerSignedIn()) return res.json(session.status());
@@ -153,12 +153,6 @@ app.post('/tips-api/reauth', async (_req, res) => {
     .then(() => verifyOwner())
     .catch(e => console.error('[tips] auto sign-in failed:', (e as Error).message.split('\n')[0]));
   res.status(202).json(session.status());
-});
-
-/** The one-time code Microsoft asked for, typed by the owner in the app. */
-app.post('/tips-api/mfa/code', (req, res) => {
-  const ok = session.submitMfaCode(String(req.body?.code ?? '').replace(/\s/g, ''));
-  res.status(ok ? 200 : 409).json({ ok });
 });
 
 // ── TIPS data ──────────────────────────────────────────────────────────────────────────────

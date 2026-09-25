@@ -51,7 +51,7 @@ export interface TipsStatus {
 }
 
 /** What Microsoft waits on during an unattended sign-in (see server/tips/msLogin.ts). */
-export type MfaPrompt = { kind: 'number'; number: string } | { kind: 'approve' } | { kind: 'code' };
+export type MfaPrompt = { kind: 'number'; number: string } | { kind: 'approve' };
 
 export interface TipsEnvelope<T> {
   data: T;

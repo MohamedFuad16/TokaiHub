@@ -72,8 +72,6 @@ export const getRecommend = (lang: 'en' | 'jp', refresh = false) =>
 
 /** Starts the Mac's unattended sign-in (Keychain account); follow it through getStatus(). */
 export const startAutoSignIn = () => call<TipsStatus>('/reauth', { method: 'POST', timeoutMs: 15_000 });
-/** The one-time code Microsoft asked for during an unattended sign-in. */
-export const sendMfaCode = (code: string) => call<{ ok: boolean }>('/mfa/code', { method: 'POST', body: JSON.stringify({ code }), timeoutMs: 15_000 });
 
 /** Mac only: a one-time code for adding a phone's passkey (valid 10 minutes). */
 export const createSetupCode = () => call<{ code: string; expiresAt: string }>('/auth/setup-code', { method: 'POST', timeoutMs: 10_000 });

@@ -1,14 +1,15 @@
 /**
  * Drives Microsoft's sign-in pages in the bridge's headless browser when a silent re-sign-in is
  * not enough (Microsoft asks for the password again, or for MFA). The account and password come
- * from the Keychain (keychain.ts). The second factor stays with the owner: the number Microsoft
- * shows is published to the app, and a one-time code, if Microsoft asks for one, is typed by the
- * owner in the app and relayed here.
+ * from the Keychain (keychain.ts).
+ * The second factor is Microsoft's number matching: the number shown on the sign-in page goes to
+ * the app, and the owner types it into Microsoft Authenticator on their phone. Nothing is typed
+ * into TokaiHub.
  */
 import type { Page } from 'playwright';
 import { storedAccount, storedPassword } from './keychain';
 
-export type MfaPrompt = { kind: 'number'; number: string } | { kind: 'approve' } | { kind: 'code' };
+export type MfaPrompt = { kind: 'number'; number: string } | { kind: 'approve' };
 
 const DEADLINE_MS = 150_000; // Microsoft's own number-match prompt expires before this
 const onMicrosoft = (p: Page) => /login\.microsoftonline\.com|login\.live\.com/.test(p.url());
@@ -20,15 +21,12 @@ const textOf = async (p: Page, sel: string) => (await p.locator(sel).first().inn
  * Walks the Microsoft pages until the browser leaves Microsoft (back to TIPS). Throws with a
  * short reason when Microsoft rejects the account or password, or when nobody approves in time.
  */
-export async function driveMicrosoftLogin(page: Page, hooks: {
-  prompt: (p: MfaPrompt | null) => void;
-  /** Resolves with the code the owner typed in the app, or null on timeout. */
-  code: () => Promise<string | null>;
-}) {
+export async function driveMicrosoftLogin(page: Page, hooks: { prompt: (p: MfaPrompt | null) => void }) {
   const account = await storedAccount();
   if (!account) throw new Error('auto sign-in is not set up');
   const until = Date.now() + DEADLINE_MS;
   let passwordSent = 0;
+  let switchedMethod = 0;
   try {
     while (Date.now() < until) {
       if (!onMicrosoft(page)) return;
@@ -67,15 +65,17 @@ export async function driveMicrosoftLogin(page: Page, hooks: {
       const notify = page.locator('[data-value="PhoneAppNotification"]').first();
       if (await notify.isVisible().catch(() => false)) { await notify.click(); await page.waitForTimeout(2000); continue; }
 
-      // One-time code (authenticator app code or SMS): the owner types it in the app.
+      // A code page (Authenticator code or SMS): switch to the Authenticator notification, which
+      // shows the number to match. The method picker above then selects it.
       if (await visible(page, 'input[name="otc"]')) {
-        hooks.prompt({ kind: 'code' });
-        const code = await hooks.code();
-        if (!code) throw new Error('no code entered in time');
-        await page.fill('input[name="otc"]', code);
-        await page.click('#idSubmit_SAOTCC_Continue').catch(() => page.click('#idSIButton9'));
-        await page.waitForTimeout(2500);
-        continue;
+        const other = page.locator('#signInAnotherWay, a:has-text("別の方法"), a:has-text("another way")').first();
+        if (switchedMethod < 2 && await other.isVisible().catch(() => false)) {
+          switchedMethod++;
+          await other.click();
+          await page.waitForTimeout(2000);
+          continue;
+        }
+        throw new Error('Microsoft asked for a one-time code; sign in at the Mac');
       }
 
       // "Stay signed in?": yes, and don't ask again, so the next re-sign-in stays silent.

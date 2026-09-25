@@ -37,23 +37,10 @@ let loginPromise: Promise<void> | null = null;
 let lastError: string | null = null;
 /**
  * Second factor waiting on the owner during an unattended sign-in (msLogin.ts): the number to
- * enter in Microsoft Authenticator, a push to approve, or a one-time code to type in the app.
+ * enter in Microsoft Authenticator, or a push to approve.
  */
 let mfa: MfaPrompt | null = null;
-let codeWaiter: ((code: string | null) => void) | null = null;
-export function submitMfaCode(code: string) {
-  if (!codeWaiter || !/^\d{6,8}$/.test(code)) return false;
-  codeWaiter(code);
-  codeWaiter = null;
-  return true;
-}
-const mfaHooks = {
-  prompt: (p: MfaPrompt | null) => { mfa = p; },
-  code: () => new Promise<string | null>(resolve => {
-    codeWaiter = resolve;
-    setTimeout(() => { if (codeWaiter === resolve) { codeWaiter = null; resolve(null); } }, 120_000);
-  }),
-};
+const mfaHooks = { prompt: (p: MfaPrompt | null) => { mfa = p; } };
 // Headless Chromium says so in its user agent; Microsoft treats that as a bot on its sign-in pages.
 const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 
@@ -274,8 +261,8 @@ async function waitForMicrosoftInput(page: Page, ms: number): Promise<'microsoft
 }
 
 /**
- * Signs in from scratch without a window: the Keychain account and password, the second factor
- * relayed to the app. For when the bridge is signed out and the owner is away from the Mac.
+ * Signs in from scratch without a window: the Keychain account and password, the number to
+ * match shown in the app. For when the bridge is signed out and the owner is away from the Mac.
  * index.ts checks the account against the owner ID afterwards, as for a window sign-in.
  */
 export function autoSignIn(): Promise<void> {
