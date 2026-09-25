@@ -1,14 +1,36 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig } from 'vite';
+import fs from 'fs';
+import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * Writes precache.json: every file of this build plus the fonts and icons from public/, so the
+ * service worker can store the whole app when it installs (instant, offline-capable screens).
+ * TTF fonts are left out; browsers take the WOFF listed first in @font-face.
+ */
+function precacheList(): Plugin {
+  return {
+    name: 'tokaihub-precache',
+    apply: 'build',
+    generateBundle(_opts, bundle) {
+      const built = Object.keys(bundle).filter(f => !f.endsWith('.map') && f !== 'precache.json');
+      const pub = (dir: string, keep: RegExp) => (fs.existsSync(`public/${dir}`) ? fs.readdirSync(`public/${dir}`) : [])
+        .filter(f => keep.test(f)).map(f => `${dir}/${f}`);
+      const files = ['/', ...built, 'manifest.json', ...pub('fonts', /\.woff$/), ...pub('icons', /\.png$/)]
+        .map(f => (f.startsWith('/') ? f : `/${f}`))
+        .filter(f => f !== '/index.html');
+      this.emitFile({ type: 'asset', fileName: 'precache.json', source: JSON.stringify(files) });
+    },
+  };
+}
 
 export default defineConfig(() => {
   const isGithub = process.env.GITHUB === 'true';
 
   return {
     base: isGithub ? '/TokaiHub/' : '/', // 👈 FIX
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), precacheList()],
     server: {
       // The bridge (server/) runs separately; editing it should not reload the page.
       watch: { ignored: ['**/server/**'] },

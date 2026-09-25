@@ -12,7 +12,7 @@ import RegistrationPlanner from './RegistrationPlanner';
 import { CONTAINER, Pill, RefreshButton, LoadError, TAP, EASE } from './ScreenHeader';
 import { DayClassCard } from './DayClassCard';
 import type { Term } from '../lib/types';
-import mascotIdle from '../assets/mascots/mascot_1_2.png';
+import mascotIdle from '../assets/mascots/mascot_1_2.webp';
 
 const t = {
   en: {

@@ -3,7 +3,7 @@ import { X, ChevronRight } from 'lucide-react';
 import { Language, AppSettings } from '../App';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import mascotLogo from '../assets/mascots/mascot_1_1.png';
+import mascotLogo from '../assets/mascots/mascot_1_1.webp';
 import { NAV_ITEMS } from '../lib/nav';
 
 interface SharedMenuProps {
@@ -29,7 +29,9 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="absolute inset-0 z-50 flex lg:hidden">
+        // fixed, not absolute: in the installed iOS app the page area can stop short of the
+        // screen's bottom edge, which left the drawer (and its language switch) floating above it.
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -79,22 +81,19 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
             </div>
 
             {/* Nav items */}
-            <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
-              {navItems.map(({ path, icon: Icon, labelEn, labelJp, descEn, descJp }, i) => {
+            <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-2 space-y-1">
+              {navItems.map(({ path, icon: Icon, labelEn, labelJp, descEn, descJp }) => {
                 const active = isActive(path);
                 const label = lang === 'en' ? labelEn : labelJp;
                 const desc = lang === 'en' ? descEn : descJp;
                 return (
-                  <motion.button
+                  // The items ride in with the drawer. Moving them separately as well read as the
+                  // list shifting position while it opened.
+                  <button
                     key={path}
                     onClick={() => { onClose(); setTimeout(() => navigate(path), 150); }}
                     aria-current={active ? 'page' : undefined}
-                    // Items follow the drawer in, one after another.
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0, transition: { duration: 0.26, delay: 0.08 + i * 0.025, ease: [0.22, 1, 0.36, 1] } }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl text-left transition-all duration-200 ${
+                    className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl text-left transition-[background-color,color,transform] duration-150 active:scale-[0.98] ${
                       active
                         ? isDark
                           ? 'bg-brand-yellow text-brand-black'
@@ -120,7 +119,7 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                       }`}>{desc}</div>
                     </div>
                     {active && <ChevronRight className="w-4 h-4 shrink-0 opacity-60" />}
-                  </motion.button>
+                  </button>
                 );
               })}
             </nav>

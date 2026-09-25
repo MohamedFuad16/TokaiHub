@@ -12,7 +12,7 @@ export function academicYearOf(date: Date) {
 }
 
 const PALETTE = ['bg-brand-pink', 'bg-brand-yellow', 'bg-brand-green', 'bg-blue-200', 'bg-purple-300', 'bg-orange-200', 'bg-green-300', 'bg-brand-gray'];
-const ARTWORK = Object.values(import.meta.glob('../assets/courses/*.png', { eager: true, import: 'default' })) as string[];
+const ARTWORK = Object.values(import.meta.glob('../assets/courses/*.webp', { eager: true, import: 'default' })) as string[];
 function hash(s: string) {
   let h = 0;
   for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

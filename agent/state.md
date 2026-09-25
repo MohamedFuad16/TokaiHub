@@ -14,6 +14,15 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — drawer, installed-app layout, images, precache** (by: Claude). Mobile drawer
+  items no longer animate on their own (only the panel slides); drawer and app root are fixed to
+  the screen, so the language switch sits at the true bottom in the iOS standalone app. Course
+  and mascot images converted to WebP at 2x display size (5.6 MB -> 224 KB; build 8.8 MB ->
+  1.8 MB before compression). Build writes precache.json; the service worker (tokaihub-v3)
+  stores all 47 files on install, drops old hashed files, and falls back to the stored app after
+  2.5 s on a weak network. Verified: drawer 812/812 px with footer at 812 and no item transforms
+  (375x812); in Chrome the SW activated with 47/47 files cached. The built-in browser pane cannot
+  register service workers ("unknown error fetching the script"); Chrome can.
 - **2026-09-24 (thirteenth pass) — one grading panel for every course** (by: Claude). Owner
   reported TTX060's grading still as plain text (no stated weights). New src/lib/grading.ts
   (analyzeGrading: weights, single named component = 100%, named components without weights,

@@ -13,8 +13,8 @@ import type { CourseItem, TipsAttendanceCourse, TipsBulletins, TipsCabinetFile, 
 import { FileRow } from './TokaiCabinet';
 import { Fresh, CONTAINER, TAP, EASE, RefreshButton, Skeleton, LoadError } from './ScreenHeader';
 import { DayClassCard } from './DayClassCard';
-import mascotIdle from '../assets/mascots/mascot_1_2.png';
-import mascotLogo from '../assets/mascots/mascot_1_1.png';
+import mascotIdle from '../assets/mascots/mascot_1_2.webp';
+import mascotLogo from '../assets/mascots/mascot_1_1.webp';
 
 const t = {
   en: {

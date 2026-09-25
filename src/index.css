@@ -144,6 +144,13 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* Pin the app to the screen. In the installed iOS app with a translucent status bar, a 100%
+   or 100dvh height can come up short of the bottom edge, leaving a strip under the layout. */
+#root {
+  position: fixed;
+  inset: 0;
+}
+
 body {
   font-family: var(--app-font-family);
   background-color: #ffffff;

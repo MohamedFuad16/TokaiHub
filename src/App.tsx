@@ -9,7 +9,7 @@ import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT }
 import { displayName, tidy } from './lib/tipsAdapters';
 import { NAV_ITEMS } from './lib/nav';
 import type { TipsGrades, TipsProfile, TipsStatus } from './lib/types';
-import mascotLogo from './assets/mascots/mascot_1_1.png';
+import mascotLogo from './assets/mascots/mascot_1_1.webp';
 
 // Lazy load route components — imports cached after first load
 const lazyHome = () => import('./components/TokaiHome');
@@ -187,7 +187,7 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: Mai
   const muted = isDark ? 'text-gray-500' : 'text-gray-400';
   const toggleLabel = collapsed ? (lang === 'en' ? 'Expand sidebar (⌘B)' : 'サイドバーを開く (⌘B)') : (lang === 'en' ? 'Collapse sidebar (⌘B)' : 'サイドバーを閉じる (⌘B)');
   return (
-    <div className={`h-[100dvh] w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+    <div className={`h-full w-full overflow-hidden flex transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
       <UpdatedPill lang={lang} isDark={isDark} />
       {/* Desktop Sidebar */}
       <motion.aside
@@ -513,7 +513,7 @@ export default function App() {
 
   if ((!IS_LOCAL && locked) || session?.state !== 'signed_in') {
     return (
-      <div className={`h-[100dvh] w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
+      <div className={`h-full w-full overflow-hidden transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'bg-[#EBF2D9]'}`}>
         <TokaiSignIn
           lang={lang}
           setLang={setLang}

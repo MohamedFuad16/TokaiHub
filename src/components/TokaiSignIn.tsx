@@ -4,9 +4,9 @@ import { ArrowRight, Loader2, Terminal, RefreshCw, ShieldCheck, ScanFace, Laptop
 import { Language, AppSettings } from '../App';
 import { signIn, unlockWithPasskey, registerPasskey, deviceLabel } from '../lib/api';
 import type { TipsStatus } from '../lib/types';
-import mascotIdle from '../assets/mascots/mascot_1_2.png';
-import mascotCover from '../assets/mascots/mascot_2_2.png';
-import mascotLoading from '../assets/mascots/mascot_0_2.png';
+import mascotIdle from '../assets/mascots/mascot_1_2.webp';
+import mascotCover from '../assets/mascots/mascot_2_2.webp';
+import mascotLoading from '../assets/mascots/mascot_0_2.webp';
 
 interface SignInProps {
   lang: Language;
