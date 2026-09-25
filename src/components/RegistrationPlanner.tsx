@@ -10,12 +10,14 @@ import { colorFor, tidy, parseSlots } from '../lib/tipsAdapters';
 import { PERIOD_TIMES } from '../config/periods';
 import DeliveryChip from './DeliveryChip';
 import CreditsNeeded, { SectionChip, type PlanItem } from './CreditsNeeded';
+import SmartPicks from './SmartPicks';
+import type { Offering } from '../lib/recommendTypes';
 import { useCourseCategories } from '../lib/courseCategories';
 import type { TipsActionResult, TipsCandidate, TipsGrades, TipsProfile, TipsSyllabusOptions, TipsSyllabusResult, TipsTimetable, TipsTimetableCourse } from '../lib/types';
 
 const t = {
   en: {
-    bySlot: 'By slot', byCurriculum: 'My curriculum', byCode: 'By code',
+    forYou: 'For you', bySlot: 'By slot', byCurriculum: 'My curriculum', byCode: 'By code',
     pick: 'Tap an empty slot to see the courses your department can take there.',
     curriculumHint: 'Courses in your curriculum, from TIPS. Pick a category, then a course to see its sections.',
     code: 'Timetable code (e.g. TTX040)', find: 'Find', campus: 'Campus', offered: (s: string) => `Offered in ${s}`,
@@ -33,7 +35,7 @@ const t = {
     plan: 'Plan', planned: 'Planned', onlyNeeded: 'Only what I still need',
   },
   jp: {
-    bySlot: 'コマから', byCurriculum: 'カリキュラムから', byCode: '時間割番号',
+    forYou: 'おすすめ', bySlot: 'コマから', byCurriculum: 'カリキュラムから', byCode: '時間割番号',
     pick: '空いているコマを選ぶと、所属学科で履修できる開講科目が表示されます。',
     curriculumHint: 'TIPSのカリキュラム科目です。科目区分を選び、科目を選ぶと開講クラスが表示されます。',
     code: '時間割番号（例: TTX040）', find: '検索', campus: '校舎', offered: (s: string) => `${s}の開講科目`,
@@ -53,6 +55,12 @@ const t = {
 };
 
 type Ctx = Record<string, string>;
+
+/** A recommender offering in the shape the register dialog and plan use. */
+const offeringCandidate = (o: Offering): TipsCandidate => ({
+  code: o.code, number: '', title: o.title, teacher: o.teacher, requirement: o.requirement, credits: o.credits,
+  campus: o.campus, slotText: o.slotText, jscd: o.jscd, year: o.year, canRegister: o.canRegister,
+});
 type Pending = { kind: 'register'; c: TipsCandidate; ctx: Ctx } | { kind: 'drop'; c: TipsTimetableCourse };
 type Cat = { d: string; s: string; m: string; name: string; rawName: string };
 type CurCourse = { kamoku: string | null; number: string; title: string; credits: number | null; spring: number | null; springIntensive: number | null; fall: number | null; fallIntensive: number | null; prerequisite: string | null };
@@ -118,7 +126,7 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
   );
   const [campus, setCampus] = useState('');
   const campusCode = campus || defaultCampus;
-  const [mode, setMode] = useState<'slot' | 'curriculum' | 'code'>('slot');
+  const [mode, setMode] = useState<'smart' | 'slot' | 'curriculum' | 'code'>('smart');
   const [slot, setSlot] = useState<{ day: number; period: number } | null>(null);
   const [codeDraft, setCodeDraft] = useState('');
   const [code, setCode] = useState('');
@@ -279,10 +287,19 @@ export default function RegistrationPlanner({ lang, isDark }: { lang: Language; 
         {/* Finder */}
         <div ref={listRef} className="scroll-mt-4 min-w-0">
           <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+            <Pill layoutId="planner-mode" active={mode === 'smart'} isDark={isDark} onClick={() => setMode('smart')}>{tx.forYou}</Pill>
             <Pill layoutId="planner-mode" active={mode === 'slot'} isDark={isDark} onClick={() => setMode('slot')}>{tx.bySlot}</Pill>
             <Pill layoutId="planner-mode" active={mode === 'curriculum'} isDark={isDark} onClick={() => setMode('curriculum')}>{tx.byCurriculum}</Pill>
             <Pill layoutId="planner-mode" active={mode === 'code'} isDark={isDark} onClick={() => setMode('code')}>{tx.byCode}</Pill>
           </div>
+
+          {mode === 'smart' && (
+            <SmartPicks lang={lang} isDark={isDark} needed={grad.needed} done={grad.done}
+              plannedCodes={new Set(plan.map(p => p.code))}
+              onPlan={o => togglePlan(offeringCandidate(o))}
+              onPlanAll={os => savePlan([...plan, ...os.filter(o => !plan.some(p => p.code === o.code)).map(o => ({ code: o.code, title: o.title, credits: o.credits, section: o.section, requirement: o.requirement }))])}
+              onRegister={o => setPending({ kind: 'register', c: offeringCandidate(o), ctx: { code: o.code } })} />
+          )}
 
           {mode === 'slot' && (
             <>

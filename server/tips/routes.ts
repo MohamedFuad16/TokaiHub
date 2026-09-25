@@ -288,7 +288,7 @@ const FEATURES: Record<string, Feature> = {
       const reg = await parser('registration');
       const grad = (await parser('graduation')).parse((await c.startFlow('HTW0001000-flow')).html);
       const list = await c.submitForm(await timetablePage(), 'form[name=SearchForm]', { _eventId: 'searchDisplay', searchDisplayFlg: '6', campusCd: '' });
-      const categories = reg.parseCurriculum(list.html) as { d: string; s: string; m: string; name: string }[];
+      const categories = reg.parseCurriculum(list.html) as { d: string; s: string; m: string; name: string; rawName?: string }[];
       const remaining = (i: { required: number | null; earned: number | null; inProgress: number | null }) =>
         Math.max(0, (i.required ?? 0) - (i.earned ?? 0) - (i.inProgress ?? 0));
       const sections = grad.groups.map((g: any) => ({
@@ -307,12 +307,22 @@ const FEATURES: Record<string, Feature> = {
         const n = Number(/\d+/.exec(cat.d)?.[0]);
         return byName?.section ?? sections.find((sec: any) => sec.section === ROMAN[n - 1])?.section ?? null;
       };
-      const courses: { kamoku: string | null; title: string; credits: number | null; section: string | null; category: string }[] = [];
+      const courses: {
+        kamoku: string | null; title: string; credits: number | null; section: string | null; category: string;
+        /** Weekly slots / intensive sessions per term (0 = not offered then), and prerequisite text. */
+        spring: number; fall: number; intensive: { spring: number; fall: number }; prerequisite: string | null;
+        /** The curriculum category, to open this course's sections (registration-candidates). */
+        cat: { d: string; s: string; m: string; name: string };
+      }[] = [];
       for (const cat of categories) {
         // Web Flow keeps earlier steps, so every category can be opened from the same list page.
         const page = await c.submitForm(list, 'form[name=SearchForm]', { _eventId: 'curriculumSearch', kamokuDKbncd: cat.d, kamokuMShozokucd: cat.s, kamokuMKbncd: cat.m, kamokuMKbnnm: '' });
         const section = sectionOf(cat);
-        for (const k of reg.parseCurriculumCourses(page.html) as any[]) courses.push({ kamoku: k.kamoku, title: k.title, credits: k.credits, section, category: cat.name });
+        for (const k of reg.parseCurriculumCourses(page.html) as any[]) courses.push({
+          kamoku: k.kamoku, title: k.title, credits: k.credits, section, category: cat.name,
+          spring: k.spring ?? 0, fall: k.fall ?? 0, intensive: { spring: k.springIntensive ?? 0, fall: k.fallIntensive ?? 0 }, prerequisite: k.prerequisite,
+          cat: { d: cat.d, s: cat.s, m: cat.m, name: (cat as any).rawName ?? cat.name },
+        });
       }
       return {
         sections,

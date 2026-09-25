@@ -66,6 +66,10 @@ export const getStatus = () => call<TipsStatus>('/status', { timeoutMs: 8_000 })
 /** Opens the Microsoft sign-in window on the Mac; resolves once TIPS is reached. Mac only. */
 export const signIn = () => call<TipsStatus>('/signin', { method: 'POST', timeoutMs: 6 * 60_000 });
 
+/** The course recommender's state; starts a build on the Mac when there is none or it is old. */
+export const getRecommend = (lang: 'en' | 'jp', refresh = false) =>
+  call<import('./recommendTypes').RecommendStatus>(`/recommend?lang=${lang}${refresh ? '&refresh=1' : ''}`, { timeoutMs: 20_000 });
+
 /** Starts the Mac's unattended sign-in (Keychain account); follow it through getStatus(). */
 export const startAutoSignIn = () => call<TipsStatus>('/reauth', { method: 'POST', timeoutMs: 15_000 });
 /** The one-time code Microsoft asked for during an unattended sign-in. */

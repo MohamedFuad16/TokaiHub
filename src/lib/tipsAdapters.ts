@@ -129,12 +129,4 @@ export function displayName(p: TipsProfile | undefined, lang: 'en' | 'jp'): Loca
 
 export const pct = (a?: number | null, b?: number | null) => (a && b ? Math.round((a / b) * 100) : 0);
 
-const DAY_JP: Record<string, number> = { 日: 0, 月: 1, 火: 2, 水: 3, 木: 4, 金: 5, 土: 6 };
-const DAY_EN: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
-/** TIPS slot text ("水3 水4", "Wed3 Wed4", "月／Mon 2") → [{day, period}] */
-export function parseSlots(text: string): { day: number; period: number }[] {
-  const out: { day: number; period: number }[] = [];
-  for (const m of text.matchAll(/([日月火水木金土])[^\d,\s]*\s*(\d+)/g)) out.push({ day: DAY_JP[m[1]], period: Number(m[2]) });
-  if (!out.length) for (const m of text.matchAll(/\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)[a-z]*\s*(\d+)/gi)) out.push({ day: DAY_EN[m[1].toLowerCase()], period: Number(m[2]) });
-  return out;
-}
+export { parseSlots } from './slots';

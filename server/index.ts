@@ -133,6 +133,15 @@ app.post('/tips-api/auth/sessions/remove', (req, res) => {
   try { auth.removeSession(req.body?.id); res.json(auth.listDevices(req.headers.authorization)); } catch (e) { authError(res, e); }
 });
 
+// ── Course recommender (built in the background from TIPS, the handbook and Jev) ──────────
+app.get('/tips-api/recommend', async (req, res) => {
+  if (!ownerGuard(req, res)) return;
+  const lang = req.query.lang === 'en' ? 'en' : 'jp';
+  const { ensureBuilt, recommendStatus } = await import('./tips/recommend');
+  ensureBuilt(lang, req.query.refresh === '1');
+  res.json(recommendStatus(lang));
+});
+
 // ── Unattended sign-in (Keychain account, second factor relayed to the app) ────────────────
 /** Starts a sign-in without a window; the app follows it through /status (signin.mfa, busy). */
 app.post('/tips-api/reauth', async (_req, res) => {

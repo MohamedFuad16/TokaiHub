@@ -14,6 +14,15 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-25 — course recommender (not deployed yet)** (by: Claude). server/tips/handbook.ts
+  (parses the saved 授業要覧 text: ○/◇/×/☆ marks and ①②③ prerequisites; 415 rows for JE 2024,
+  11 required IV courses, 5 with prerequisites), server/tips/jev.ts (TypeSafe Jev client; key in
+  ~/.tokaihub/hub.env TYPESAFE_API_KEY, bridge only), server/tips/recommend.ts (background build:
+  course-categories now carries term availability and category refs, sections via
+  registration-candidates, syllabus features, optional Jev; cached 6 h; GET /tips-api/recommend),
+  src/lib/courseFeatures.ts, recommend.ts (scoring + plan), recommendTypes.ts, slots.ts,
+  SmartPicks.tsx as the planner's default "For you" mode. 71 tests pass. NOT verified on live
+  data: the bridge was signed out (see previous entry), so no build has run against TIPS.
 - **2026-09-25 — unattended Microsoft sign-in with relayed second factor** (by: Claude). ADR-0012.
   server/tips/keychain.ts, server/tips/msLogin.ts, session.ts (reauth hands Microsoft input pages
   to the driver when the Keychain is set up; autoSignIn()), index.ts (/tips-api/reauth,
