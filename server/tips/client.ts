@@ -14,6 +14,8 @@ export interface Page {
   ms: number;
 }
 
+const REQUEST_LIMIT_MS = 30_000;
+
 let queue: Promise<unknown> = Promise.resolve();
 function serial<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(fn, fn);
@@ -26,10 +28,14 @@ type Req = { method: 'GET' } | { method: 'POST'; form: Record<string, string | s
 async function once(url: string, req: Req): Promise<Page> {
   const page = await workerPage();
   const t0 = Date.now();
-  const r = await page.evaluate(async ({ url, method, body }) => {
+  const r = await page.evaluate(async ({ url, method, body, limit }) => {
+    // TIPS sometimes stops answering mid-response; without a limit the read (and the one-at-a-time
+    // queue behind it) waited up to 21 minutes. Normal requests take 1 to 5 s.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), limit);
     try {
       const res = await fetch(url, {
-        method, credentials: 'include', redirect: 'follow',
+        method, credentials: 'include', redirect: 'follow', signal: abort.signal,
         headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
         body: body ?? undefined,
       });
@@ -41,10 +47,13 @@ async function once(url: string, req: Req): Promise<Page> {
       try { html = new TextDecoder(charset).decode(buf); } catch { html = new TextDecoder().decode(buf); }
       return { ok: true as const, status: res.status, url: res.url, html };
     } catch (e) {
+      if (abort.signal.aborted) return { ok: false as const, timedOut: true, error: 'timeout' };
       // A redirect to login.microsoftonline.com is cross-origin, so fetch rejects with TypeError.
-      return { ok: false as const, error: String(e) };
-    }
-  }, { url, method: req.method, body: req.method === 'POST' ? encodeForm(req.form) : null });
+      return { ok: false as const, timedOut: false, error: String(e) };
+    } finally { clearTimeout(timer); }
+  }, { url, method: req.method, body: req.method === 'POST' ? encodeForm(req.form) : null, limit: REQUEST_LIMIT_MS });
+  // A slow TIPS is not a signed-out TIPS: report it without starting a re-sign-in.
+  if (!r.ok && r.timedOut) throw new Error(`TIPS did not answer within ${REQUEST_LIMIT_MS / 1000} s (${new URL(url).pathname})`);
   if (!r.ok) throw new SessionExpiredError(`request blocked (${r.error}); likely signed out`);
   const finalUrl = new URL(r.url);
   if (looksSignedOut(finalUrl, r.html)) throw new SessionExpiredError('tips session expired');

@@ -14,6 +14,11 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-27 — health check and TIPS request time limit** (by: Claude). Two days of logs (bridge
+  up 1 d 20 h, no errors, session valid, scheduler on schedule, ~25 user-driven TIPS reads).
+  Fixed: 30 s limit per TIPS request (client.ts), timestamps on every log line (index.ts),
+  queue wait logged apart from TIPS time (routes.ts). See errors.md. Suggested and not done:
+  quieter bulletin checks at night, longer cache for course-categories, auto-update on resume.
 - **2026-09-26 — Home floating bar shows the next class; Required courses list removed** (by: Claude).
   The bar shows the next class (title, countdown, date, time, room; "now · until" during a
   class); its circle counts classes left today, or shows the next class day's date. Tapping it

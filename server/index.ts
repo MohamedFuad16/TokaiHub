@@ -19,6 +19,12 @@ import * as auth from './auth';
 import { autoLoginConfigured } from './tips/keychain';
 import * as push from './tips/push';
 
+// Every log line starts with the local time, so slow or failed reads can be placed in the day.
+for (const level of ['log', 'warn', 'error'] as const) {
+  const write = console[level].bind(console);
+  console[level] = (...args: unknown[]) => write(new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Tokyo' }), ...args);
+}
+
 const PORT = Number(process.env.TIPS_BRIDGE_PORT ?? 8791);
 const PUBLIC_PORT = Number(process.env.TIPS_PUBLIC_PORT ?? 8792);
 const DEV = process.env.NODE_ENV !== 'production';

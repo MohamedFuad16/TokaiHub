@@ -97,3 +97,10 @@
 - **"For you" showed "Reading TIPS…" for ever when the recommender request failed**
   (2026-09-25, from the Fable audit). The poll swallowed errors; two misses in a row now show
   LoadError with a retry.
+- **TIPS reads that hung for up to 21 minutes** (found 2026-09-27 from two days of logs). 18 of
+  139 background bulletin checks took 20 s to 21 min (normal 1.4 s); the Mac never slept and
+  the session stayed valid. The in-page fetch() had no time limit, so a TIPS response that
+  stalled held the one-at-a-time queue. Each request now aborts after 30 s and reports a
+  timeout (not "signed out", so no re-sign-in starts); verified by forcing a 5 ms limit. Log
+  lines now carry a timestamp and split TIPS time from queue wait. Cause of the stalls on the
+  TIPS side: unknown.

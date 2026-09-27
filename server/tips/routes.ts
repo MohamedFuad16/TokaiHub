@@ -410,9 +410,11 @@ export async function handle(feature: string, q: Q) {
   if (hit && !refresh && Date.now() - hit.cachedAt < f.ttl) return { data: hit.data, cachedAt: hit.cachedAt, fromCache: true, stale: false };
   const { runFeature } = await import('./session');
   const t0 = Date.now();
-  const data = await runFeature(locale, () => f.run(params), bg === '1' ? -1 : f.priority ?? 0);
+  let started = t0;
+  const data = await runFeature(locale, () => { started = Date.now(); return f.run(params); }, bg === '1' ? -1 : f.priority ?? 0);
   const entry = cache.write(key, data);
-  console.log(`[tips] ${feature} (${locale}) fetched in ${Date.now() - t0} ms`);
+  // Queue wait and TIPS time apart: a slow line says which one was slow.
+  console.log(`[tips] ${feature} (${locale}) fetched in ${Date.now() - started} ms, waited ${started - t0} ms${bg === '1' ? ' (background)' : ''}`);
   return { data: entry.data, cachedAt: entry.cachedAt, fromCache: false, stale: false };
 }
 
