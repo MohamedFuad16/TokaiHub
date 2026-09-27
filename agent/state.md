@@ -14,6 +14,14 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-27 — course categories cheaper and fresher; app updates itself on reopen** (by: Claude).
+  course-categories now refreshes hourly (was 12 h) from the graduation page, reusing a
+  7-day cache of the curriculum crawl (curriculum-crawl:<lang>); output identical to before (240
+  courses, same sections), repeat runs about 6 s instead of 25 to 40 s. src/lib/appUpdate.ts:
+  after 30 s away, the app compares the live bundle with its own and reloads into a new deploy,
+  first storing the new page for the service worker (sw.js passes ?update-check through).
+  Verified in Chrome on the local listener: reload into a new build, no reload without one.
+  Not done by the owner's choice: quieter bulletin checks at night.
 - **2026-09-27 — health check and TIPS request time limit** (by: Claude). Two days of logs (bridge
   up 1 d 20 h, no errors, session valid, scheduler on schedule, ~25 user-driven TIPS reads).
   Fixed: 30 s limit per TIPS request (client.ts), timestamps on every log line (index.ts),

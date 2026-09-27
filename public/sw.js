@@ -62,6 +62,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // The app's own update check (src/lib/appUpdate.ts) must see the live page, never this cache.
+  if (url.searchParams.has('update-check')) return;
+
   // Built assets (hashed file names), fonts, icons: cache first, fill on miss.
   event.respondWith((async () => {
     const hit = await caches.match(req);

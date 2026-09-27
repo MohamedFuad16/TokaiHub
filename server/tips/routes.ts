@@ -76,6 +76,8 @@ async function attendanceList(q: Q) {
   return page;
 }
 
+const CURRICULUM_TTL = 7 * 24 * 60 * MIN;
+
 const FEATURES: Record<string, Feature> = {
   profile: {
     ttl: 24 * 60 * MIN,
@@ -281,14 +283,29 @@ const FEATURES: Record<string, Feature> = {
    * categories G1, G2, ... in the same order as the graduation sections I, II, ...
    */
   'course-categories': {
-    ttl: 12 * 60 * MIN,
-    priority: -1, // ~10 TIPS pages; never hold up the student's own requests
-    run: async () => {
+    // Credit counts come from the graduation page on every run (hourly); the curriculum crawl
+    // behind them (~10 pages, 25 to 40 s) changes about once a year and is kept for a week.
+    ttl: 60 * MIN,
+    priority: -1, // never hold up the student's own requests
+    run: async q => {
       const c = await getClient();
       const reg = await parser('registration');
       const grad = (await parser('graduation')).parse((await c.startFlow('HTW0001000-flow')).html);
-      const list = await c.submitForm(await timetablePage(), 'form[name=SearchForm]', { _eventId: 'searchDisplay', searchDisplayFlg: '6', campusCd: '' });
-      const categories = reg.parseCurriculum(list.html) as { d: string; s: string; m: string; name: string; rawName?: string }[];
+      type Cat = { d: string; s: string; m: string; name: string; rawName?: string };
+      const crawlKey = `curriculum-crawl:${q.lang ?? ''}`;
+      let crawl = cache.read(crawlKey) as { data: { categories: Cat[]; courses: any[][] }; cachedAt: number } | null;
+      if (!crawl || Date.now() - crawl.cachedAt > CURRICULUM_TTL) {
+        const list = await c.submitForm(await timetablePage(), 'form[name=SearchForm]', { _eventId: 'searchDisplay', searchDisplayFlg: '6', campusCd: '' });
+        const cats = reg.parseCurriculum(list.html) as Cat[];
+        const perCat: any[][] = [];
+        // Web Flow keeps earlier steps, so every category can be opened from the same list page.
+        for (const cat of cats) {
+          const page = await c.submitForm(list, 'form[name=SearchForm]', { _eventId: 'curriculumSearch', kamokuDKbncd: cat.d, kamokuMShozokucd: cat.s, kamokuMKbncd: cat.m, kamokuMKbnnm: '' });
+          perCat.push(reg.parseCurriculumCourses(page.html) as any[]);
+        }
+        crawl = cache.write(crawlKey, { categories: cats, courses: perCat }) as typeof crawl;
+      }
+      const categories = crawl!.data.categories;
       const remaining = (i: { required: number | null; earned: number | null; inProgress: number | null }) =>
         Math.max(0, (i.required ?? 0) - (i.earned ?? 0) - (i.inProgress ?? 0));
       const sections = grad.groups.map((g: any) => ({
@@ -314,16 +331,14 @@ const FEATURES: Record<string, Feature> = {
         /** The curriculum category, to open this course's sections (registration-candidates). */
         cat: { d: string; s: string; m: string; name: string };
       }[] = [];
-      for (const cat of categories) {
-        // Web Flow keeps earlier steps, so every category can be opened from the same list page.
-        const page = await c.submitForm(list, 'form[name=SearchForm]', { _eventId: 'curriculumSearch', kamokuDKbncd: cat.d, kamokuMShozokucd: cat.s, kamokuMKbncd: cat.m, kamokuMKbnnm: '' });
+      categories.forEach((cat, i) => {
         const section = sectionOf(cat);
-        for (const k of reg.parseCurriculumCourses(page.html) as any[]) courses.push({
+        for (const k of crawl!.data.courses[i] ?? []) courses.push({
           kamoku: k.kamoku, title: k.title, credits: k.credits, section, category: cat.name,
           spring: k.spring ?? 0, fall: k.fall ?? 0, intensive: { spring: k.springIntensive ?? 0, fall: k.fallIntensive ?? 0 }, prerequisite: k.prerequisite,
-          cat: { d: cat.d, s: cat.s, m: cat.m, name: (cat as any).rawName ?? cat.name },
+          cat: { d: cat.d, s: cat.s, m: cat.m, name: cat.rawName ?? cat.name },
         });
-      }
+      });
       return {
         sections,
         total: grad.total ? { ...grad.total, remaining: remaining(grad.total) } : null,
