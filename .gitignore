@@ -7,3 +7,7 @@ coverage/
 .env*
 !.env.example
 !.env.production
+
+# Local tool output. Also kept out of Tailwind's class scan, which follows .gitignore.
+.daijin/
+graphify-out/

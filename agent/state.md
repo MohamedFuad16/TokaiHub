@@ -14,6 +14,11 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-09-27 — Mac build now matches Vercel** (by: Claude). The Mac's build differed only in
+  CSS: Tailwind scans every non-ignored file, and picked up class names from a leftover agent
+  worktree (.claude/worktrees/agent-aa006f49, removed at the owner's request with its branch
+  and gitlink), .daijin/ and graphify-out/ (now in .gitignore). npm ci was not the cause. After
+  the change all 48 served files are identical to the live site.
 - **2026-09-27 — course categories cheaper and fresher; app updates itself on reopen** (by: Claude).
   course-categories now refreshes hourly (was 12 h) from the graduation page, reusing a
   7-day cache of the curriculum crawl (curriculum-crawl:<lang>); output identical to before (240
