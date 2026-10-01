@@ -124,8 +124,16 @@ const FEATURES: Record<string, Feature> = {
     key: q => `lms-course:${q.id}`,
     run: async q => {
       if (!/^\d+$/.test(q.id ?? '')) throw notFound('course id');
-      const raw = await (await lms()).ajax<string>('core_courseformat_get_state', { courseid: Number(q.id) });
-      return { id: Number(q.id), sections: (await lmsParse()).parseState(raw) };
+      const l = await lms();
+      const p = await lmsParse();
+      // Labels' text is only on the course page; the state has their names.
+      const [raw, page] = await Promise.all([
+        l.ajax<string>('core_courseformat_get_state', { courseid: Number(q.id) }),
+        l.lmsGet(`/course/view.php?id=${q.id}`).catch(() => null),
+      ]);
+      const labels = page ? p.parseLabels(page.html, page.url) : {};
+      const sections = p.parseState(raw).map(sec => ({ ...sec, items: sec.items.map(i => (i.module === 'label' ? { ...i, blocks: labels[i.id] ?? [{ t: 'text' as const, text: i.name }] } : i)) }));
+      return { id: Number(q.id), sections };
     },
   },
   // Deadlines: assignments, quizzes and other dated activities, from two weeks back (overdue).
@@ -154,6 +162,71 @@ const FEATURES: Record<string, Feature> = {
       const href = /class="urlworkaround"[^]*?href="([^"]+)"/.exec(page.html)?.[1]?.replace(/&amp;/g, '&');
       if (!href) throw notFound('no link on that item');
       return { url: href };
+    },
+  },
+  'lms-forum': {
+    ttl: 10 * MIN, direct: true,
+    key: q => `lms-forum:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('forum id');
+      const page = await (await lms()).lmsGet(`/mod/forum/view.php?id=${q.id}`);
+      return { id: Number(q.id), ...(await lmsParse()).parseForum(page.html) };
+    },
+  },
+  'lms-discussion': {
+    ttl: 10 * MIN, direct: true,
+    key: q => `lms-discussion:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('discussion id');
+      const l = await lms();
+      const raw = await l.ajax<{ posts: any[] }>('mod_forum_get_discussion_posts', { discussionid: Number(q.id), sortby: 'created', sortdirection: 'ASC' });
+      return { id: Number(q.id), posts: (await lmsParse()).parsePosts(raw, l.LMS_ORIGIN) };
+    },
+  },
+  // This term's announcements across courses (?ids=course ids), newest first.
+  'lms-announcements': {
+    ttl: 10 * MIN, direct: true,
+    key: q => `lms-announcements:${q.ids}`,
+    run: async q => {
+      const ids = (q.ids ?? '').split(',').filter(x => /^\d+$/.test(x)).slice(0, 24).map(Number);
+      const l = await lms();
+      const p = await lmsParse();
+      const per = await Promise.all(ids.map(async id => {
+        const state = p.parseState(await l.ajax<string>('core_courseformat_get_state', { courseid: id }));
+        const forums = state.flatMap(sec => sec.items).filter(i => i.module === 'forum');
+        const news = forums.find(f => /アナウンス|announcement|news/i.test(f.name)) ?? forums[0];
+        if (!news) return [];
+        const page = await l.lmsGet(`/mod/forum/view.php?id=${news.id}`);
+        return p.parseForum(page.html).discussions.map(d => ({ ...d, courseId: id, forumId: news.id }));
+      }));
+      return { items: per.flat().sort((a, b) => (b.lastPost ?? 0) - (a.lastPost ?? 0)).slice(0, 30) };
+    },
+  },
+  'lms-folder': {
+    ttl: 60 * MIN, direct: true,
+    key: q => `lms-folder:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('folder id');
+      const page = await (await lms()).lmsGet(`/mod/folder/view.php?id=${q.id}`);
+      return { id: Number(q.id), ...(await lmsParse()).parseFolder(page.html, page.url) };
+    },
+  },
+  'lms-page': {
+    ttl: 60 * MIN, direct: true,
+    key: q => `lms-page:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('page id');
+      const page = await (await lms()).lmsGet(`/mod/page/view.php?id=${q.id}`);
+      return { id: Number(q.id), ...(await lmsParse()).parsePage(page.html, page.url) };
+    },
+  },
+  'lms-quiz': {
+    ttl: 5 * MIN, direct: true,
+    key: q => `lms-quiz:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('quiz id');
+      const page = await (await lms()).lmsGet(`/mod/quiz/view.php?id=${q.id}`);
+      return { id: Number(q.id), ...(await lmsParse()).parseQuiz(page.html) };
     },
   },
   'lms-assign': {
@@ -503,7 +576,8 @@ export async function handle(feature: string, q: Q) {
   // bg=1: the UI only wants this for decoration (e.g. a delivery chip), so it waits its turn.
   const { mode, refresh, bg, ...params } = q;
   const locale = localeOf(params);
-  const key = `${f.key ? f.key(params) : feature}@${locale}`;
+  // LMS content is the same in either app language: one cached copy, not one per locale.
+  const key = f.direct ? `${f.key ? f.key(params) : feature}` : `${f.key ? f.key(params) : feature}@${locale}`;
   const hit = cache.read(key);
   if (mode === 'cache') {
     if (!hit) throw notFound('not cached');

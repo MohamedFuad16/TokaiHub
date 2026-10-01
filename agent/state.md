@@ -14,6 +14,16 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-10-01 — LMS forums, announcements, folders, pages, labels, quizzes** (by: Claude).
+  Bridge features lms-forum (HTML list), lms-discussion (AJAX mod_forum_get_discussion_posts),
+  lms-announcements (this term's news forums merged), lms-folder, lms-page, lms-quiz (HTML);
+  labels' text added to lms-course from the course page; rich text as blocks (text, images,
+  files). App: LmsModules.tsx (Forum, Discussion, Folder, Page, Quiz screens; Blocks renderer;
+  images fetched through the bridge with the device token), Announcements on LMS Home, course
+  items routed in-app. Quizzes show dates, info and attempts; answering opens the LMS website.
+  Verified at 375 px against live data (past courses for forum posts, folder, page image, quiz,
+  labels). Not verified: the quiz attempts table with a real attempt (none exist in this
+  account's quizzes). Fixed two bugs found on the way (errors.md).
 - **2026-10-01 — LMS assignment submission in the app** (by: Claude). Bridge: lms.ts
   openSubmission/draftFiles/uploadDraft/removeDraft/submit; routes /tips-api/lms/submission,
   /upload (raw, 30 MB), /remove, /submit (requires confirm: true). App: LmsAssign SubmitPanel

@@ -8,13 +8,14 @@ import { useTips } from '../lib/useTips';
 import { getFeature, openTipsFile } from '../lib/api';
 import type { LmsCourse as Course } from '../lib/lms';
 import { ModuleIcon, dueText } from './lmsShared';
+import { Blocks, type Block } from './LmsModules';
 
 const t = {
   en: { loading: 'Loading the course from the LMS…', empty: 'This course has nothing posted yet.', web: 'Opens the LMS website' },
   jp: { loading: 'LMSからコースを読み込み中…', empty: 'このコースにはまだ何も掲載されていません。', web: 'LMSのWebサイトで開きます' },
 };
 
-interface Item { id: number; name: string; module: string; url: string | null; dates: { label: string; at: number }[]; done: boolean | null }
+interface Item { id: number; name: string; module: string; url: string | null; dates: { label: string; at: number }[]; done: boolean | null; blocks?: Block[] }
 interface Section { id: number; number: number; title: string; items: Item[] }
 
 /**
@@ -47,7 +48,9 @@ export default function LmsCourse(props: ScreenProps) {
   }, [a.data, b.data, c.data]);
 
   const open = (i: Item) => {
-    if (i.module === 'assign') return navigate(`/lms/assign/${i.id}`);
+    // Screens in the app; anything else opens the LMS website.
+    const inApp: Record<string, string> = { assign: 'assign', forum: 'forum', folder: 'folder', page: 'page', quiz: 'quiz' };
+    if (inApp[i.module]) return navigate(`/lms/${inApp[i.module]}/${i.id}`);
     if (i.module === 'resource' && i.url) return openTipsFile({ kind: 'lms', lmsUrl: i.url });
     if (i.module === 'url') {
       // Open the tab now (keeps the tap's popup permission), then point it at the link's address.
@@ -57,7 +60,7 @@ export default function LmsCourse(props: ScreenProps) {
     }
     if (i.url) window.open(i.url, '_blank', 'noopener');
   };
-  const action = (m: string) => (m === 'assign' ? ChevronRight : m === 'resource' ? Download : ExternalLink);
+  const action = (m: string) => (['assign', 'forum', 'folder', 'page', 'quiz'].includes(m) ? ChevronRight : m === 'resource' ? Download : ExternalLink);
 
   const loading = parts.some(p => !p.data && !p.error);
   const error = parts.find(p => p.error && !p.data)?.error;
@@ -75,10 +78,12 @@ export default function LmsCourse(props: ScreenProps) {
               <h2 className="font-bold mb-2">{s.title}</h2>
               <div className="space-y-1">
                 {s.items.map(i => {
+                  // Labels are text on the course page itself, not something to open.
+                  if (i.module === 'label') return <div key={i.id} className="px-2 py-2"><Blocks blocks={i.blocks ?? []} isDark={isDark} lang={lang} /></div>;
                   const Arrow = action(i.module);
                   const due = i.dates.find(d => /期限|due/i.test(d.label));
                   return (
-                    <button key={i.id} onClick={() => open(i)} title={['resource', 'assign', 'url'].includes(i.module) ? undefined : tx.web}
+                    <button key={i.id} onClick={() => open(i)} title={['resource', 'assign', 'url', 'forum', 'folder', 'page', 'quiz'].includes(i.module) ? undefined : tx.web}
                       className={`w-full text-left flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
                       <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${i.module === 'assign' ? 'bg-brand-yellow text-brand-black' : isDark ? 'bg-gray-700' : 'bg-white'}`}>
                         <ModuleIcon module={i.module} className="w-4 h-4" />

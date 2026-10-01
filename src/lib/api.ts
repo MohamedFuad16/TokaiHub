@@ -191,3 +191,14 @@ export const lmsRemoveDraft = (id: number, name: string) =>
 /** Hands the submission in. Only call after the student confirms. */
 export const lmsSubmit = (id: number, text?: string) =>
   call<TipsEnvelope<unknown>>('/lms/submit', { method: 'POST', body: JSON.stringify({ id, text, confirm: true }), timeoutMs: 120_000 });
+
+/**
+ * An LMS image as an object URL: images in posts and pages need the device token, which an
+ * <img src> cannot send, so the bytes come through the bridge and are shown from memory.
+ */
+export async function lmsImageUrl(lmsUrl: string, signal?: AbortSignal): Promise<string> {
+  const token = IS_LOCAL ? null : getDeviceToken();
+  const res = await fetch(`${BASE}/file${qs({ kind: 'lms', lmsUrl })}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal });
+  if (!res.ok) throw new Error(`image ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}

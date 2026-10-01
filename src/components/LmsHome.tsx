@@ -10,11 +10,11 @@ import { useLmsSubjects, ModuleIcon, slotsLabel, courseTitle, dueText, dueIn } f
 
 const t = {
   en: {
-    title: 'LMS', due: 'Due soon', none: 'Nothing due in the next weeks.', mine: 'This term', other: 'Other courses this term',
+    title: 'LMS', news: 'Announcements', noNews: 'No announcements this term yet.', due: 'Due soon', none: 'Nothing due in the next weeks.', mine: 'This term', other: 'Other courses this term',
     loading: 'Loading from the LMS…', overdue: 'Overdue', todo: 'Not submitted', later: 'Opens later', done: 'Done', showAll: (n: number) => `Show ${n} later deadlines`, noCourses: 'No LMS courses match this term’s TIPS registration yet.',
   },
   jp: {
-    title: 'LMS', due: '締切が近いもの', none: '数週間以内の締切はありません。', mine: '今学期の科目', other: '今学期のその他のコース',
+    title: 'LMS', news: 'お知らせ', noNews: '今学期のお知らせはまだありません。', due: '締切が近いもの', none: '数週間以内の締切はありません。', mine: '今学期の科目', other: '今学期のその他のコース',
     loading: 'LMSから読み込み中…', overdue: '期限切れ', todo: '未提出', later: '受付前', done: '完了', showAll: (n: number) => `その後の締切${n}件を表示`, noCourses: '今学期のTIPS履修科目に一致するLMSコースはまだありません。',
   },
 };
@@ -33,6 +33,11 @@ export default function LmsHome(props: ScreenProps) {
   const muted = isDark ? 'text-gray-400' : 'text-gray-500';
   const due = useTips<{ items: LmsDueItem[] }>('lms-due');
   const { mine, other, courses } = useLmsSubjects();
+  // Announcements from this term's courses (both LMS courses of a two-period class).
+  const termIds = [...mine, ...other].flatMap(s => s.ids).sort((a, b) => a - b).join(',');
+  const news = useTips<{ items: { id: number; subject: string; author: string; lastPost: number | null; created: number | null; courseId: number }[] }>('lms-announcements', { ids: termIds }, { enabled: !!termIds });
+  const titleOf = (courseId: number) => [...mine, ...other].find(s => s.ids.includes(courseId))?.title ?? '';
+  const [moreNews, setMoreNews] = useState(false);
   const all = (due.data?.items ?? []).filter(i => !i.overdue || i.action?.actionable).sort((a, b) => a.due - b.due);
   // The next two weeks and anything open for submission now; the rest behind "Show all".
   const [showAll, setShowAll] = useState(false);
@@ -77,6 +82,26 @@ export default function LmsHome(props: ScreenProps) {
         })}
         {!showAll && all.length > soon.length && (
           <button onClick={() => setShowAll(true)} className={`w-full h-11 rounded-2xl text-sm font-bold ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>{tx.showAll(all.length - soon.length)}</button>
+        )}
+      </div>
+
+      <SectionTitle>{tx.news}</SectionTitle>
+      {!news.data && termIds && (news.error ? <LoadError error={news.error} isDark={isDark} lang={lang} onRetry={news.refresh} /> : <Loading text={tx.loading} isDark={isDark} rows={1} />)}
+      {news.data && news.data.items.length === 0 && <Empty text={tx.noNews} isDark={isDark} />}
+      <div className="space-y-2 mb-8">
+        {(news.data?.items ?? []).slice(0, moreNews ? 30 : 4).map(n => (
+          <button key={n.id} onClick={() => navigate(`/lms/discussion/${n.id}`)}
+            className={`w-full text-left flex items-center gap-3 p-4 rounded-2xl transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
+            <span className={`w-1.5 self-stretch rounded-full shrink-0 ${colorFor(String(n.courseId))}`} />
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold leading-snug line-clamp-2">{n.subject}</span>
+              <span className={`block text-xs font-medium mt-0.5 truncate ${muted}`}>{[titleOf(n.courseId), n.author, n.lastPost ? dueText(n.lastPost, lang) : ''].filter(Boolean).join(' · ')}</span>
+            </span>
+            <ChevronRight className={`w-4 h-4 shrink-0 ${muted}`} />
+          </button>
+        ))}
+        {!moreNews && (news.data?.items.length ?? 0) > 4 && (
+          <button onClick={() => setMoreNews(true)} className={`w-full h-11 rounded-2xl text-sm font-bold ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>{lang === 'en' ? 'Show more' : 'もっと見る'}</button>
         )}
       </div>
 

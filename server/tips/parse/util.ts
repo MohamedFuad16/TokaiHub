@@ -20,10 +20,16 @@ export function bi(s: string): { jp: string; en: string } {
   return { jp: jp ?? '', en: rest.join(' / ') || jp || '' };
 }
 
+/**
+ * Text of an HTML fragment, once. (Selecting 'div' after wrapping also matched divs inside the
+ * fragment and repeated their text: an LMS label with two nested divs came out three times.)
+ */
+const wrapperText = (h: string) => cheerio.load(`<div id="__fragment">${h}</div>`)('#__fragment').text();
+
 /** Text of a cell keeping <br> as newlines. */
 export function lines($: $, el: any): string[] {
   const h = ($(el).html() ?? '').replace(/<br\s*\/?>/gi, '\n');
-  return cheerio.load(`<div>${h}</div>`)('div').text().split('\n').map(clean).filter(Boolean);
+  return wrapperText(h).split('\n').map(clean).filter(Boolean);
 }
 
 /**
@@ -50,7 +56,7 @@ export function cellText($: $, el: any, drop?: string): string {
   if (drop) node.find(drop).remove();
   // Source newlines are layout, not content: TIPS marks real breaks with <br>.
   const h = (node.html() ?? '').replace(/[\r\n]+/g, ' ').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n');
-  return cheerio.load(`<div>${h}</div>`)('div').text().split('\n').map(clean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return wrapperText(h).split('\n').map(clean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export const DAY_JP: Record<string, number> = { 日: 0, 月: 1, 火: 2, 水: 3, 木: 4, 金: 5, 土: 6 };

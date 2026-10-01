@@ -31,6 +31,12 @@ const LmsHome = React.lazy(() => import('./components/LmsHome'));
 const LmsCourses = React.lazy(() => import('./components/LmsCourses'));
 const LmsCourse = React.lazy(() => import('./components/LmsCourse'));
 const LmsAssign = React.lazy(() => import('./components/LmsAssign'));
+const lmsModules = () => import('./components/LmsModules');
+const LmsForum = React.lazy(() => lmsModules().then(m => ({ default: m.LmsForum })));
+const LmsDiscussion = React.lazy(() => lmsModules().then(m => ({ default: m.LmsDiscussion })));
+const LmsFolder = React.lazy(() => lmsModules().then(m => ({ default: m.LmsFolder })));
+const LmsPage = React.lazy(() => lmsModules().then(m => ({ default: m.LmsPage })));
+const LmsQuiz = React.lazy(() => lmsModules().then(m => ({ default: m.LmsQuiz })));
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
@@ -340,6 +346,11 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: Mai
                 <Route path="/lms/courses" element={<LmsCourses {...screenProps} />} />
                 <Route path="/lms/course/:id" element={<LmsCourse {...screenProps} />} />
                 <Route path="/lms/assign/:id" element={<LmsAssign {...screenProps} />} />
+                <Route path="/lms/forum/:id" element={<LmsForum {...screenProps} />} />
+                <Route path="/lms/discussion/:id" element={<LmsDiscussion {...screenProps} />} />
+                <Route path="/lms/folder/:id" element={<LmsFolder {...screenProps} />} />
+                <Route path="/lms/page/:id" element={<LmsPage {...screenProps} />} />
+                <Route path="/lms/quiz/:id" element={<LmsQuiz {...screenProps} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

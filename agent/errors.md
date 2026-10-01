@@ -117,3 +117,11 @@
   absent elements return at once. Verified live: email, password, number 58 approved, "stay
   signed in", signed in within 25 s. The driver logs each screen heading; a screenshot is kept
   only of a screen it gives up on. The trigger that day was my own dev read of portal.do.
+- **Rich text repeated when it contained nested divs** (2026-10-01). util `cellText()` and
+  `lines()` wrapped a fragment in `<div>` and took `$('div').text()`, which matches every div
+  inside the fragment too, so their text repeated (an LMS label with two nested divs came out
+  three times). TIPS content rarely has divs, which is why it went unseen. Now the wrapper has an
+  id and only it is read. Regression test in parse/util.test.ts fails without the fix.
+- **LMS data cached once per app language** (2026-10-01). Features were keyed `…@locale`, so the
+  LMS (same content in either language) was read and cached twice. LMS features are keyed
+  without the locale.
