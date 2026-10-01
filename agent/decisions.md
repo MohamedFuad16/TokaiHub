@@ -255,3 +255,23 @@ successful read only records what exists. Preferences are per device and stored 
 **Consequences:** Needs the app installed to the Home Screen on iPhone (iOS 16.4+) and a tap to
 allow. Notification text passes through Apple's or Google's push service encrypted end to end.
 If the Mac is off or signed out, no reminders are sent.
+
+## ADR-0014 · 2026-10-01 · The LMS through the bridge, inside the same app
+**Context:** The owner wants the university LMS (Open LMS, a Moodle site at tlms.tsc.u-tokai.ac.jp,
+signed in through the same Microsoft account) in TokaiHub, showing only this term's courses,
+with downloads and assignment submission.
+**Decision:** The bridge opens the LMS in the same headless browser context as TIPS, so the
+Microsoft SAML session carries over; when Microsoft asks for the password, the same unattended
+sign-in runs (Keychain, number relayed to the app). The site's Moodle mobile web service is off
+(tool_mobile_get_public_config: enablemobilewebservice 0), so there is no wstoken; the bridge
+calls Moodle's AJAX endpoint (/lib/ajax/service.php with the page's sesskey) from a page parked
+on the LMS origin, and reads HTML only where no AJAX function exists (assignment pages; URL
+items). Features: lms-courses, lms-course, lms-due, lms-assign, lms-link, plus LMS files through
+the existing one-minute file tickets. LMS features skip the TIPS queue. "This term" is decided
+by matching the TIPS code in each LMS course name (17TTX00500 → TTX005) against the current TIPS
+registration, not by LMS dates; two-period classes (…00, …01) merge into one subject. One app,
+one device token: a TIPS | LMS switch, LMS screens under /lms.
+**Consequences:** A second site depends on the Microsoft session; when Microsoft's sign-in
+period ends, LMS reads trigger the number prompt like TIPS does. No LMS keep-alive yet: the
+Moodle session is re-entered through SAML when it lapses. Submission is a separate step and is
+not tested against a real assignment except by the owner.

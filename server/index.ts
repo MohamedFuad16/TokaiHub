@@ -252,6 +252,12 @@ app.post('/tips-api/file-ticket', (req, res) => {
     if (!/^\d{4}$/.test(str('year')) || !/^[A-Za-z0-9]{3,12}$/.test(str('code')) || !/^\d{1,4}$/.test(str('column')) || !/^\d{1,3}$/.test(str('renban'))) return res.status(400).json({ error: 'bad file id' });
     return res.json({ ticket: auth.fileTicket({ kind: 'syllabus', year: str('year'), code: str('code'), column: str('column'), renban: str('renban'), locale: str('locale') === 'en_US' ? 'en_US' : 'ja_JP' }) });
   }
+  if (b.kind === 'lms') {
+    let ok = false;
+    try { ok = new URL(str('lmsUrl')).origin === 'https://tlms.tsc.u-tokai.ac.jp'; } catch { /* not a URL */ }
+    if (!ok) return res.status(400).json({ error: 'bad file id' });
+    return res.json({ ticket: auth.fileTicket({ kind: 'lms', lmsUrl: str('lmsUrl') }) });
+  }
   if (b.kind === 'bulletin') {
     if (!/^\d+-\w+-\d+$/.test(str('id')) || !/^\d{1,3}$/.test(str('index'))) return res.status(400).json({ error: 'bad file id' });
     return res.json({ ticket: auth.fileTicket({ kind: 'bulletin', id: str('id'), index: str('index') }) });

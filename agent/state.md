@@ -14,6 +14,15 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-10-01 — LMS (read-only) in the app; sign-in fix; keyword capture; Back fix** (by: Claude).
+  ADR-0014. Bridge: server/tips/lms.ts, parse/lms.ts, features lms-courses/lms-course/lms-due/
+  lms-assign/lms-link, LMS file tickets. App: TIPS | LMS switch (ModeSwitch) in drawer and
+  sidebar, screens LmsHome (/lms), LmsCourses, LmsCourse (merged two-period subjects), LmsAssign.
+  Verified in the browser pane at 375 px against live LMS data: 6 subjects matched to TIPS
+  registration, deadlines with three states, course weeks, assignment status, a .docx download.
+  Also: unattended Microsoft sign-in fixed (errors.md), Back goes Home from notification-opened
+  screens, push sends logged, keyword attendance page captured during class (AAW6901000) for
+  the next step. Not done: in-app submission, keyword entry screen, LMS keep-alive.
 - **2026-09-27 — Mac build now matches Vercel** (by: Claude). The Mac's build differed only in
   CSS: Tailwind scans every non-ignored file, and picked up class names from a leftover agent
   worktree (.claude/worktrees/agent-aa006f49, removed at the owner's request with its branch

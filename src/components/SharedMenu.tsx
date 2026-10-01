@@ -4,7 +4,8 @@ import { Language, AppSettings } from '../App';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import mascotLogo from '../assets/mascots/mascot_1_1.webp';
-import { NAV_ITEMS } from '../lib/nav';
+import { navFor, navActive } from '../lib/nav';
+import ModeSwitch from './ModeSwitch';
 
 interface SharedMenuProps {
   isOpen: boolean;
@@ -14,17 +15,13 @@ interface SharedMenuProps {
   settings: AppSettings;
 }
 
-const navItems = NAV_ITEMS;
-
 export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }: SharedMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isDark = settings.isDarkMode;
 
-  const isActive = useCallback((path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  }, [location.pathname]);
+  const isActive = useCallback((path: string) => navActive(path, location.pathname), [location.pathname]);
+  const navItems = navFor(location.pathname);
 
   return (
     <AnimatePresence>
@@ -79,6 +76,8 @@ export default function SharedMenu({ isOpen, onClose, lang, setLang, settings }:
                 </button>
               </div>
             </div>
+
+            <div className="px-4 pt-4 shrink-0"><ModeSwitch isDark={isDark} id="drawer" /></div>
 
             {/* Nav items */}
             <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-2 space-y-1">

@@ -159,7 +159,9 @@ export const runAction = <T>(action: 'register' | 'drop', body: Record<string, s
 export type TipsFileRef =
   | { url?: string; fileId?: string; folderId?: string }
   | { kind: 'syllabus'; year: string; code: string; column: string; renban: string; locale: 'ja_JP' | 'en_US' }
-  | { kind: 'bulletin'; id: string; index: string };
+  | { kind: 'bulletin'; id: string; index: string }
+  // LMS files go through the bridge too; `lmsUrl`, not `url`, which marks an outside link.
+  | { kind: 'lms'; lmsUrl: string };
 
 /** URL that downloads a TIPS file through the bridge (external files keep their own URL). */
 export const tipsFileUrl = (f: TipsFileRef) =>

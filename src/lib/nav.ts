@@ -1,4 +1,4 @@
-import { Home, Calendar, ClipboardList, GraduationCap, UserCheck, Megaphone, FileText, Settings, BookOpenText, ListPlus, FolderOpen } from 'lucide-react';
+import { Home, Calendar, ClipboardList, GraduationCap, UserCheck, Megaphone, FileText, Settings, BookOpenText, ListPlus, FolderOpen, LayoutDashboard, Library } from 'lucide-react';
 
 /** One navigation list for the desktop sidebar and the mobile drawer. */
 export const NAV_ITEMS = [
@@ -14,3 +14,16 @@ export const NAV_ITEMS = [
   { path: '/tasks', icon: FileText, labelEn: 'Reports & Exams', labelJp: 'レポート・試験', descEn: 'Deadlines and exam times', descJp: '提出期限・試験日程' },
   { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定', descEn: 'Preferences & session', descJp: '設定・セッション' },
 ];
+
+/** The LMS side of the app (Open LMS): its own short menu. */
+export const LMS_NAV_ITEMS = [
+  { path: '/lms', icon: LayoutDashboard, labelEn: 'LMS Home', labelJp: 'LMSホーム', descEn: 'Due soon & this term', descJp: '締切・今学期の科目' },
+  { path: '/lms/courses', icon: Library, labelEn: 'Courses', labelJp: 'コース', descEn: 'This term and past', descJp: '今学期・過去のコース' },
+  { path: '/settings', icon: Settings, labelEn: 'Settings', labelJp: '設定', descEn: 'Preferences & session', descJp: '設定・セッション' },
+];
+
+/** The app is in LMS mode on any /lms screen; the menu follows the screen. */
+export const isLmsPath = (p: string) => p === '/lms' || p.startsWith('/lms/');
+export const navFor = (p: string) => (isLmsPath(p) ? LMS_NAV_ITEMS : NAV_ITEMS);
+/** Home-like roots match only themselves; other items also match their sub-screens. */
+export const navActive = (item: string, p: string) => (item === '/' || item === '/lms' ? p === item : p === item || p.startsWith(`${item}/`));

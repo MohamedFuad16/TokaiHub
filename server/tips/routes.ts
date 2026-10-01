@@ -144,6 +144,18 @@ const FEATURES: Record<string, Feature> = {
       };
     },
   },
+  // A "URL" item's real address (the LMS redirects there only for a signed-in visitor).
+  'lms-link': {
+    ttl: 7 * 24 * 60 * MIN, direct: true,
+    key: q => `lms-link:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('item id');
+      const page = await (await lms()).lmsGet(`/mod/url/view.php?id=${q.id}&redirect=0`);
+      const href = /class="urlworkaround"[^]*?href="([^"]+)"/.exec(page.html)?.[1]?.replace(/&amp;/g, '&');
+      if (!href) throw notFound('no link on that item');
+      return { url: href };
+    },
+  },
   'lms-assign': {
     ttl: 5 * MIN, direct: true,
     key: q => `lms-assign:${q.id}`,
@@ -564,7 +576,7 @@ function viewable(f: { type: string; disposition: string; bytes: Buffer }) {
 export async function file(q: Q) {
   const { runFeature } = await import('./session');
   if (q.kind === 'lms') {
-    const f = await (await lms()).lmsBinary(q.url ?? '');
+    const f = await (await lms()).lmsBinary(q.lmsUrl ?? '');
     const name = f.name ?? 'file';
     return viewable({ bytes: f.bytes, type: f.type, disposition: `attachment; filename*=UTF-8''${encodeURIComponent(name)}` });
   }

@@ -8,7 +8,8 @@ import { getStatus, signOut as bridgeSignOut, extendSession, needsUnlock, IS_LOC
 import SignInPrompt from './components/SignInPrompt';
 import { useTips, clearTipsStore, setTipsLang, SIGNED_OUT_EVENT, UPDATED_EVENT, REFETCH_EVENT } from './lib/useTips';
 import { displayName, tidy } from './lib/tipsAdapters';
-import { NAV_ITEMS } from './lib/nav';
+import { navFor, navActive } from './lib/nav';
+import ModeSwitch from './components/ModeSwitch';
 import { syncPushLanguage } from './lib/push';
 import type { TipsGrades, TipsProfile, TipsStatus } from './lib/types';
 import mascotLogo from './assets/mascots/mascot_1_1.webp';
@@ -26,6 +27,10 @@ const lazyTasks = () => import('./components/TokaiTasks');
 const lazySyllabus = () => import('./components/TokaiSyllabus');
 const lazyRegistration = () => import('./components/TokaiRegistration');
 const lazyCabinet = () => import('./components/TokaiCabinet');
+const LmsHome = React.lazy(() => import('./components/LmsHome'));
+const LmsCourses = React.lazy(() => import('./components/LmsCourses'));
+const LmsCourse = React.lazy(() => import('./components/LmsCourse'));
+const LmsAssign = React.lazy(() => import('./components/LmsAssign'));
 
 const TokaiHome = React.lazy(lazyHome);
 const TokaiCourse = React.lazy(lazyCourse);
@@ -233,11 +238,12 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: Mai
           {!collapsed && <SessionPill session={screenProps.session ?? null} lang={lang} isDark={isDark} onExtend={screenProps.onExtendSession!} />}
         </div>
 
+        <div className={`pt-4 ${collapsed ? 'px-3' : 'px-4'}`}><ModeSwitch isDark={isDark} id="sidebar" compact={collapsed} /></div>
         <nav className={`flex-1 py-4 space-y-1 overflow-y-auto overflow-x-hidden no-scrollbar ${collapsed ? 'px-3' : 'px-4'}`}>
-          {NAV_ITEMS.map(item => {
+          {navFor(location.pathname).map(item => {
             const Icon = item.icon;
             const label = lang === 'en' ? item.labelEn : item.labelJp;
-            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            const isActive = navActive(item.path, location.pathname);
             return (
               <motion.button
                 key={item.path}
@@ -330,6 +336,10 @@ function MainAppContent({ screenProps, lang, userProfile, isDark, setLang }: Mai
                 <Route path="/syllabus" element={<TokaiSyllabus {...screenProps} />} />
                 <Route path="/registration" element={<TokaiRegistration {...screenProps} />} />
                 <Route path="/cabinet" element={<TokaiCabinet {...screenProps} />} />
+                <Route path="/lms" element={<LmsHome {...screenProps} />} />
+                <Route path="/lms/courses" element={<LmsCourses {...screenProps} />} />
+                <Route path="/lms/course/:id" element={<LmsCourse {...screenProps} />} />
+                <Route path="/lms/assign/:id" element={<LmsAssign {...screenProps} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
