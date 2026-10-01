@@ -19,6 +19,7 @@ import * as cache from './tips/cache';
 import * as auth from './auth';
 import { autoLoginConfigured } from './tips/keychain';
 import * as push from './tips/push';
+import { PERIOD_TIMES } from '../src/config/periods';
 
 // Every log line starts with the local time, so slow or failed reads can be placed in the day.
 for (const level of ['log', 'warn', 'error'] as const) {
@@ -290,6 +291,13 @@ app.get('/tips-api/dev/browse', async (req, res) => {
   } catch (e) { res.status(502).json({ error: (e as Error).message.split('\n')[0] }); }
 });
 
+app.get('/tips-api/dev/capture-keyword', async (_req, res) => {
+  try {
+    const { captureKeywordPages } = await loadRoutes();
+    res.json({ result: await session.runFeature('ja_JP', captureKeywordPages, 5) });
+  } catch (e) { res.status(502).json({ error: (e as Error).message.split('\n')[0] }); }
+});
+
 app.get('/tips-api/dev/dump', async (req, res) => {
   try {
     const { dump } = await loadRoutes();
@@ -347,6 +355,22 @@ async function main() {
       await push.tick((f, q) => handle(f, q) as Promise<{ data: any }>, ownerSignedIn());
     } catch (e) { console.error('[push] tick:', (e as Error).message.split('\n')[0]); }
   }, 60_000).unref();
+  // Keyword-page capture (see captureKeywordPages): every 5 minutes while a period runs, Mon to Sat.
+  setInterval(async () => {
+    if (!ownerSignedIn()) return;
+    const now = new Date(Date.now() + 9 * 3_600_000); // JST clock
+    const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const inPeriod = now.getUTCDay() >= 1 && now.getUTCDay() <= 6 && Object.values(PERIOD_TIMES).some(([a, b]) => {
+      const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+      return minutes >= m(a) + 5 && minutes <= m(b);
+    });
+    if (!inPeriod) return;
+    try {
+      const { captureKeywordPages } = await loadRoutes();
+      const result = await session.runFeature('ja_JP', captureKeywordPages, -1);
+      if (result !== 'no class open' && result !== 'already captured') console.log(`[capture] keyword page: ${result}`);
+    } catch (e) { console.error('[capture] keyword page:', (e as Error).message.split('\n')[0]); }
+  }, 5 * 60_000).unref();
   const servers = [app.listen(PORT, '127.0.0.1', () => console.log(`[tips] bridge on http://127.0.0.1:${PORT}`))];
   if (auth.configured()) {
     servers.push(app.listen(PUBLIC_PORT, '127.0.0.1', () => console.log(`[tips] public listener on 127.0.0.1:${PUBLIC_PORT} for ${auth.APP_ORIGIN}, owner ${auth.OWNER_ID}`)));

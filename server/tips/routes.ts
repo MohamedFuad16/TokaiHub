@@ -19,6 +19,32 @@ async function parser(name: string) {
 }
 
 /** Dev only: saves raw HTML of a flow step to ~/.tokaihub/fixtures and summarizes its forms. */
+/**
+ * One-off capture (2026-10): 出席キーワード登録 (AAW6901000) lists classes only while they run, so its
+ * populated list and the entry screen behind it cannot be read on demand. During class periods
+ * this saves both under ~/.tokaihub/fixtures once, to build the in-app screen from. Opening the
+ * entry screen (_eventId=select) is navigation; nothing here presses 更新 or submits a keyword.
+ */
+export async function captureKeywordPages(): Promise<string> {
+  const dir = path.join(os.homedir(), '.tokaihub', 'fixtures');
+  if (fs.existsSync(path.join(dir, 'keyword-entry.html'))) return 'already captured';
+  const c = await getClient();
+  const list = await c.startFlow('AAW6901000-flow');
+  if (/該当するデータはありません|No data/.test(list.html)) return 'no class open';
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(path.join(dir, 'keyword-list.html'), list.html, { mode: 0o600 });
+  // The row's handler fills the form's hidden fields (nendo, shozoku, code, date, period).
+  const handler = list.$('[onclick]').map((_, e) => list.$(e).attr('onclick') ?? '').get()
+    .find(h => /jikanwari|jugyo|select/i.test(h) && /'[^']*'\s*,\s*'/.test(h)) ?? '';
+  const args = [...handler.matchAll(/'([^']*)'/g)].map(m => m[1]);
+  fs.writeFileSync(path.join(dir, 'keyword-handler.txt'), handler, { mode: 0o600 });
+  if (args.length < 5) return `list saved; row handler not understood (${args.length} args)`;
+  const keys = ['nendo', 'jikanwariShozokuCd', 'jikanwariCd', 'jugyoYmd', 'jigen'];
+  const entry = await c.submitForm(list, 'form[name=jugyoListForm]', { _eventId: 'select', ...Object.fromEntries(keys.map((k, i) => [k, args[i]])) });
+  fs.writeFileSync(path.join(dir, 'keyword-entry.html'), entry.html, { mode: 0o600 });
+  return 'list and entry screen saved';
+}
+
 export async function dump(flow: string, q: Record<string, string>) {
   const client = await getClient();
   let page = flow.startsWith('/') ? await client.get(flow) : await client.startFlow(flow);
