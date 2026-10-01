@@ -32,6 +32,17 @@ interface PageShellProps {
   children: React.ReactNode;
 }
 
+/**
+ * Back to the previous screen, or Home when there is none: a screen opened from a notification
+ * starts a fresh history, and navigate(-1) would do nothing. react-router keeps the position in
+ * history.state.idx.
+ */
+export function goBack(navigate: ReturnType<typeof useNavigate>) {
+  const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+  if (idx > 0) navigate(-1);
+  else navigate('/', { replace: true });
+}
+
 /** Page frame: title row (menu on mobile, optional back/refresh), scrolling body, drawer. */
 export default function PageShell({ title, subtitle, lang, setLang, settings, onRefresh, refreshing, back, right, children }: PageShellProps) {
   const navigate = useNavigate();
@@ -44,7 +55,7 @@ export default function PageShell({ title, subtitle, lang, setLang, settings, on
       <header style={{ paddingTop: 'calc(1.75rem + env(safe-area-inset-top, 0px))' }} className="shrink-0 pb-4">
         <div className={`${CONTAINER} flex items-center gap-3`}>
           {back ? (
-            <motion.button whileTap={TAP} onClick={() => navigate(-1)} aria-label={lang === 'en' ? 'Back' : '戻る'} className={btn}><ChevronLeft className="w-5 h-5" /></motion.button>
+            <motion.button whileTap={TAP} onClick={() => goBack(navigate)} aria-label={lang === 'en' ? 'Back' : '戻る'} className={btn}><ChevronLeft className="w-5 h-5" /></motion.button>
           ) : (
             <motion.button whileTap={TAP} onClick={() => setMenuOpen(true)} aria-label={lang === 'en' ? 'Open menu' : 'メニューを開く'} className={`${btn} lg:hidden`}><Menu className="w-5 h-5" /></motion.button>
           )}

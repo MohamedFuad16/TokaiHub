@@ -81,6 +81,8 @@ async function deliver(s: Sub, n: Note, urgency: 'high' | 'normal', ttl: number)
     await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), {
       TTL: ttl, urgency, vapidDetails: { subject: APP_ORIGIN, publicKey: k.publicKey, privateKey: k.privateKey },
     });
+    // One line per delivery, so "did that notification go out?" has an answer in the log.
+    console.log(`[push] sent ${n.tag} to ${s.label}`);
     return true;
   } catch (e) {
     const code = (e as { statusCode?: number }).statusCode;
