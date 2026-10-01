@@ -242,6 +242,55 @@ app.post('/tips-api/action/:action', async (req, res) => {
   }
 });
 
+// ── LMS assignment submission ──────────────────────────────────────────────────────────────
+const lmsError = (res: Response, e: unknown) => {
+  const status = (e as any).status ?? ((e as Error).name === 'SessionExpiredError' ? 401 : 502);
+  res.status(status).json({ error: (e as Error).message.split('\n')[0] });
+};
+const cmidOf = (v: unknown) => (/^\d{1,9}$/.test(String(v)) ? Number(v) : null);
+
+/** The submission form's limits and the files currently in its draft area. Read-only. */
+app.get('/tips-api/lms/submission', async (req, res) => {
+  if (!ownerGuard(req, res)) return;
+  const id = cmidOf(req.query.id);
+  if (!id) return res.status(400).json({ error: 'bad assignment id' });
+  try {
+    const lms = await import('./tips/lms');
+    const f = await lms.openSubmission(id);
+    res.json({ maxFiles: f.maxFiles, maxBytes: f.maxBytes, accepted: f.accepted, hasText: !!f.textField, text: f.text, takesFiles: !!f.draftItemId, files: await lms.draftFiles(id) });
+  } catch (e) { lmsError(res, e); }
+});
+
+/** Adds a file to the draft area (not handed in yet). Body: the file's bytes. */
+app.post('/tips-api/lms/upload', express.raw({ type: 'application/octet-stream', limit: '30mb' }), async (req, res) => {
+  if (!ownerGuard(req, res)) return;
+  const id = cmidOf(req.query.id);
+  const name = String(req.query.name ?? '').replace(/[\\/]/g, '_').slice(0, 200);
+  if (!id || !name || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'bad upload' });
+  try { res.json({ files: await (await import('./tips/lms')).uploadDraft(id, name, req.body) }); } catch (e) { lmsError(res, e); }
+});
+
+app.post('/tips-api/lms/remove', async (req, res) => {
+  if (!ownerGuard(req, res)) return;
+  const id = cmidOf(req.body?.id);
+  if (!id || typeof req.body?.name !== 'string') return res.status(400).json({ error: 'bad request' });
+  try { res.json({ files: await (await import('./tips/lms')).removeDraft(id, req.body.name) }); } catch (e) { lmsError(res, e); }
+});
+
+/** Hands the submission in. The app sends confirm: true only from its confirmation step. */
+app.post('/tips-api/lms/submit', async (req, res) => {
+  if (!ownerGuard(req, res)) return;
+  const id = cmidOf(req.body?.id);
+  if (!id || req.body?.confirm !== true) return res.status(400).json({ error: 'confirm the submission first' });
+  try {
+    const lms = await import('./tips/lms');
+    await lms.submit(id, typeof req.body.text === 'string' ? req.body.text : undefined);
+    console.log(`[lms] submitted assignment ${id}`);
+    const { handle } = await loadRoutes();
+    res.json(await handle('lms-assign', { id: String(id), refresh: '1' }));
+  } catch (e) { lmsError(res, e); }
+});
+
 /** A one-minute, single-use link for a cabinet file, so the phone can open it in a new tab. */
 app.post('/tips-api/file-ticket', (req, res) => {
   const b = req.body ?? {};

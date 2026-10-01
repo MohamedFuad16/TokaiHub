@@ -14,6 +14,14 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-10-01 — LMS assignment submission in the app** (by: Claude). Bridge: lms.ts
+  openSubmission/draftFiles/uploadDraft/removeDraft/submit; routes /tips-api/lms/submission,
+  /upload (raw, 30 MB), /remove, /submit (requires confirm: true). App: LmsAssign SubmitPanel
+  (file into the LMS draft area, then a separate confirmation naming file and assignment).
+  Verified against 課題１ (GBE): form read (1 .docx, 100 MB), wrong type refused, draft upload
+  and removal through the API and through the UI, confirmation shown and cancelled, submit
+  without confirm refused, status still "not submitted". NOT verified: the final hand-in POST
+  (left to the owner's first real submission).
 - **2026-10-01 — LMS (read-only) in the app; sign-in fix; keyword capture; Back fix** (by: Claude).
   ADR-0014. Bridge: server/tips/lms.ts, parse/lms.ts, features lms-courses/lms-course/lms-due/
   lms-assign/lms-link, LMS file tickets. App: TIPS | LMS switch (ModeSwitch) in drawer and

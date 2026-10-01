@@ -112,3 +112,124 @@ export async function lmsBinary(url: string): Promise<{ bytes: Buffer; type: str
   if (!name && fromHeader) name = Buffer.from(fromHeader, 'latin1').toString('utf8');
   return { bytes: Buffer.from(r.b64, 'base64'), type: r.type || 'application/octet-stream', name: name || null };
 }
+
+// ── Assignment submission ───────────────────────────────────────────────────────────────────
+// The submission form (view.php?action=editsubmission) keeps files in a per-form draft area;
+// uploading there changes nothing the teacher sees. Only posting the form (submit()) hands it in.
+
+interface SubmissionForm {
+  cmid: number; action: string; fields: Record<string, string>; submitName: string; submitValue: string;
+  draftItemId: string | null; ctxId: string; clientId: string; author: string; repoId: string;
+  maxFiles: number; maxBytes: number; accepted: string[]; textField: string | null; text: string; at: number;
+}
+const forms = new Map<number, SubmissionForm>();
+
+const unescapeJson = (s: string) => { try { return JSON.parse(`"${s}"`) as string; } catch { return s; } };
+
+/** Opens the submission form and remembers what posting it needs (30 minutes). */
+export async function openSubmission(cmid: number): Promise<SubmissionForm> {
+  const { html, url } = await lmsGet(`/mod/assign/view.php?id=${cmid}&action=editsubmission`);
+  const form = /<form[^>]*class="mform"[^>]*>([\s\S]*?)<\/form>/.exec(html);
+  if (!form) throw Object.assign(new Error('this assignment is not open for submission'), { status: 409 });
+  const action = /<form[^>]*action="([^"]+)"[^>]*class="mform"/.exec(html)?.[1] ?? '/mod/assign/view.php';
+  const fields: Record<string, string> = {};
+  for (const m of form[1].matchAll(/<input([^>]*)type="hidden"([^>]*)>/g)) {
+    const attrs = m[1] + m[2];
+    const name = /name="([^"]+)"/.exec(attrs)?.[1];
+    if (name) fields[name] = (/value="([^"]*)"/.exec(attrs)?.[1] ?? '').replace(/&amp;/g, '&');
+  }
+  const submit = /<input[^>]*type="submit"[^>]*name="submitbutton"[^>]*value="([^"]*)"/.exec(form[1]) ?? /<input[^>]*name="submitbutton"[^>]*value="([^"]*)"/.exec(form[1]);
+  const opt = (k: string) => new RegExp(`"${k}":"?([^",}]*)"?`).exec(html)?.[1] ?? '';
+  const textarea = /<textarea[^>]*name="(onlinetext_editor\[text\])"[^>]*>([\s\S]*?)<\/textarea>/.exec(form[1]);
+  const f: SubmissionForm = {
+    cmid, action: new URL(action.replace(/&amp;/g, '&'), url).pathname, fields,
+    submitName: 'submitbutton', submitValue: submit?.[1] ?? '',
+    draftItemId: fields.files_filemanager ?? null,
+    ctxId: /"context":\{"id":(\d+)/.exec(html)?.[1] ?? '', clientId: opt('client_id'), author: unescapeJson(opt('author')),
+    repoId: /"(\d+)":\{"id":"\d+","name":"[^"]*","type":"upload"/.exec(html)?.[1] ?? '',
+    maxFiles: Number(opt('maxfiles')) || 1, maxBytes: Number(opt('maxbytes')) || 0,
+    accepted: [...(/"accepted_types":\[([^\]]*)\]/.exec(html)?.[1] ?? '').matchAll(/"([^"]+)"/g)].map(m => m[1]).filter(t => t !== '*'),
+    textField: textarea?.[1] ?? null, text: textarea ? textarea[2].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&') : '',
+    at: Date.now(),
+  };
+  // The text box's draft area and format ride along as hidden fields already.
+  forms.set(cmid, f);
+  return f;
+}
+
+async function form(cmid: number) {
+  const f = forms.get(cmid);
+  return f && Date.now() - f.at < 30 * 60_000 ? f : openSubmission(cmid);
+}
+
+/** POSTs a form body inside the LMS page (urlencoded or multipart from base64 parts). */
+async function post(path: string, body: { fields: Record<string, string>; file?: { name: string; b64: string; field: string } }) {
+  const page = await lmsPage();
+  return page.evaluate(async ({ path, body }) => {
+    let payload: BodyInit;
+    if (body.file) {
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(body.fields)) fd.append(k, v);
+      const bin = atob(body.file.b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      fd.append(body.file.field, new Blob([bytes]), body.file.name);
+      payload = fd;
+    } else payload = new URLSearchParams(body.fields);
+    const res = await fetch(path, { method: 'POST', credentials: 'include', body: payload });
+    return { status: res.status, url: res.url, text: await res.text() };
+  }, { path, body });
+}
+
+/** Files in the form's draft area (what will be handed in). */
+export async function draftFiles(cmid: number) {
+  const f = await form(cmid);
+  if (!f.draftItemId) return [];
+  const r = await post('/repository/draftfiles_ajax.php?action=list', { fields: { sesskey, client_id: f.clientId, filepath: '/', itemid: f.draftItemId } });
+  const list = (JSON.parse(r.text).list ?? []) as { filename: string; size?: number; filesize?: string }[];
+  return list.map(x => ({ name: x.filename, size: x.size ?? null }));
+}
+
+/** Adds a file to the draft area. Nothing is submitted. */
+export async function uploadDraft(cmid: number, name: string, bytes: Buffer) {
+  const f = await form(cmid);
+  if (!f.draftItemId || !f.repoId) throw Object.assign(new Error('this assignment takes no files'), { status: 409 });
+  const ext = name.includes('.') ? `.${name.split('.').pop()!.toLowerCase()}` : '';
+  if (f.accepted.length && !f.accepted.includes(ext)) throw Object.assign(new Error(`this assignment accepts ${f.accepted.join(', ')}`), { status: 400 });
+  if (f.maxBytes && bytes.length > f.maxBytes) throw Object.assign(new Error('the file is larger than the assignment allows'), { status: 400 });
+  const r = await post('/repository/repository_ajax.php?action=upload', {
+    fields: {
+      sesskey, repo_id: f.repoId, itemid: f.draftItemId, author: f.author, savepath: '/', title: name,
+      ctx_id: f.ctxId, client_id: f.clientId, env: 'filemanager', license: 'unknown', overwrite: '1',
+      maxbytes: String(f.maxBytes || -1), areamaxbytes: '-1',
+    },
+    file: { name, b64: bytes.toString('base64'), field: 'repo_upload_file' },
+  });
+  const out = JSON.parse(r.text);
+  if (out.error) throw Object.assign(new Error(`LMS: ${out.error}`), { status: 400 });
+  return draftFiles(cmid);
+}
+
+/** Removes a file from the draft area. */
+export async function removeDraft(cmid: number, name: string) {
+  const f = await form(cmid);
+  if (!f.draftItemId) return [];
+  await post('/repository/draftfiles_ajax.php?action=delete', { fields: { sesskey, client_id: f.clientId, filepath: '/', itemid: f.draftItemId, filename: name } });
+  return draftFiles(cmid);
+}
+
+/**
+ * Hands the submission in: posts the form with the draft files (and text, if the assignment has a
+ * text box). Called only after the student confirms in the app.
+ */
+export async function submit(cmid: number, text?: string) {
+  const f = await form(cmid);
+  const fields = { ...f.fields, [f.submitName]: f.submitValue };
+  if (f.textField && typeof text === 'string') fields[f.textField] = text;
+  const r = await post(f.action, { fields });
+  forms.delete(cmid);
+  if (r.status >= 400) throw new Error(`LMS ${r.status} when submitting`);
+  // A form shown again means Moodle refused it; say why if it says.
+  const error = /class="(?:error|alert alert-danger)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span)>/.exec(r.text)?.[1]?.replace(/<[^>]+>/g, '').trim();
+  if (/action=editsubmission|name="_qf__mod_assign_submission_form"/.test(r.text) && error) throw Object.assign(new Error(error), { status: 400 });
+}

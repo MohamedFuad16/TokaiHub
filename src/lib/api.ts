@@ -178,3 +178,16 @@ export function openTipsFile(f: TipsFileRef) {
     .then(({ ticket }) => { if (tab) tab.location.href = `${BASE}/file?ticket=${encodeURIComponent(ticket)}`; })
     .catch(() => tab?.close());
 }
+
+// ── LMS assignment submission ──────────────────────────────────────────────────────────────
+export interface LmsSubmissionForm { maxFiles: number; maxBytes: number; accepted: string[]; hasText: boolean; text: string; takesFiles: boolean; files: { name: string; size: number | null }[] }
+/** Opens the assignment's submission form on the LMS (read-only) and lists its draft files. */
+export const lmsSubmission = (id: number) => call<LmsSubmissionForm>(`/lms/submission?id=${id}`, { timeoutMs: 60_000 });
+/** Puts a file in the submission's draft area. Nothing is handed in until lmsSubmit. */
+export const lmsUpload = (id: number, file: File) =>
+  call<{ files: LmsSubmissionForm['files'] }>(`/lms/upload?id=${id}&name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream' }, timeoutMs: 180_000 });
+export const lmsRemoveDraft = (id: number, name: string) =>
+  call<{ files: LmsSubmissionForm['files'] }>('/lms/remove', { method: 'POST', body: JSON.stringify({ id, name }), timeoutMs: 60_000 });
+/** Hands the submission in. Only call after the student confirms. */
+export const lmsSubmit = (id: number, text?: string) =>
+  call<TipsEnvelope<unknown>>('/lms/submit', { method: 'POST', body: JSON.stringify({ id, text, confirm: true }), timeoutMs: 120_000 });
