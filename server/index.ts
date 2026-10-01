@@ -11,6 +11,7 @@
  */
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import * as session from './tips/session';
 import { SessionExpiredError } from './tips/session';
@@ -276,8 +277,20 @@ app.get('/tips-api/file', async (req, res) => {
   }
 });
 
+// Local listener only (LOCAL_ONLY): saves the page under ~/.tokaihub/fixtures for reading.
+app.get('/tips-api/dev/browse', async (req, res) => {
+  try {
+    const { browse } = await import('./tips/session');
+    const r = await browse(String(req.query.url ?? ''), { click: req.query.click ? String(req.query.click) : undefined, wait: req.query.wait ? String(req.query.wait) : undefined });
+    const dir = path.join(os.homedir(), '.tokaihub', 'fixtures');
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const name = `${String(req.query.name ?? 'browse').replace(/\W+/g, '_')}.html`;
+    fs.writeFileSync(path.join(dir, name), r.html, { mode: 0o600 });
+    res.json({ url: r.url, title: r.title, saved: name, bytes: r.html.length, text: r.text });
+  } catch (e) { res.status(502).json({ error: (e as Error).message.split('\n')[0] }); }
+});
+
 app.get('/tips-api/dev/dump', async (req, res) => {
-  if (!DEV) return res.status(404).end();
   try {
     const { dump } = await loadRoutes();
     res.json(await dump(String(req.query.flow ?? ''), req.query as Record<string, string>));

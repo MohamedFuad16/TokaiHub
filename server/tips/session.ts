@@ -328,6 +328,27 @@ export async function workerPage() {
   return worker;
 }
 
+/**
+ * Developer tool (local listener only): open a URL in the signed-in browser, follow any SSO
+ * redirects, and return the final page. Used to explore TIPS and the LMS before writing parsers.
+ */
+export function browse(url: string, opts: { click?: string; wait?: string } = {}) {
+  return runFeature('ja_JP', async () => {
+    const page = await requireContext().newPage();
+    try {
+      await page.goto(url, { timeout: 45_000, waitUntil: 'domcontentloaded' }).catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+      if (opts.click) {
+        await page.click(opts.click, { timeout: 10_000 }).catch(() => {});
+        await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+      }
+      if (opts.wait) await page.waitForSelector(opts.wait, { timeout: 15_000 }).catch(() => {});
+      const text = await page.evaluate(() => document.body?.innerText ?? '').catch(() => '');
+      return { url: page.url(), title: await page.title(), html: await page.content(), text: text.slice(0, 3000) };
+    } finally { await page.close().catch(() => {}); }
+  }, 5);
+}
+
 export function requireContext(): BrowserContext {
   status();
   if (state !== 'signed_in' || !context) throw new SessionExpiredError('not signed in');

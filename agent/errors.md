@@ -104,3 +104,16 @@
   timeout (not "signed out", so no re-sign-in starts); verified by forcing a 5 ms limit. Log
   lines now carry a timestamp and split TIPS time from queue wait. Cause of the stalls on the
   TIPS side: unknown.
+- **Bridge signed out and could not sign back in by itself** (2026-10-01). Microsoft's
+  organisation policy ("sign in again after a period") expired the Microsoft session; TIPS
+  reads kept working until a portal visit forced a fresh SAML sign-in. The unattended sign-in
+  then failed for two driver bugs: (1) `textOf()` used `innerText()`, which waits Playwright's
+  default 30 s for every absent selector, so each loop pass took about a minute; (2) Microsoft
+  keeps hidden copies of the email and password fields on each other's screens (off screen,
+  aria-hidden or CSS-hidden) that Playwright reports as visible, so the driver typed the email
+  on the password screen and submitted an empty password ("パスワードを入力してください"), then
+  later typed the password on the email screen. Fixed: fields count only when the browser's
+  `checkVisibility()` passes inside the viewport, typing is gated by the screen heading, and
+  absent elements return at once. Verified live: email, password, number 58 approved, "stay
+  signed in", signed in within 25 s. The driver logs each screen heading; a screenshot is kept
+  only of a screen it gives up on. The trigger that day was my own dev read of portal.do.
