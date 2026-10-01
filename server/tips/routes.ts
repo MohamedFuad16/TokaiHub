@@ -18,7 +18,6 @@ async function parser(name: string) {
   return DEV ? import(`./parse/${name}.ts?t=${Date.now()}`) : import(`./parse/${name}`);
 }
 
-/** Dev only: saves raw HTML of a flow step to ~/.tokaihub/fixtures and summarizes its forms. */
 /**
  * One-off capture (2026-10): 出席キーワード登録 (AAW6901000) lists classes only while they run, so its
  * populated list and the entry screen behind it cannot be read on demand. During class periods
@@ -45,6 +44,7 @@ export async function captureKeywordPages(): Promise<string> {
   return 'list and entry screen saved';
 }
 
+/** Local listener only: saves raw HTML of a flow step to ~/.tokaihub/fixtures and summarizes its forms. */
 export async function dump(flow: string, q: Record<string, string>) {
   const client = await getClient();
   let page = flow.startsWith('/') ? await client.get(flow) : await client.startFlow(flow);
@@ -80,7 +80,9 @@ export async function dump(flow: string, q: Record<string, string>) {
 const MIN = 60_000;
 type Q = Record<string, string>;
 /** priority: queue order against other TIPS work (see runFeature); default 0. */
-type Feature = { ttl: number; key?: (q: Q) => string; run: (q: Q) => Promise<unknown>; priority?: number };
+type Feature = { ttl: number; key?: (q: Q) => string; run: (q: Q) => Promise<unknown>; priority?: number;
+  /** LMS features run on their own page and skip the TIPS queue. */
+  direct?: boolean };
 type Locale = 'ja_JP' | 'en_US';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -104,7 +106,54 @@ async function attendanceList(q: Q) {
 
 const CURRICULUM_TTL = 7 * 24 * 60 * MIN;
 
+const lmsParse = () => parser('lms');
+const lms = () => import('./lms');
+
 const FEATURES: Record<string, Feature> = {
+  // ── LMS (Open LMS / Moodle) ──────────────────────────────────────────────────────────────
+  'lms-courses': {
+    ttl: 6 * 60 * MIN, direct: true,
+    run: async () => {
+      const r = await (await lms()).ajax<{ courses: any[] }>('core_course_get_enrolled_courses_by_timeline_classification', { classification: 'all', limit: 0, offset: 0, sort: 'fullname' });
+      const p = await lmsParse();
+      return { courses: r.courses.map(p.parseCourse) };
+    },
+  },
+  'lms-course': {
+    ttl: 30 * MIN, direct: true,
+    key: q => `lms-course:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('course id');
+      const raw = await (await lms()).ajax<string>('core_courseformat_get_state', { courseid: Number(q.id) });
+      return { id: Number(q.id), sections: (await lmsParse()).parseState(raw) };
+    },
+  },
+  // Deadlines: assignments, quizzes and other dated activities, from two weeks back (overdue).
+  'lms-due': {
+    ttl: 10 * MIN, direct: true,
+    run: async () => {
+      const from = Math.floor(Date.now() / 1000) - 14 * 86_400;
+      const r = await (await lms()).ajax<{ events: any[] }>('core_calendar_get_action_events_by_timesort', { timesortfrom: from, limitnum: 50 });
+      return {
+        items: r.events.map(e => ({
+          id: e.id, cmid: Number(new URL(e.url).searchParams.get('id')) || null, name: e.activityname ?? e.name, eventName: e.name,
+          module: e.modulename, due: e.timesort, overdue: !!e.overdue, url: e.url,
+          course: e.course ? { id: e.course.id, fullname: e.course.fullname } : null,
+          action: e.action ? { name: e.action.name, actionable: !!e.action.actionable } : null,
+        })),
+      };
+    },
+  },
+  'lms-assign': {
+    ttl: 5 * MIN, direct: true,
+    key: q => `lms-assign:${q.id}`,
+    run: async q => {
+      if (!/^\d+$/.test(q.id ?? '')) throw notFound('assignment id');
+      const page = await (await lms()).lmsGet(`/mod/assign/view.php?id=${q.id}`);
+      return { id: Number(q.id), ...(await lmsParse()).parseAssign(page.html, page.url) };
+    },
+  },
+
   profile: {
     ttl: 24 * 60 * MIN,
     run: async () => (await parser('profile')).parse((await (await getClient()).startFlow('CHW0001000-flow')).html),
@@ -452,7 +501,7 @@ export async function handle(feature: string, q: Q) {
   const { runFeature } = await import('./session');
   const t0 = Date.now();
   let started = t0;
-  const data = await runFeature(locale, () => { started = Date.now(); return f.run(params); }, bg === '1' ? -1 : f.priority ?? 0);
+  const data = f.direct ? await f.run(params) : await runFeature(locale, () => { started = Date.now(); return f.run(params); }, bg === '1' ? -1 : f.priority ?? 0);
   const entry = cache.write(key, data);
   // Queue wait and TIPS time apart: a slow line says which one was slow.
   console.log(`[tips] ${feature} (${locale}) fetched in ${Date.now() - started} ms, waited ${started - t0} ms${bg === '1' ? ' (background)' : ''}`);
@@ -514,6 +563,11 @@ function viewable(f: { type: string; disposition: string; bytes: Buffer }) {
  */
 export async function file(q: Q) {
   const { runFeature } = await import('./session');
+  if (q.kind === 'lms') {
+    const f = await (await lms()).lmsBinary(q.url ?? '');
+    const name = f.name ?? 'file';
+    return viewable({ bytes: f.bytes, type: f.type, disposition: `attachment; filename*=UTF-8''${encodeURIComponent(name)}` });
+  }
   if (q.kind === 'syllabus') {
     if (!/^\d{4}$/.test(q.year ?? '') || !/^[A-Za-z0-9]{3,12}$/.test(q.code ?? '') || !/^\d{1,4}$/.test(q.column ?? '') || !/^\d{1,3}$/.test(q.renban ?? '')) throw badFile();
     const locale = q.locale === 'en_US' ? 'en_US' : 'ja_JP';

@@ -298,6 +298,21 @@ app.get('/tips-api/dev/capture-keyword', async (_req, res) => {
   } catch (e) { res.status(502).json({ error: (e as Error).message.split('\n')[0] }); }
 });
 
+// Local only: try a Moodle AJAX function (?method=&args=JSON) or fetch an LMS page (?url=).
+app.get('/tips-api/dev/lms', async (req, res) => {
+  try {
+    const lms = await import('./tips/lms');
+    if (req.query.url) {
+      const r = await lms.lmsGet(String(req.query.url));
+      const dir = path.join(os.homedir(), '.tokaihub', 'fixtures');
+      const name = `${String(req.query.name ?? 'lms_page').replace(/\W+/g, '_')}.html`;
+      fs.writeFileSync(path.join(dir, name), r.html, { mode: 0o600 });
+      return res.json({ url: r.url, saved: name, bytes: r.html.length });
+    }
+    res.json(await lms.ajax(String(req.query.method), JSON.parse(String(req.query.args ?? '{}'))));
+  } catch (e) { res.status(502).json({ error: (e as Error).message.split('\n')[0] }); }
+});
+
 app.get('/tips-api/dev/dump', async (req, res) => {
   try {
     const { dump } = await loadRoutes();

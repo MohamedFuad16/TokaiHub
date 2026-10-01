@@ -349,6 +349,16 @@ export function browse(url: string, opts: { click?: string; wait?: string } = {}
   }, 5);
 }
 
+/**
+ * Finishes a Microsoft sign-in that another site (the LMS) stopped at, with the Keychain account
+ * and the second factor relayed to the app, then saves the refreshed cookies.
+ */
+export async function microsoftSignIn(page: Page) {
+  if (!(await autoLoginConfigured())) throw new SessionExpiredError('Microsoft asked for sign-in');
+  await driveMicrosoftLogin(page, mfaHooks);
+  await persist();
+}
+
 export function requireContext(): BrowserContext {
   status();
   if (state !== 'signed_in' || !context) throw new SessionExpiredError('not signed in');
