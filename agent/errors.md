@@ -125,3 +125,16 @@
 - **LMS data cached once per app language** (2026-10-01). Features were keyed `…@locale`, so the
   LMS (same content in either language) was read and cached twice. LMS features are keyed
   without the locale.
+- **Bridge down for about 44 hours: headless browser exited, bridge never noticed**
+  (2026-10-04 20:48–21:04 JST to 2026-10-06 17:20). The Node process stayed up and /status said
+  "signed in", but every TIPS/LMS read, keep-alive, reminder and bulletin check failed with
+  "Target page, context or browser has been closed" (3,422 log lines). No crash report; a
+  JetsamEvent at 20:56 shows the Mac at 125 MB free of 16 GB with macOS killing processes, and
+  the bridge's chrome-headless-shell processes still alive at that moment; they were gone by
+  21:04. Cause of the exit: inferred memory pressure, not proven. Fix: session.ts
+  launchBrowser() watches 'disconnected', drops the dead context and pages, and restores the
+  sealed session in a new browser with backoff; shutdown() clears its handle first so a normal
+  close is not treated as a crash. Verified by killing chrome-headless-shell with SIGKILL: the
+  bridge relaunched and restored within the same second, TIPS read 200 in 1.4 s, LMS read 200 in
+  3.2 s, no sign-in prompt. Recovery after the outage itself needed one Microsoft approval
+  (number 25), because the TIPS session had expired during the two days.

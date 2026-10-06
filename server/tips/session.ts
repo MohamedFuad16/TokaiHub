@@ -121,8 +121,44 @@ export function extend(minutes: number) {
 
 type Storage = Awaited<ReturnType<BrowserContext['storageState']>>;
 
+/**
+ * The headless browser, watched. On 2026-10-04 it exited (the Mac was at 125 MB free memory)
+ * and the bridge kept reporting "signed in" while every read failed for two days. Now a lost
+ * browser is noticed: its pages are dropped and, if the bridge was signed in, the session is
+ * restored from the sealed copy in a new browser, retrying with growing gaps.
+ */
+async function launchBrowser(): Promise<Browser> {
+  const b = await chromium.launch({ headless: true });
+  b.on('disconnected', () => {
+    if (browser !== b) return; // replaced or closed on purpose
+    browser = null;
+    context = null;
+    worker = null;
+    sessionLocale = null;
+    const wasSignedIn = state === 'signed_in';
+    console.error(`[tips] headless browser exited${wasSignedIn ? '; restoring the saved session' : ''}`);
+    if (wasSignedIn) void recover(0);
+  });
+  return b;
+}
+
+async function recover(attempt: number) {
+  try {
+    if (!(await restore())) {
+      state = 'signed_out';
+      lastError = 'browser exited and no saved session was found';
+      return;
+    }
+    console.log('[tips] browser relaunched and session restored');
+  } catch (e) {
+    const wait = Math.min(15 * 60_000, 30_000 * 2 ** attempt);
+    console.error(`[tips] relaunch failed (${(e as Error).message.split('\n')[0]}); retrying in ${Math.round(wait / 1000)} s`);
+    setTimeout(() => void recover(attempt + 1), wait).unref();
+  }
+}
+
 async function adopt(storage: Storage) {
-  browser ??= await chromium.launch({ headless: true });
+  browser ??= await launchBrowser();
   context = await browser.newContext({ storageState: storage, locale: 'ja-JP', userAgent: DESKTOP_UA });
   state = 'signed_in';
   hubExpiresAt = Date.now() + DEFAULT_HUB_MINUTES * 60_000;
@@ -278,7 +314,7 @@ export function autoSignIn(): Promise<void> {
   lastError = null;
   state = 'signing_in';
   loginPromise = (async () => {
-    browser ??= await chromium.launch({ headless: true });
+    browser ??= await launchBrowser();
     const ctx = await browser.newContext({ locale: 'ja-JP', userAgent: DESKTOP_UA });
     const page = await ctx.newPage();
     try {
@@ -370,5 +406,8 @@ export async function shutdown() {
   if (expiryTimer) clearTimeout(expiryTimer);
   await persist().catch(() => {});
   await context?.close().catch(() => {});
-  await browser?.close().catch(() => {});
+  // Forget it first, so closing it is not taken for a crash (see launchBrowser).
+  const b = browser;
+  browser = null;
+  await b?.close().catch(() => {});
 }
