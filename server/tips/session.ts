@@ -79,14 +79,36 @@ export function runFeature<T>(locale: Locale, fn: () => Promise<T>, priority = 0
     void pump();
   });
 }
+/**
+ * A job that has not settled after this long is given up, so the queue moves on. On 2026-11-09
+ * a job started on a browser that then exited never settled, and every TIPS read waited behind
+ * it until the bridge was restarted. Each TIPS request is capped at 30 s (client.ts), so a
+ * healthy job finishes well inside this.
+ */
+export const JOB_LIMIT_MS = 3 * 60_000;
+export class JobTimeoutError extends Error { name = 'JobTimeoutError'; }
+
 async function pump() {
   if (busy) return;
   const job = jobs.shift();
   if (!job) return;
   busy = true;
   wanted = job.locale;
-  try { job.resolve(await job.fn()); } catch (e) { job.reject(e); }
-  finally { busy = false; void pump(); }
+  let timer: NodeJS.Timeout | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new JobTimeoutError(`TIPS job gave no answer in ${JOB_LIMIT_MS / 1000} s`)), JOB_LIMIT_MS);
+  });
+  try { job.resolve(await Promise.race([job.fn(), limit])); } catch (e) {
+    if (e instanceof JobTimeoutError) {
+      console.error(`[tips] ${e.message}; dropped it and closed the TIPS page`);
+      // The abandoned job may still hold the page; a fresh one keeps it out of the next job's flow.
+      const stuck = worker;
+      worker = null;
+      sessionLocale = null;
+      void stuck?.close().catch(() => {});
+    }
+    job.reject(e);
+  } finally { clearTimeout(timer); busy = false; void pump(); }
 }
 
 const isPortal = (u: URL) => u.hostname === 'tips.u-tokai.ac.jp' && u.pathname.endsWith('/portal.do');

@@ -138,3 +138,18 @@
   bridge relaunched and restored within the same second, TIPS read 200 in 1.4 s, LMS read 200 in
   3.2 s, no sign-in prompt. Recovery after the outage itself needed one Microsoft approval
   (number 25), because the TIPS session had expired during the two days.
+- **LMS and other screens stale or failing on 2026-11-09** (found 21:15 JST, fixed 21:47).
+  Three faults in a row. (1) On 2026-11-08 23:36 the checkout was switched from `tips-wrapper`
+  to a local `main` 16 commits behind `origin/main`. The bridge lazy-imports `tips/lms`, so
+  every LMS read failed with "Cannot find module server/tips/lms". Fix: `git merge --ff-only
+  origin/main` (eef0a39, same as tips-wrapper and Vercel). Rule: the bridge runs from this
+  checkout; never leave it on an old branch. (2) `~/Library/Caches/ms-playwright` was deleted
+  (likely a disk cleanup). The running browser lived on until it exited at 21:24; relaunch then
+  failed with "Executable doesn't exist". Fix: `npx playwright install chromium`; recovery
+  restored the session at 21:31. Opening the LMS needed one Microsoft approval. (3) After the
+  relaunch, TIPS reads hung with no log line while LMS worked: a job started on the dead browser
+  never settled, so runFeature's queue stayed busy. Fix: `launchctl kickstart -k`, then a 3-minute
+  limit per queued job in session.ts pump() (JOB_LIMIT_MS): a job past it is rejected, the TIPS
+  page is closed, and the queue moves on. Test: server/tips/session.test.ts.
+  Verified by: every /tips-api/data route (timetable, bulletins, attendance, changes, grades,
+  cabinet, lms-courses, lms-due, lms-announcements) with refresh=1 returned 200 in under 3 s.
