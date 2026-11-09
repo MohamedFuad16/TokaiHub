@@ -6,16 +6,17 @@ import type { ScreenProps } from '../App';
 import PageShell, { Card, SectionTitle, Loading, LoadError, Empty, since, rise } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { colorFor } from '../lib/tipsAdapters';
+import { dueTag, orderDue } from '../lib/lms';
 import { useLmsSubjects, ModuleIcon, slotsLabel, courseTitle, dueText, dueIn } from './lmsShared';
 
 const t = {
   en: {
     title: 'LMS', news: 'Announcements', noNews: 'No announcements this term yet.', due: 'Due soon', none: 'Nothing due in the next weeks.', mine: 'This term', other: 'Other courses this term',
-    loading: 'Loading from the LMS…', overdue: 'Overdue', todo: 'Not submitted', later: 'Opens later', done: 'Done', showAll: (n: number) => `Show ${n} later deadlines`, noCourses: 'No LMS courses match this term’s TIPS registration yet.',
+    loading: 'Loading from the LMS…', overdue: 'Overdue', overdueClosed: 'Overdue, closed', todo: 'Not submitted', later: 'Opens later', done: 'Done', showAll: (n: number) => `Show ${n} later deadlines`, noCourses: 'No LMS courses match this term’s TIPS registration yet.',
   },
   jp: {
     title: 'LMS', news: 'お知らせ', noNews: '今学期のお知らせはまだありません。', due: '締切が近いもの', none: '数週間以内の締切はありません。', mine: '今学期の科目', other: '今学期のその他のコース',
-    loading: 'LMSから読み込み中…', overdue: '期限切れ', todo: '未提出', later: '受付前', done: '完了', showAll: (n: number) => `その後の締切${n}件を表示`, noCourses: '今学期のTIPS履修科目に一致するLMSコースはまだありません。',
+    loading: 'LMSから読み込み中…', overdue: '期限切れ', overdueClosed: '期限切れ・受付終了', todo: '未提出', later: '受付前', done: '完了', showAll: (n: number) => `その後の締切${n}件を表示`, noCourses: '今学期のTIPS履修科目に一致するLMSコースはまだありません。',
   },
 };
 
@@ -38,10 +39,10 @@ export default function LmsHome(props: ScreenProps) {
   const news = useTips<{ items: { id: number; subject: string; author: string; lastPost: number | null; created: number | null; courseId: number }[] }>('lms-announcements', { ids: termIds }, { enabled: !!termIds });
   const titleOf = (courseId: number) => [...mine, ...other].find(s => s.ids.includes(courseId))?.title ?? '';
   const [moreNews, setMoreNews] = useState(false);
-  const all = (due.data?.items ?? []).filter(i => !i.overdue || i.action?.actionable).sort((a, b) => a.due - b.due);
-  // The next two weeks and anything open for submission now; the rest behind "Show all".
+  // Overdue items stay (Moodle drops submitted ones), first. The next two weeks and anything open for
+  // submission now come with them; the rest is behind "Show all".
   const [showAll, setShowAll] = useState(false);
-  const soon = all.filter(i => i.action?.actionable || i.due * 1000 < Date.now() + 14 * 86_400_000);
+  const { all, soon } = orderDue(due.data?.items ?? []);
   const items = showAll ? all : soon;
 
   const open = (i: LmsDueItem) => (i.module === 'assign' && i.cmid ? navigate(`/lms/assign/${i.cmid}`) : window.open(i.url, '_blank', 'noopener'));
@@ -54,15 +55,16 @@ export default function LmsHome(props: ScreenProps) {
       {due.data && all.length === 0 && <Empty text={tx.none} isDark={isDark} />}
       <div className="space-y-2 mb-8">
         {items.map((i, k) => {
-          const late = i.due * 1000 < Date.now();
           // Moodle: actionable = can submit now; an action not yet actionable = submissions not
-          // open yet; no action = nothing left to do.
-          const todo = !!i.action?.actionable;
-          const later = !!i.action && !i.action.actionable;
+          // open yet; no action = nothing left to do. Overdue ones are told apart by `dueTag`.
+          const tag = dueTag(i);
+          const late = tag === 'overdue' || tag === 'overdue-closed';
+          const todo = tag === 'todo' || tag === 'overdue';
+          const later = tag === 'later';
           return (
             <motion.button key={i.id} {...rise(k)} onClick={() => open(i)}
               className={`w-full text-left flex items-center gap-3 p-4 rounded-2xl transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}>
-              <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${late && todo ? 'bg-red-500/15 text-red-500' : isDark ? 'bg-gray-700' : 'bg-white'}`}>
+              <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${late ? 'bg-red-500/15 text-red-500' : isDark ? 'bg-gray-700' : 'bg-white'}`}>
                 <ModuleIcon module={i.module} className="w-5 h-5" />
               </span>
               <span className="flex-1 min-w-0">
@@ -70,11 +72,11 @@ export default function LmsHome(props: ScreenProps) {
                 <span className={`block text-xs font-medium mt-0.5 truncate ${muted}`}>{i.course ? courseTitle(i.course.fullname) : ''}</span>
               </span>
               <span className="text-right shrink-0">
-                <span className={`block text-xs font-bold ${late && todo ? 'text-red-500' : ''}`}>{dueIn(i.due, lang)}</span>
+                <span className={`block text-xs font-bold ${late ? 'text-red-500' : ''}`}>{dueIn(i.due, lang)}</span>
                 <span className={`block text-[11px] font-semibold ${muted}`}>{dueText(i.due, lang)}</span>
-                <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold ${todo ? (late ? 'text-red-500' : isDark ? 'text-amber-300' : 'text-amber-700') : later ? muted : isDark ? 'text-green-400' : 'text-green-700'}`}>
-                  {todo ? <AlertTriangle className="w-3 h-3" /> : later ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
-                  {todo ? (late ? tx.overdue : tx.todo) : later ? tx.later : tx.done}
+                <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold ${tag === 'overdue' ? 'text-red-500' : tag === 'overdue-closed' ? 'text-red-500/70' : todo ? (isDark ? 'text-amber-300' : 'text-amber-700') : later ? muted : isDark ? 'text-green-400' : 'text-green-700'}`}>
+                  {todo || late ? <AlertTriangle className="w-3 h-3" /> : later ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                  {tag === 'overdue' ? tx.overdue : tag === 'overdue-closed' ? tx.overdueClosed : todo ? tx.todo : later ? tx.later : tx.done}
                 </span>
               </span>
             </motion.button>

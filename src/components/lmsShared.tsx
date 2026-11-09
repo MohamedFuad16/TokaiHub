@@ -36,11 +36,18 @@ export const slotsLabel = (slots: { day: number; period: number }[], lang: Langu
 
 /** "グローバルビジネス英語 火 3 （17TTX00500）" → "グローバルビジネス英語". */
 export const courseTitle = (fullname: string) =>
-  fullname.normalize('NFKC').replace(/\s*[日月火水木金土他]\s*\d?\s*\([0-9A-Z]+\)\s*$/, '').replace(/\s*\([0-9A-Z]+\)\s*$/, '').trim();
+  fullname.replace(/\s*[日月火水木金土他]\s*[0-9０-９]?\s*[(（][0-9A-ZＡ-Ｚ０-９]+[)）]\s*$/, '').replace(/\s*[(（][0-9A-ZＡ-Ｚ０-９]+[)）]\s*$/, '').trim();
 
 /** "Thu 10/1 23:59" in Japan time. */
 export const dueText = (unix: number, lang: Language) =>
   new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(unix * 1000));
+
+/** An LMS date label ("開始", "期限"…) in the app's language. Unknown labels stay as the LMS wrote them. */
+export function dateLabel(label: string, lang: Language) {
+  if (lang === 'jp') return label;
+  const l = label.toLowerCase();
+  return /期限|締切|due/.test(l) ? 'Due' : /開始|open/.test(l) ? 'Opens' : /終了|閉じる|close/.test(l) ? 'Closes' : label;
+}
 
 /** "in 4 h", "in 3 days", "2 days ago". */
 export function dueIn(unix: number, lang: Language, now = Date.now()) {

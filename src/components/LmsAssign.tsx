@@ -12,10 +12,12 @@ const t = {
   en: {
     loading: 'Loading the assignment from the LMS…', instructions: 'Instructions', files: 'Files from the teacher', status: 'Your submission',
     submit: 'Submit on the LMS website', submitNote: 'Opens the LMS submission page.', course: 'Open course',
+    errTitle: 'The LMS shows an error for this assignment', openLms: 'Open in LMS',
   },
   jp: {
     loading: 'LMSから課題を読み込み中…', instructions: '課題の説明', files: '教員からのファイル', status: '提出状況',
     submit: 'LMSのWebサイトで提出', submitNote: 'LMSの提出ページを開きます。', course: 'コースを開く',
+    errTitle: 'この課題はLMS側でエラーになっています', openLms: 'LMSで開く',
   },
 };
 
@@ -23,6 +25,8 @@ interface Assign {
   title: string; course: { title: string; id: number } | null; dates: { label: string; text: string }[];
   intro: string[]; links: { text: string; href: string }[]; files: { name: string; href: string }[];
   status: { label: string; value: string; files: { name: string; href: string }[] }[]; submitted: boolean; canSubmit: boolean;
+  /** Moodle's own error page text; the other fields are empty then. */
+  error?: string | null;
 }
 
 /** An LMS assignment: due date, status, the teacher's instructions and files. */
@@ -48,7 +52,17 @@ export default function LmsAssign(props: ScreenProps) {
   return (
     <PageShell {...props} title={d?.title || (lang === 'en' ? 'Assignment' : '課題')} subtitle={d?.course?.title} back onRefresh={a.refresh} refreshing={a.loading}>
       {!d && (a.error ? <LoadError error={a.error} isDark={isDark} lang={lang} onRetry={a.refresh} /> : <Loading text={tx.loading} isDark={isDark} />)}
-      {d && (
+      {d?.error && (
+        <Card isDark={isDark} className="p-5 space-y-3">
+          <div className="flex items-center gap-2 font-bold"><AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />{tx.errTitle}</div>
+          <p className="text-sm leading-relaxed break-words">{d.error}</p>
+          <a href={`${LMS_ORIGIN}/mod/assign/view.php?id=${id}`} target="_blank" rel="noopener noreferrer"
+            className={`inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+            <ExternalLink className="w-4 h-4" />{tx.openLms}
+          </a>
+        </Card>
+      )}
+      {d && !d.error && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           <div className="space-y-4 lg:col-span-2">
             {d.dates.length > 0 && (

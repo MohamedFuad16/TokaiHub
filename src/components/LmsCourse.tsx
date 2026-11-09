@@ -1,22 +1,22 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ChevronRight, Download, ExternalLink } from 'lucide-react';
+import { ChevronRight, Download, ExternalLink, CheckCircle2, Circle } from 'lucide-react';
 import type { ScreenProps } from '../App';
 import PageShell, { Card, Loading, LoadError, Empty, rise } from './ScreenHeader';
 import { useTips } from '../lib/useTips';
 import { getFeature, openTipsFile } from '../lib/api';
 import type { LmsCourse as Course } from '../lib/lms';
-import { ModuleIcon, dueText } from './lmsShared';
+import { ModuleIcon, dueText, dateLabel } from './lmsShared';
 import { Blocks, type Block } from './LmsModules';
 
 const t = {
-  en: { loading: 'Loading the course from the LMS…', empty: 'This course has nothing posted yet.', web: 'Opens the LMS website' },
-  jp: { loading: 'LMSからコースを読み込み中…', empty: 'このコースにはまだ何も掲載されていません。', web: 'LMSのWebサイトで開きます' },
+  en: { loading: 'Loading the course from the LMS…', empty: 'This course has nothing posted yet.', web: 'Opens the LMS website', done: 'Done', todo: 'Not done' },
+  jp: { loading: 'LMSからコースを読み込み中…', empty: 'このコースにはまだ何も掲載されていません。', web: 'LMSのWebサイトで開きます', done: '完了', todo: '未完了' },
 };
 
-interface Item { id: number; name: string; module: string; url: string | null; dates: { label: string; at: number }[]; done: boolean | null; blocks?: Block[] }
-interface Section { id: number; number: number; title: string; items: Item[] }
+interface Item { id: number; name: string; module: string; url: string | null; dates: { label: string; text?: string; at: number | null }[]; done: boolean | null; blocks?: Block[] }
+interface Section { id: number; number: number; title: string; summary?: Block[]; items: Item[] }
 
 /**
  * One subject's LMS content. A two-period class is two LMS courses (/lms/course/172107,172108);
@@ -40,6 +40,7 @@ export default function LmsCourse(props: ScreenProps) {
     const by = new Map<number, Section>();
     for (const p of parts) for (const s of p.data?.sections ?? []) {
       const into = by.get(s.number) ?? { ...s, items: [] };
+      if (!into.summary?.length && s.summary?.length) into.summary = s.summary;
       for (const i of s.items) if (!into.items.some(x => x.name === i.name && x.module === i.module)) into.items.push(i);
       by.set(s.number, into);
     }
@@ -76,12 +77,14 @@ export default function LmsCourse(props: ScreenProps) {
           <motion.div key={s.number} {...rise(k)}>
             <Card isDark={isDark} className="p-4 sm:p-5">
               <h2 className="font-bold mb-2">{s.title}</h2>
+              {!!s.summary?.length && <div className="mb-2 px-2 text-sm"><Blocks blocks={s.summary} isDark={isDark} lang={lang} /></div>}
               <div className="space-y-1">
                 {s.items.map(i => {
                   // Labels are text on the course page itself, not something to open.
                   if (i.module === 'label') return <div key={i.id} className="px-2 py-2"><Blocks blocks={i.blocks ?? []} isDark={isDark} lang={lang} /></div>;
                   const Arrow = action(i.module);
-                  const due = i.dates.find(d => /期限|due/i.test(d.label));
+                  // Every date the LMS lists (開始, 期限…), in Japan time; the LMS's own text if it did not parse.
+                  const dates = i.dates.filter(d => d.at || d.text).map(d => `${dateLabel(d.label, lang)} ${d.at ? dueText(d.at, lang) : d.text}`).join(' · ');
                   return (
                     <button key={i.id} onClick={() => open(i)} title={['resource', 'assign', 'url', 'forum', 'folder', 'page', 'quiz'].includes(i.module) ? undefined : tx.web}
                       className={`w-full text-left flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-white'}`}>
@@ -90,8 +93,9 @@ export default function LmsCourse(props: ScreenProps) {
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-semibold leading-snug line-clamp-2">{i.name}</span>
-                        {due && <span className={`block text-[11px] font-semibold ${muted}`}>{(lang === 'en' ? 'Due ' : '期限 ') + dueText(due.at, lang)}</span>}
+                        {dates && <span className={`block text-[11px] font-semibold ${muted}`}>{dates}</span>}
                       </span>
+                      {i.done !== null && (i.done ? <CheckCircle2 aria-label={tx.done} className={`w-4 h-4 shrink-0 ${isDark ? 'text-green-400' : 'text-green-600'}`} /> : <Circle aria-label={tx.todo} className={`w-4 h-4 shrink-0 ${muted}`} />)}
                       <Arrow className={`w-4 h-4 shrink-0 ${muted}`} />
                     </button>
                   );

@@ -126,14 +126,18 @@ const FEATURES: Record<string, Feature> = {
       if (!/^\d+$/.test(q.id ?? '')) throw notFound('course id');
       const l = await lms();
       const p = await lmsParse();
-      // Labels' text is only on the course page; the state has their names.
+      // The state has names only. Section summaries are on the course page; each section page has its
+      // activities' dates, completion and the labels' full text. One browser, so one page at a time.
       const [raw, page] = await Promise.all([
         l.ajax<string>('core_courseformat_get_state', { courseid: Number(q.id) }),
         l.lmsGet(`/course/view.php?id=${q.id}`).catch(() => null),
       ]);
-      const labels = page ? p.parseLabels(page.html, page.url) : {};
-      const sections = p.parseState(raw).map(sec => ({ ...sec, items: sec.items.map(i => (i.module === 'label' ? { ...i, blocks: labels[i.id] ?? [{ t: 'text' as const, text: i.name }] } : i)) }));
-      return { id: Number(q.id), sections };
+      const state = p.parseState(raw);
+      const pages: Record<number, ReturnType<typeof p.parseSectionPage> | null> = {};
+      for (const sec of state.filter(x => x.items.length > 0)) {
+        pages[sec.id] = await l.lmsGet(`/course/section.php?id=${sec.id}`).then(r => p.parseSectionPage(r.html, r.url)).catch(() => null);
+      }
+      return { id: Number(q.id), sections: p.assembleCourse(state, page ? p.parseCourseSummaries(page.html, page.url) : {}, pages) };
     },
   },
   // Deadlines: assignments, quizzes and other dated activities, from two weeks back (overdue).
@@ -170,7 +174,7 @@ const FEATURES: Record<string, Feature> = {
     run: async q => {
       if (!/^\d+$/.test(q.id ?? '')) throw notFound('forum id');
       const page = await (await lms()).lmsGet(`/mod/forum/view.php?id=${q.id}`);
-      return { id: Number(q.id), ...(await lmsParse()).parseForum(page.html) };
+      return { id: Number(q.id), ...(await lmsParse()).parseForum(page.html, page.url) };
     },
   },
   'lms-discussion': {
@@ -235,6 +239,7 @@ const FEATURES: Record<string, Feature> = {
     run: async q => {
       if (!/^\d+$/.test(q.id ?? '')) throw notFound('assignment id');
       const page = await (await lms()).lmsGet(`/mod/assign/view.php?id=${q.id}`);
+      // A Moodle error page parses to an empty assignment; the app shows the LMS's message instead.
       return { id: Number(q.id), ...(await lmsParse()).parseAssign(page.html, page.url) };
     },
   },

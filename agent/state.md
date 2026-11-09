@@ -14,6 +14,19 @@ passkey test. Unit tests: `npm test` (Vitest, pure logic and parsers on syntheti
 `npm run lint` (tsc) and `npm run eslint`.
 
 ## Recent changes
+- **2026-11-09 — bridge outage fixed; stuck TIPS jobs now time out** (by: Claude). Local `main`
+  fast-forwarded to origin/main (eef0a39); Playwright Chromium reinstalled; bridge restarted.
+  server/tips/session.ts pump(): JOB_LIMIT_MS 3 min per queued job, then reject, close the
+  TIPS page, move on. Test server/tips/session.test.ts; 96 tests pass; tsc clean. Running on
+  the Mac bridge since 22:07; not committed. Details in errors.md.
+- **2026-11-10 — LMS mapping fixed after a page-by-page audit** (by: Claude, builder). Audit of
+  14 autumn courses, 117 items: 92 matched, 25 did not (/tmp/lms-audit/report.md, not kept).
+  Fixed: course-page dates and completion from /course/section.php (core_courseformat_get_state
+  has no dates); label text from section pages; section summaries kept, summary-only sections
+  kept; forum intro; online-text status rows without markup; Moodle error page shown with an
+  "Open in LMS" link; LMS text keeps full-width characters (NFKC only for code matching);
+  Home shows overdue items ("Overdue" or "Overdue, closed"). lms-course item `dates` is now
+  {label, text, at}. Bridge restarted 00:58 and checked live. Frontend not deployed yet.
 - **2026-10-01 — LMS forums, announcements, folders, pages, labels, quizzes** (by: Claude).
   Bridge features lms-forum (HTML list), lms-discussion (AJAX mod_forum_get_discussion_posts),
   lms-announcements (this term's news forums merged), lms-folder, lms-page, lms-quiz (HTML);

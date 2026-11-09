@@ -3,7 +3,34 @@
  * the TIPS timetable code: "グローバルビジネス英語 火 3 （17TTX00500）" is TTX005, Tuesday period 3;
  * a two-period class is two LMS courses (…00 and …01).
  */
-import { load, clean, lines, cellText, DAY_JP, type $ } from './util';
+import * as cheerio from 'cheerio';
+import { load, DAY_JP, type $ } from './util';
+
+// LMS text keeps the characters the LMS shows (課題１, 23：59): util's clean() folds full-width forms
+// with NFKC, fine for TIPS but it made the same item read differently on the course page and on its
+// own page. Whitespace is the only thing collapsed here; NFKC stays where text is matched (parseCourse).
+const clean = (s: string | undefined | null) => (s ?? '').replace(/[\s\u3000]+/g, ' ').trim();
+const wrapperText = (h: string) => cheerio.load(`<div id="__fragment">${h}</div>`)('#__fragment').text();
+function lines($: $, el: any): string[] {
+  const h = ($(el).html() ?? '').replace(/<br\s*\/?>/gi, '\n');
+  return wrapperText(h).split('\n').map(clean).filter(Boolean);
+}
+/** Writes the address after a link whose text does not show it, so it survives as plain text. File links stay out: they are returned separately. */
+function keepLinkTargets($: $, node: cheerio.Cheerio<any>) {
+  node.find('a[href]').each((_, a) => {
+    const href = ($(a).attr('href') ?? '').trim();
+    const target = /^mailto:/i.test(href) ? href.slice(7).split('?')[0] : /^https?:\/\//i.test(href) && !/pluginfile\.php/.test(href) ? href : '';
+    const text = clean($(a).text());
+    if (target && !text.includes(target)) $(a).append(text ? ` (${target})` : target);
+  });
+  return node;
+}
+function cellText($: $, el: any, drop?: string): string {
+  const node = keepLinkTargets($, $(el).clone());
+  if (drop) node.find(drop).remove();
+  const h = (node.html() ?? '').replace(/[\r\n]+/g, ' ').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n');
+  return wrapperText(h).split('\n').map(clean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
 
 export interface LmsCourseRaw { id: number; fullname: string; shortname?: string; coursecategory?: string; startdate?: number; enddate?: number; viewurl?: string; hidden?: boolean }
 
@@ -13,7 +40,8 @@ export function parseCourse(c: LmsCourseRaw) {
   // 17TTX00500 → TTX005: the TIPS code is the letters and the first three digits after them.
   const tipsCode = code ? /([A-Z]{3}\d{3})\d*$/.exec(code)?.[1] ?? null : null;
   const slot = /\s([日月火水木金土])\s*(\d)?\s*\(/.exec(name);
-  const title = name.replace(/\s*[日月火水木金土他]\s*\d?\s*\([0-9A-Z]+\)\s*$/, '').replace(/\s*\([0-9A-Z]+\)\s*$/, '').trim();
+  // The title keeps the LMS's characters; only the match above is folded.
+  const title = clean(c.fullname).replace(/\s*[日月火水木金土他]\s*[0-9０-９]?\s*[(（][0-9A-ZＡ-Ｚ０-９]+[)）]\s*$/, '').replace(/\s*[(（][0-9A-ZＡ-Ｚ０-９]+[)）]\s*$/, '').trim();
   return {
     id: c.id, title, fullname: c.fullname, code, tipsCode,
     day: slot ? DAY_JP[slot[1]] : null, period: slot?.[2] ? Number(slot[2]) : null,
@@ -34,8 +62,97 @@ export function parseState(raw: unknown) {
       id: Number(s.id), number: s.number, title: s.title,
       items: s.cmlist.map(id => cms.get(id)).filter((m): m is NonNullable<typeof m> => !!m && m.uservisible)
         .map(m => ({ id: Number(m.id), name: m.name, module: m.module, url: m.url ?? null, dates: (m.dates ?? []).map(d => ({ label: d.label, at: d.timestamp })), done: m.isoverallcomplete ?? null })),
-    }))
-    .filter(s => s.items.length > 0);
+    }));
+}
+
+/** "2026年 10月 12日(月曜日) 23:59" (Japan time) as a unix time; null when the text is not a date. */
+export function parseJaDate(text: string): number | null {
+  const m = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日(?:[^\d]*?(\d{1,2})\s*:\s*(\d{2}))?/.exec(text.normalize('NFKC'));
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0) - 9, +(m[5] ?? 0)) / 1000 : null;
+}
+
+/** The "開始: …  期限: …" lines under an activity (assign, quiz, forum…). */
+function activityDates($: $, root: any) {
+  return $(root).find('[data-region="activity-dates"] > div').toArray().map(d => {
+    const label = clean($(d).find('strong').text()).replace(/[:：]$/, '');
+    const text = clean($(d).clone().find('strong').remove().end().text());
+    return { label, text, at: parseJaDate(text) };
+  }).filter(d => d.label || d.text);
+}
+
+/**
+ * What a section page (/course/section.php?id=…) shows that the course state lacks: each activity's
+ * dates and completion, each label's full text, and the section's summary.
+ */
+export function parseSectionPage(html: string, url: string) {
+  const $ = load(html);
+  const items: Record<number, { dates: { label: string; text: string; at: number | null }[]; done: boolean | null; blocks?: Block[] }> = {};
+  $('li[data-for="cmitem"]').each((_, li) => {
+    const id = Number($(li).attr('data-id') || ($(li).attr('id') ?? '').replace('module-', ''));
+    if (!id) return;
+    const info = $(li).find('[data-region="completion-info"]').first();
+    const toggle = info.find('[data-toggletype]').attr('data-toggletype') ?? '';
+    const shown = clean(info.text());
+    // Manual: the button offers "mark done" (not done) or "undo" (done). Automatic: a "完了:"/"実行:" badge.
+    const done = !info.length ? null : toggle ? /undo/.test(toggle) : /^(完了|Done)/.test(shown) ? true : /^(実行|To do)/.test(shown) ? false : null;
+    const alt = $(li).find('.activity-altcontent').first();
+    items[id] = { dates: activityDates($, li), done, ...(alt.length && $(li).hasClass('modtype_label') ? { blocks: blocks($, alt, url) } : {}) };
+  });
+  const sec = $('[data-for="section"]').first();
+  const summary = sec.find('[data-for="sectioninfo"] .summarytext .no-overflow').first();
+  return { items, summary: summary.length ? blocks($, summary, url) : [] };
+}
+
+/** Section summaries on the course page (/course/view.php), by section id. */
+export function parseCourseSummaries(html: string, url: string) {
+  const $ = load(html);
+  const out: Record<number, Block[]> = {};
+  $('[data-for="section"]').each((_, li) => {
+    const id = Number($(li).attr('data-id'));
+    const summary = $(li).find('[data-for="sectioninfo"] .summarytext .no-overflow').first();
+    if (id && summary.length) { const b = blocks($, summary, url); if (b.length) out[id] = b; }
+  });
+  return out;
+}
+
+/**
+ * The course as the app shows it: the state's sections and items, plus dates, completion and label
+ * text from the section pages and section summaries. A section with neither items nor a summary is dropped.
+ */
+export function assembleCourse(
+  state: ReturnType<typeof parseState>, summaries: Record<number, Block[]>,
+  pages: Record<number, ReturnType<typeof parseSectionPage> | null | undefined>,
+) {
+  return state.map(sec => {
+    const page = pages[sec.id];
+    const items = sec.items.map(i => {
+      const x = page?.items[i.id];
+      const base = { ...i, dates: x?.dates?.length ? x.dates : i.dates.map(d => ({ label: d.label, text: '', at: d.at as number | null })), done: i.done ?? x?.done ?? null };
+      return i.module === 'label' ? { ...base, blocks: x?.blocks?.length ? x.blocks : [{ t: 'text' as const, text: i.name }] } : base;
+    });
+    return { id: sec.id, number: sec.number, title: sec.title, summary: summaries[sec.id] ?? page?.summary ?? [], items };
+  }).filter(s => s.items.length > 0 || s.summary.length > 0);
+}
+
+/** Moodle's own error page ("コーディングエラーが検出されました…"): its message, or null on a normal page. */
+export function moodleError(html: string): string | null {
+  const $ = load(html);
+  const e = $('[data-rel="fatalerror"] .errormessage, .errorbox .errormessage').first();
+  return e.length ? clean(e.text()) : null;
+}
+
+/**
+ * A status cell as text. An online-text submission is a summary box (expand icon, "(37 語)", a
+ * truncated copy) plus the full text; it reads "(37 語)" and the full text, with no icons or links.
+ */
+function statusValue($: $, td: cheerio.Cheerio<any>): string {
+  const box = td.find('.plugincontentsummary').first();
+  const full = td.find('.hidefull .no-overflow').first();
+  if (box.length && full.length) {
+    const count = clean(box.clone().find('noscript, .expandsummaryicon, .no-overflow, script').remove().end().text());
+    return [count, cellText($, full)].filter(Boolean).join('\n');
+  }
+  return cellText($, td, 'noscript, script, .expandsummaryicon');
 }
 
 /** An assignment's page (mod/assign/view.php): dates, instructions, files, submission status. */
@@ -48,17 +165,19 @@ export function parseAssign(html: string, url: string) {
     const label = clean($(d).find('strong').text()).replace(/[:：]$/, '');
     return { label, text: clean($(d).text().replace($(d).find('strong').text(), '')) };
   });
+  const error = moodleError(html);
   const intro = $('#intro .no-overflow').first();
   const introLinks = intro.find('a[href]').toArray().map(a => ({ text: clean($(a).text()), href: abs($(a).attr('href'))! }));
   const files = $('#intro a[href*="pluginfile.php"], .activity-description a[href*="pluginfile.php"]').toArray()
     .map(a => ({ name: clean($(a).text()) || decodeURIComponent((abs($(a).attr('href')) ?? '').split('/').pop()?.split('?')[0] ?? ''), href: abs($(a).attr('href'))! }));
   const status = $('.submissionstatustable table tr').toArray().map(tr => ({
     label: clean($(tr).find('th').first().text()),
-    value: clean($(tr).find('td').first().text()),
+    value: statusValue($, $(tr).find('td').first()),
     files: $(tr).find('a[href*="pluginfile.php"]').toArray().map(a => ({ name: clean($(a).text()), href: abs($(a).attr('href'))! })),
   })).filter(r => r.label);
   const editForm = $('form').filter((_, f) => $(f).find('input[name="action"][value="editsubmission"]').length > 0).first();
   return {
+    error,
     title: clean($('h1').first().text()),
     course: course ? { title: course.text, id: Number(new URL(course.href!).searchParams.get('id')) } : null,
     dates,
@@ -100,11 +219,15 @@ export function blocks($: $, el: any, base: string): Block[] {
 /** The main content area of a module page, without the site's accessibility panel. */
 const mainOf = ($: $) => $('div[role="main"]').first();
 
+const LMS_BASE = 'https://tlms.tsc.u-tokai.ac.jp/';
+
 // ── Forum ──────────────────────────────────────────────────────────────────────────────────
-export function parseForum(html: string) {
+export function parseForum(html: string, url = LMS_BASE) {
   const $ = load(html);
   return {
     title: clean($('h1').first().text()),
+    // The teacher's description (team name, join code, room change…), above the discussions on the LMS.
+    intro: blocks($, $('#intro .no-overflow').first(), url),
     discussions: $('tr[data-region="discussion-list-item"]').toArray().map(tr => {
       const stamps = $(tr).find('[data-timestamp]').toArray().map(e => Number($(e).attr('data-timestamp')));
       return {
@@ -167,16 +290,4 @@ export function parseQuiz(html: string) {
     canAttempt: button.length > 0, attemptLabel: clean(button.text() || button.attr('value')),
     notice: clean(main.find('.quizattempt p, .alert').first().text()),
   };
-}
-
-/** Labels' text from a course page, by module id (core_courseformat_get_state has only names). */
-export function parseLabels(html: string, url: string) {
-  const $ = load(html);
-  const out: Record<number, Block[]> = {};
-  $('li.modtype_label, [data-for="cmitem"].modtype_label, li[id^="module-"]').each((_, li) => {
-    const id = Number(($(li).attr('id') ?? '').replace('module-', '') || $(li).attr('data-id'));
-    const content = $(li).find('.activity-altcontent, .contentwithoutlink').first();
-    if (id && content.length && ($(li).hasClass('modtype_label') || $(li).find('.modtype_label').length || /label/.test($(li).attr('class') ?? ''))) out[id] = blocks($, content, url);
-  });
-  return out;
 }

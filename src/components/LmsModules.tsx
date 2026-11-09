@@ -78,10 +78,11 @@ export function LmsForum(props: ScreenProps) {
   const navigate = useNavigate();
   const muted = isDark ? 'text-gray-400' : 'text-gray-500';
   const id = useParams().id ?? '';
-  const f = useTips<{ title: string; discussions: Discussion[] }>('lms-forum', { id }, { enabled: /^\d+$/.test(id) });
+  const f = useTips<{ title: string; intro?: Block[]; discussions: Discussion[] }>('lms-forum', { id }, { enabled: /^\d+$/.test(id) });
   return (
     <PageShell {...props} title={f.data?.title || (lang === 'en' ? 'Forum' : 'フォーラム')} back onRefresh={f.refresh} refreshing={f.loading}>
       {!f.data && (f.error ? <LoadError error={f.error} isDark={isDark} lang={lang} onRetry={f.refresh} /> : <Loading text={tx.loading} isDark={isDark} />)}
+      {!!f.data?.intro?.length && <Card isDark={isDark} className="p-5 mb-4"><Blocks blocks={f.data.intro} isDark={isDark} lang={lang} /></Card>}
       {f.data && f.data.discussions.length === 0 && <Empty text={tx.noPosts} isDark={isDark} />}
       <div className="space-y-2">
         {f.data?.discussions.map((d, k) => (

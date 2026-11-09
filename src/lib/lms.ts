@@ -36,3 +36,25 @@ export function splitByTerm(subjects: LmsSubject[], registered: Set<string>, ter
   const past = subjects.filter(s => !mine.includes(s) && !other.includes(s));
   return { mine, other, past };
 }
+
+/**
+ * Home deadlines. Moodle drops an event once it is submitted, so every event the bridge returns is
+ * still open work, overdue or not. Overdue and actionable: late but can still be handed in.
+ * Overdue and not actionable: submissions are closed.
+ */
+export interface DueLike { due: number; overdue: boolean; action: { actionable: boolean } | null }
+export type DueTag = 'overdue' | 'overdue-closed' | 'todo' | 'later' | 'done';
+
+export function dueTag(i: DueLike, now = Date.now()): DueTag {
+  const actionable = !!i.action?.actionable;
+  if (i.overdue || i.due * 1000 < now) return actionable ? 'overdue' : 'overdue-closed';
+  return actionable ? 'todo' : i.action ? 'later' : 'done';
+}
+
+/** Overdue first (oldest first), then by date. `soon` = overdue, open now, or due within two weeks. */
+export function orderDue<T extends DueLike>(items: T[], now = Date.now()) {
+  const late = (i: T) => i.overdue || i.due * 1000 < now;
+  const all = [...items].sort((a, b) => Number(late(b)) - Number(late(a)) || a.due - b.due);
+  const soon = all.filter(i => late(i) || i.action?.actionable || i.due * 1000 < now + 14 * 86_400_000);
+  return { all, soon };
+}
